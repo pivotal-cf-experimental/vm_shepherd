@@ -1,0 +1,20 @@
+iaas_type: vsphere
+vm_deployer:
+  vcenter_creds:
+    ip: OVA_URL
+    username: OVA_ORGANIZATION
+    password: OVA_PASSWORD
+  vsphere:
+    host:
+    datacenter: VSPHERE_DATACENTER
+    cluster: VSPHERE_CLUSTER
+    network: VSPHERE_NETWORK
+    resource_pool: VSPHERE_RESOURCE_POOL
+    datastore: VSPHERE_DATASTORE
+    folder: VSPHERE_FOLDER
+  vm:
+    ip: OVA_IP
+    gateway: OVA_GATEWAY
+    netmask: OVA_NETMASK
+    dns: OVA_DNS
+    ntp_servers: OVA_NTP

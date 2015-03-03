@@ -1,0 +1,19 @@
+iaas_type: vcloud
+vapp_deployer:
+  creds:
+    url: VAPP_URL
+    organization: VAPP_ORGANIZATION
+    user: VAPP_USERNAME
+    password: VAPP_PASSWORD
+  vdc:
+    name: VDC_NAME
+    catalog: VDC_CATALOG
+    network: VDC_NETWORK
+  vapp:
+    name: VAPP_NAME
+    ip: VAPP_IP
+    public_ip:
+    gateway: VAPP_GATEWAY
+    netmask: VAPP_NETMASK
+    dns: VAPP_DNS
+    ntp: VAPP_NTP

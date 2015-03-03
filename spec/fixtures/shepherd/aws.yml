@@ -1,0 +1,11 @@
+iaas_type: aws
+
+vm_deployer:
+  aws_access_key: aws-access-key
+  aws_secret_key: aws-secret-key
+  ssh_key_name: ssh-key-name
+  security_group: security-group-id
+  public_subnet_id: public-subnet-id
+  private_subnet_id: private-subnet-id
+  elastic_ip_id: elastic-ip-id
+  vm_name: vm-name

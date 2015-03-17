@@ -1,4 +1,4 @@
-# VmSheppherd
+# VmShepherd
 
 TODO: Write a gem description
 

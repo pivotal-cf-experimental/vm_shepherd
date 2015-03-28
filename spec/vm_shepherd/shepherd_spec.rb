@@ -115,6 +115,42 @@ module VmShepherd
         end
       end
 
+      context 'with OpenStack settings' do
+        let(:settings) do
+          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'openstack.yml')))
+        end
+        let(:qcow2_manager) { instance_double(OpenstackVmManager) }
+        let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
+        let(:openstack_options) do
+          {
+            auth_url: 'http://example.com',
+            username: 'username',
+            api_key: 'api-key',
+            tenant: 'tenant',
+          }
+        end
+        let(:openstack_vm_options) do
+          {
+            name: 'some-vm-name',
+            min_disk_size: 150,
+            network_name: 'some-network',
+            key_name: 'some-key',
+            security_group_names: [
+              'security-group-A',
+              'security-group-B',
+              'security-group-C',
+            ],
+            ip: '198.11.195.5',
+          }
+        end
+
+        it 'uses QCow2Manager to launch a VM' do
+          expect(OpenstackVmManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
+          expect(qcow2_manager).to receive(:deploy).with(qcow2_file_path, openstack_vm_options)
+          manager.deploy(path: qcow2_file_path)
+        end
+      end
+
       context 'when IAAS is unknown' do
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'unknown.yml')))
@@ -195,6 +231,42 @@ module VmShepherd
         it 'uses AwsManager::Deployer to launch a VM' do
           expect(AmiManager).to receive(:new).with(ami_destroy_options).and_return(ams_manager)
           expect(ams_manager).to receive(:destroy)
+          manager.destroy
+        end
+      end
+
+      context 'when IAAS is Openstack' do
+        let(:settings) do
+          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'openstack.yml')))
+        end
+        let(:qcow2_manager) { instance_double(OpenstackVmManager) }
+        let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
+        let(:openstack_options) do
+          {
+            auth_url: 'http://example.com',
+            username: 'username',
+            api_key: 'api-key',
+            tenant: 'tenant',
+          }
+        end
+        let(:openstack_vm_options) do
+          {
+            name: 'some-vm-name',
+            min_disk_size: 150,
+            network_name: 'some-network',
+            key_name: 'some-key',
+            security_group_names: [
+              'security-group-A',
+              'security-group-B',
+              'security-group-C',
+            ],
+            ip: '198.11.195.5',
+          }
+        end
+
+        it 'uses QCow2Manager to destroy a VM' do
+          expect(OpenstackVmManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
+          expect(qcow2_manager).to receive(:destroy).with(openstack_vm_options)
           manager.destroy
         end
       end

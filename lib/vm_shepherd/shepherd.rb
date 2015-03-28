@@ -3,12 +3,14 @@ require 'vm_shepherd/vapp_manager/destroyer'
 require 'vm_shepherd/ova_manager/deployer'
 require 'vm_shepherd/ova_manager/destroyer'
 require 'vm_shepherd/ami_manager'
+require 'vm_shepherd/openstack_vm_manager'
 
 module VmShepherd
   class Shepherd
     VCLOUD_IAAS_TYPE = 'vcloud'.freeze
     VSPHERE_IAAS_TYPE = 'vsphere'.freeze
     AWS_IAAS_TYPE = 'aws'.freeze
+    OPENSTACK_IAAS_TYPE = 'openstack'.freeze
     VSPHERE_TEMPLATE_PREFIX = 'tpl'.freeze
 
     class InvalidIaas < StandardError
@@ -34,6 +36,8 @@ module VmShepherd
           )
         when AWS_IAAS_TYPE then
           ami_manager.deploy(path)
+        when OPENSTACK_IAAS_TYPE then
+          openstack_vm_manager.deploy(path, openstack_vm_options)
         else
           fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
       end
@@ -66,6 +70,8 @@ module VmShepherd
           ).clean_folder(settings.vm_deployer.vsphere.folder)
         when AWS_IAAS_TYPE then
           ami_manager.destroy
+        when OPENSTACK_IAAS_TYPE then
+          openstack_vm_manager.destroy(openstack_vm_options)
         else
           fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
       end
@@ -161,6 +167,26 @@ module VmShepherd
         elastic_ip_id: vm_deployer.elastic_ip_id,
         vm_name: vm_deployer.vm_name,
       )
+    end
+
+    def openstack_vm_manager
+      OpenstackVmManager.new(
+        auth_url: settings.vm_deployer.creds.auth_url,
+        username: settings.vm_deployer.creds.username,
+        api_key: settings.vm_deployer.creds.api_key,
+        tenant: settings.vm_deployer.creds.tenant,
+      )
+    end
+
+    def openstack_vm_options
+      {
+        name: settings.vm_deployer.vm.name,
+        min_disk_size: settings.vm_deployer.vm.flavor_parameters.min_disk_size,
+        network_name: settings.vm_deployer.vm.network_name,
+        key_name: settings.vm_deployer.vm.key_name,
+        security_group_names: settings.vm_deployer.vm.security_group_names,
+        ip: settings.vm_deployer.vm.ip,
+      }
     end
   end
 end

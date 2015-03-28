@@ -1,0 +1,18 @@
+iaas_type: openstack
+vm_deployer:
+  creds:
+    auth_url: 'http://example.com'
+    username: 'username'
+    api_key: 'api-key'
+    tenant: 'tenant'
+  vm:
+    name: 'some-vm-name'
+    flavor_parameters:
+      min_disk_size: 150
+    network_name: 'some-network'
+    key_name: 'some-key'
+    security_group_names:
+      - 'security-group-A'
+      - 'security-group-B'
+      - 'security-group-C'
+    ip: 198.11.195.5

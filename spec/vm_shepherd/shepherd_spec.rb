@@ -5,10 +5,6 @@ module VmShepherd
   RSpec.describe Shepherd do
     subject(:manager) { Shepherd.new(settings: settings) }
 
-    specify { expect(Shepherd::VCLOUD_IAAS_TYPE).to eq('vcloud') }
-    specify { expect(Shepherd::VSPHERE_IAAS_TYPE).to eq('vsphere') }
-    specify { expect(Shepherd::VSPHERE_TEMPLATE_PREFIX).to eq('tpl') }
-
     describe '#deploy' do
       context 'with vcloud settings' do
         let(:settings) do

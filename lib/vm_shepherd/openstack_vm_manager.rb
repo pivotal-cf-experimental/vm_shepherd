@@ -21,7 +21,7 @@ module VmShepherd
       puts 'Finished uploading the image'
 
       flavor = find_flavor(vm_options[:min_disk_size])
-      network = network_service.networks.find { |network| network.name == vm_options[:network_name] }
+      network = network_service.networks.find { |net| net.name == vm_options[:network_name] }
       security_groups = vm_options[:security_group_names]
 
       puts('Launching an instance')
@@ -37,13 +37,13 @@ module VmShepherd
       puts('Finished launching an instance')
 
       puts('Assigning an IP to the instance')
-      ip = service.addresses.find { |ip| ip.instance_id.nil? && ip.ip == vm_options[:ip] }
+      ip = service.addresses.find { |address| address.instance_id.nil? && address.ip == vm_options[:ip] }
       ip.server = server
       puts('Finished assigning an IP to the instance')
     end
 
     def destroy(vm_options)
-      ip = service.addresses.find { |ip| ip.ip == vm_options[:ip] }
+      ip = service.addresses.find { |address| address.ip == vm_options[:ip] }
       server = service.servers.get(ip.instance_id)
       image = image_service.images.get(server.image['id'])
 

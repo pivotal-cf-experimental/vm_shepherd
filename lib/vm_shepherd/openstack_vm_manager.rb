@@ -10,7 +10,7 @@ module VmShepherd
     end
 
     def deploy(qcow2_file_path, vm_options)
-      puts "Uploading the image #{qcow2_file_path}"
+      say "Uploading the image #{qcow2_file_path}"
       image = image_service.images.create(
         name: vm_options[:name],
         size: File.size(qcow2_file_path),
@@ -18,13 +18,13 @@ module VmShepherd
         container_format: 'bare',
         location: qcow2_file_path,
       )
-      puts 'Finished uploading the image'
+      say 'Finished uploading the image'
 
       flavor = find_flavor(vm_options[:min_disk_size])
       network = network_service.networks.find { |net| net.name == vm_options[:network_name] }
       security_groups = vm_options[:security_group_names]
 
-      puts('Launching an instance')
+      say('Launching an instance')
       server = service.servers.create(
         name: vm_options[:name],
         flavor_ref: flavor.id,
@@ -34,12 +34,12 @@ module VmShepherd
         nics: [{net_id: network.id}],
       )
       server.wait_for { ready? }
-      puts('Finished launching an instance')
+      say('Finished launching an instance')
 
-      puts('Assigning an IP to the instance')
+      say('Assigning an IP to the instance')
       ip = service.addresses.find { |address| address.instance_id.nil? && address.ip == vm_options[:ip] }
       ip.server = server
-      puts('Finished assigning an IP to the instance')
+      say('Finished assigning an IP to the instance')
     end
 
     def destroy(vm_options)
@@ -54,6 +54,10 @@ module VmShepherd
     private
 
     attr_reader :auth_url, :username, :api_key, :tenant
+
+    def say(message)
+      puts message
+    end
 
     def service
       @service ||= Fog::Compute.new(

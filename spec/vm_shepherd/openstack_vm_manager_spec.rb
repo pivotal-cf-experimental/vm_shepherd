@@ -68,6 +68,7 @@ module VmShepherd
 
       before do
         allow(File).to receive(:size).with(path).and_return(file_size)
+        allow(subject).to receive(:say)
 
         Fog.mock!
         Fog::Mock.reset
@@ -206,7 +207,7 @@ module VmShepherd
       let(:image_service) { double('Fog::Image') }
       let(:image) { double('Fog::Image::OpenStack::Image', id: 'image-id') }
 
-      let(:server) { double('Fog::Compute::OpenStack::Server', image: {'id' => image.id} ) }
+      let(:server) { double('Fog::Compute::OpenStack::Server', image: { 'id' => image.id }) }
 
       before do
         allow(Fog::Compute).to receive(:new).and_return(service)

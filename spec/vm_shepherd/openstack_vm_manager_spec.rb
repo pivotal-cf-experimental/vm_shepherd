@@ -14,14 +14,14 @@ module VmShepherd
       {
         name: 'some-vm-name',
         min_disk_size: 150,
-        network_name: 'some-network',
+        network_name: 'Public',
         key_name: 'some-key',
         security_group_names: [
           'security-group-A',
           'security-group-B',
           'security-group-C',
         ],
-        ip: '198.11.195.5',
+        ip: '192.168.27.129',
       }
     end
 
@@ -29,45 +29,55 @@ module VmShepherd
 
 
     describe '#deploy' do
-      let(:service) { double('Fog::Compute', flavors: flavor_collection, addresses: ip_collection) }
-      let(:server) { double('Fog::Compute::OpenStack::Server') }
-
-      let(:ip_collection) { [ip] }
-      let(:ip) do
-        double('Fog::Compute::OpenStack::Address',
-          instance_id: nil,
-          ip: openstack_vm_options[:ip],
-        )
-      end
-
-      let(:flavor_collection) { [flavor] }
-      let(:flavor) { double('Fog::Compute::OpenStack::Flavor', id: 'flavor-id', disk: 150) }
-
-      let(:image_service) { double('Fog::Image') }
-      let(:image) { double('Fog::Image::OpenStack::Image', id: 'image-id') }
-
-      let(:network_service) { double('Fog::Network', networks: network_collection) }
-      let(:network_collection) { [network] }
-      let(:network) do
-        double('Fog::Compute::OpenStack::Network',
-          name: openstack_vm_options[:network_name],
-          id: 'network-id',
-        )
-      end
-
       let(:path) { 'path/to/qcow2/file' }
       let(:file_size) { 42 }
+
+      let(:compute_service) do
+        Fog::Compute.new(
+          provider: 'openstack',
+          openstack_auth_url: openstack_options[:auth_url],
+          openstack_username: openstack_options[:username],
+          openstack_tenant: openstack_options[:tenant],
+          openstack_api_key: openstack_options[:api_key],
+        )
+      end
+      let(:image_service) do
+        Fog::Image.new(
+          provider: 'openstack',
+          openstack_auth_url: openstack_options[:auth_url],
+          openstack_username: openstack_options[:username],
+          openstack_tenant: openstack_options[:tenant],
+          openstack_api_key: openstack_options[:api_key],
+          openstack_endpoint_type: 'publicURL',
+        )
+      end
+      let(:network_service) do
+        Fog::Network.new(
+          provider: 'openstack',
+          openstack_auth_url: openstack_options[:auth_url],
+          openstack_username: openstack_options[:username],
+          openstack_tenant: openstack_options[:tenant],
+          openstack_api_key: openstack_options[:api_key],
+          openstack_endpoint_type: 'publicURL',
+        )
+      end
+
+      let(:servers) { compute_service.servers }
+      let(:addresses) { compute_service.addresses }
+      let(:instance) { servers.find { |server| server.name == openstack_vm_options[:name] } }
 
       before do
         allow(File).to receive(:size).with(path).and_return(file_size)
 
-        allow(Fog::Compute).to receive(:new).and_return(service)
+        Fog.mock!
+        Fog::Mock.reset
+
+        allow(Fog::Compute).to receive(:new).and_return(compute_service)
         allow(Fog::Image).to receive(:new).and_return(image_service)
         allow(Fog::Network).to receive(:new).and_return(network_service)
-        allow(image_service).to receive_message_chain(:images, :create).and_return(image)
-        allow(service).to receive_message_chain(:servers, :create).and_return(server)
-        allow(server).to receive(:wait_for)
-        allow(ip).to receive(:server=)
+
+        allow(compute_service).to receive(:servers).and_return(servers)
+        allow(compute_service).to receive(:addresses).and_return(addresses)
       end
 
       it 'creates a Fog::Compute connection' do
@@ -115,38 +125,71 @@ module VmShepherd
         file_size = 2
         expect(File).to receive(:size).with(path).and_return(file_size)
 
-        expect(image_service).to receive_message_chain(:images, :create).with(
-            name: openstack_vm_options[:name],
-            size: file_size,
-            disk_format: 'qcow2',
-            container_format: 'bare',
-            location: path,
-          )
-
         openstack_vm_manager.deploy(path, openstack_vm_options)
+
+        uploaded_image = image_service.images.find { |image| image.name == openstack_vm_options[:name] }
+        expect(uploaded_image).to be
+        expect(uploaded_image.size).to eq(file_size)
       end
 
-      it 'launches an image instance' do
-        expect(service).to receive_message_chain(:servers, :create).with(
-            :name => openstack_vm_options[:name],
-            :flavor_ref => flavor.id,
-            :image_ref => image.id,
-            :key_name => openstack_vm_options[:key_name],
-            :security_groups => openstack_vm_options[:security_group_names],
-            :nics => [{net_id: network.id}]
-          )
-        openstack_vm_manager.deploy(path, openstack_vm_options)
+      context 'when launching an instance' do
+        it 'launches an image instance' do
+          openstack_vm_manager.deploy(path, openstack_vm_options)
+
+          expect(instance).to be
+        end
+
+        it 'uses the correct flavor for the instance' do
+          openstack_vm_manager.deploy(path, openstack_vm_options)
+
+          instance_flavor = compute_service.flavors.find { |flavor| flavor.id == instance.flavor['id'] }
+          expect(instance_flavor.disk).to be >= 150
+        end
+
+        it 'uses the previously uploaded image' do
+          openstack_vm_manager.deploy(path, openstack_vm_options)
+
+          instance_image = image_service.images.get instance.image['id']
+          expect(instance_image.name).to eq(openstack_vm_options[:name])
+        end
+
+        it 'assigns the correct key_name to the instance' do
+          expect(servers).to receive(:create).with(
+              hash_including(:key_name => openstack_vm_options[:key_name])
+            ).and_call_original
+
+          openstack_vm_manager.deploy(path, openstack_vm_options)
+        end
+
+        it 'assigns the correct security groups' do
+          expect(servers).to receive(:create).with(
+              hash_including(:security_groups => openstack_vm_options[:security_group_names])
+            ).and_call_original
+
+          openstack_vm_manager.deploy(path, openstack_vm_options)
+        end
+
+        it 'assigns the correct network id' do
+          assigned_network = network_service.networks.find { |network| network.name == openstack_vm_options[:network_name] }
+          expect(servers).to receive(:create).with(
+              hash_including(:nics => [{ net_id: assigned_network.id }])
+            ).and_call_original
+
+          openstack_vm_manager.deploy(path, openstack_vm_options)
+        end
       end
 
       it 'waits for the server to be ready' do
-        expect(server).to receive(:wait_for)
-
         openstack_vm_manager.deploy(path, openstack_vm_options)
+
+        expect(instance.state).to eq('ACTIVE')
       end
 
       it 'assigns an IP to the instance' do
-        expect(ip).to receive(:server=).with(server)
         openstack_vm_manager.deploy(path, openstack_vm_options)
+        ip = addresses.find { |address| address.ip == openstack_vm_options[:ip] }
+
+        expect(ip.instance_id).to eq(instance.id)
       end
     end
 

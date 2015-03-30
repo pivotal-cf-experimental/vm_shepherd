@@ -27,40 +27,60 @@ module VmShepherd
 
     subject(:openstack_vm_manager) { OpenstackVmManager.new(openstack_options) }
 
+    describe '#service' do
+      it 'creates a Fog::Compute connection' do
+        expect(Fog::Compute).to receive(:new).with(
+            {
+              provider: 'openstack',
+              openstack_auth_url: openstack_options[:auth_url],
+              openstack_username: openstack_options[:username],
+              openstack_tenant: openstack_options[:tenant],
+              openstack_api_key: openstack_options[:api_key],
+            }
+          )
+        openstack_vm_manager.service
+      end
+    end
+
+    describe '#image_service' do
+      it 'creates a Fog::Image connection' do
+        expect(Fog::Image).to receive(:new).with(
+            {
+              provider: 'openstack',
+              openstack_auth_url: openstack_options[:auth_url],
+              openstack_username: openstack_options[:username],
+              openstack_tenant: openstack_options[:tenant],
+              openstack_api_key: openstack_options[:api_key],
+              openstack_endpoint_type: 'publicURL',
+            }
+          )
+        openstack_vm_manager.image_service
+      end
+    end
+
+    describe '#network_service' do
+      it 'creates a Fog::Network connection' do
+        expect(Fog::Network).to receive(:new).with(
+            {
+              provider: 'openstack',
+              openstack_auth_url: openstack_options[:auth_url],
+              openstack_username: openstack_options[:username],
+              openstack_tenant: openstack_options[:tenant],
+              openstack_api_key: openstack_options[:api_key],
+              openstack_endpoint_type: 'publicURL',
+            }
+          )
+        openstack_vm_manager.network_service
+      end
+    end
 
     describe '#deploy' do
       let(:path) { 'path/to/qcow2/file' }
       let(:file_size) { 42 }
 
-      let(:compute_service) do
-        Fog::Compute.new(
-          provider: 'openstack',
-          openstack_auth_url: openstack_options[:auth_url],
-          openstack_username: openstack_options[:username],
-          openstack_tenant: openstack_options[:tenant],
-          openstack_api_key: openstack_options[:api_key],
-        )
-      end
-      let(:image_service) do
-        Fog::Image.new(
-          provider: 'openstack',
-          openstack_auth_url: openstack_options[:auth_url],
-          openstack_username: openstack_options[:username],
-          openstack_tenant: openstack_options[:tenant],
-          openstack_api_key: openstack_options[:api_key],
-          openstack_endpoint_type: 'publicURL',
-        )
-      end
-      let(:network_service) do
-        Fog::Network.new(
-          provider: 'openstack',
-          openstack_auth_url: openstack_options[:auth_url],
-          openstack_username: openstack_options[:username],
-          openstack_tenant: openstack_options[:tenant],
-          openstack_api_key: openstack_options[:api_key],
-          openstack_endpoint_type: 'publicURL',
-        )
-      end
+      let(:compute_service) { subject.service }
+      let(:image_service) { subject.image_service }
+      let(:network_service) { subject.network_service }
 
       let(:servers) { compute_service.servers }
       let(:addresses) { compute_service.addresses }
@@ -73,53 +93,8 @@ module VmShepherd
         Fog.mock!
         Fog::Mock.reset
 
-        allow(Fog::Compute).to receive(:new).and_return(compute_service)
-        allow(Fog::Image).to receive(:new).and_return(image_service)
-        allow(Fog::Network).to receive(:new).and_return(network_service)
-
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(compute_service).to receive(:addresses).and_return(addresses)
-      end
-
-      it 'creates a Fog::Compute connection' do
-        expect(Fog::Compute).to receive(:new).with(
-            {
-              provider: 'openstack',
-              openstack_auth_url: openstack_options[:auth_url],
-              openstack_username: openstack_options[:username],
-              openstack_tenant: openstack_options[:tenant],
-              openstack_api_key: openstack_options[:api_key],
-            }
-          )
-        openstack_vm_manager.deploy(path, openstack_vm_options)
-      end
-
-      it 'creates a Fog::Image connection' do
-        expect(Fog::Image).to receive(:new).with(
-            {
-              provider: 'openstack',
-              openstack_auth_url: openstack_options[:auth_url],
-              openstack_username: openstack_options[:username],
-              openstack_tenant: openstack_options[:tenant],
-              openstack_api_key: openstack_options[:api_key],
-              openstack_endpoint_type: 'publicURL',
-            }
-          )
-        openstack_vm_manager.deploy(path, openstack_vm_options)
-      end
-
-      it 'creates a Fog::Network connection' do
-        expect(Fog::Network).to receive(:new).with(
-            {
-              provider: 'openstack',
-              openstack_auth_url: openstack_options[:auth_url],
-              openstack_username: openstack_options[:username],
-              openstack_tenant: openstack_options[:tenant],
-              openstack_api_key: openstack_options[:api_key],
-              openstack_endpoint_type: 'publicURL',
-            }
-          )
-        openstack_vm_manager.deploy(path, openstack_vm_options)
       end
 
       it 'uploads the image' do

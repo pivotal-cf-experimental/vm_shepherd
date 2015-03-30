@@ -51,14 +51,6 @@ module VmShepherd
       image.destroy
     end
 
-    private
-
-    attr_reader :auth_url, :username, :api_key, :tenant
-
-    def say(message)
-      puts message
-    end
-
     def service
       @service ||= Fog::Compute.new(
         provider: 'openstack',
@@ -89,6 +81,14 @@ module VmShepherd
         openstack_api_key: api_key,
         openstack_endpoint_type: 'publicURL',
       )
+    end
+
+    private
+
+    attr_reader :auth_url, :username, :api_key, :tenant
+
+    def say(message)
+      puts message
     end
 
     def find_flavor(min_disk)

@@ -6,7 +6,6 @@ module VmShepherd
     end
 
     AWS_REGION = 'us-east-1'
-    OPS_MANAGER_PRIVATE_IP = '10.0.1.5'
     OPS_MANAGER_INSTANCE_TYPE = 'm3.medium'
     RETRY_LIMIT = 60
     RETRY_INTERVAL = 5
@@ -31,7 +30,6 @@ module VmShepherd
             key_name: aws_options.fetch(:ssh_key_name),
             security_group_ids: [aws_options.fetch(:security_group_id)],
             subnet: aws_options.fetch(:public_subnet_id),
-            private_ip_address: OPS_MANAGER_PRIVATE_IP,
             instance_type: OPS_MANAGER_INSTANCE_TYPE
           )
         end

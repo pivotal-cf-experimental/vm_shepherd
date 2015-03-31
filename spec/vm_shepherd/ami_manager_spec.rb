@@ -48,7 +48,6 @@ module VmShepherd
             key_name: 'ssh-key-name',
             security_group_ids: ['security-group-id'],
             subnet: aws_options.fetch(:public_subnet_id),
-            private_ip_address: AmiManager::OPS_MANAGER_PRIVATE_IP,
             instance_type: 'm3.medium').and_return(instance)
 
         ami_manager.deploy(ami_file_path)

@@ -1,4 +1,5 @@
 require 'vm_shepherd/openstack_vm_manager'
+require 'support/patched_fog'
 
 module VmShepherd
   RSpec.describe OpenstackVmManager do
@@ -78,9 +79,9 @@ module VmShepherd
       let(:path) { 'path/to/qcow2/file' }
       let(:file_size) { 42 }
 
-      let(:compute_service) { subject.service }
-      let(:image_service) { subject.image_service }
-      let(:network_service) { subject.network_service }
+      let(:compute_service) { openstack_vm_manager.service }
+      let(:image_service) { openstack_vm_manager.image_service }
+      let(:network_service) { openstack_vm_manager.network_service }
 
       let(:servers) { compute_service.servers }
       let(:addresses) { compute_service.addresses }
@@ -88,7 +89,7 @@ module VmShepherd
 
       before do
         allow(File).to receive(:size).with(path).and_return(file_size)
-        allow(subject).to receive(:say)
+        allow(openstack_vm_manager).to receive(:say)
 
         Fog.mock!
         Fog::Mock.reset
@@ -170,54 +171,51 @@ module VmShepherd
     end
 
     describe '#destroy' do
-      let(:service) { double('Fog::Compute', addresses: ip_collection) }
-      let(:ip_collection) { [ip] }
-      let(:ip) do
-        double('Fog::Compute::OpenStack::Address',
-          instance_id: 'my-instance-id',
-          ip: openstack_vm_options[:ip],
-        )
-      end
+      include PatchedFog
 
-      let(:image_service) { double('Fog::Image') }
-      let(:image) { double('Fog::Image::OpenStack::Image', id: 'image-id') }
+      let(:path) { 'path/to/qcow2/file' }
+      let(:file_size) { 42 }
 
-      let(:server) { double('Fog::Compute::OpenStack::Server', image: { 'id' => image.id }) }
+      let(:compute_service) { openstack_vm_manager.service }
+      let(:image_service) { openstack_vm_manager.image_service }
+      let(:network_service) { openstack_vm_manager.network_service }
+
+      let(:servers) { compute_service.servers }
+      let(:addresses) { compute_service.addresses }
+      let(:images) { image_service.images }
+      let(:image) { images.find { |image| image.name == openstack_vm_options[:name] } }
+      let(:instance) { servers.find { |server| server.name == openstack_vm_options[:name] } }
 
       before do
-        allow(Fog::Compute).to receive(:new).and_return(service)
-        allow(Fog::Image).to receive(:new).and_return(image_service)
-        allow(image_service).to receive_message_chain(:images, :get).and_return(image)
-        allow(service).to receive_message_chain(:servers, :get).and_return(server)
-        allow(server).to receive(:destroy)
-        allow(image).to receive(:destroy)
-      end
+        allow(File).to receive(:size).with(path).and_return(file_size)
+        allow(openstack_vm_manager).to receive(:say)
 
-      it 'creates a Fog::Compute connection' do
-        expect(Fog::Compute).to receive(:new).with(
-            {
-              provider: 'openstack',
-              openstack_auth_url: openstack_options[:auth_url],
-              openstack_username: openstack_options[:username],
-              openstack_tenant: openstack_options[:tenant],
-              openstack_api_key: openstack_options[:api_key],
-            }
-          )
-        openstack_vm_manager.destroy(openstack_vm_options)
+        Fog.mock!
+        Fog::Mock.reset
+
+        allow(compute_service).to receive(:servers).and_return(servers)
+        allow(compute_service).to receive(:addresses).and_return(addresses)
+        allow(image_service).to receive(:images).and_return(images)
+
+        openstack_vm_manager.deploy(path, openstack_vm_options)
       end
 
       it 'calls destroy on the correct instance' do
-        expect(service).to receive_message_chain(:servers, :get).with(ip.instance_id)
-        expect(server).to receive(:destroy)
+        destroy_correct_server = change do
+          servers.reload
+          servers.find { |server| server.name == openstack_vm_options[:name] }
+        end.to(nil)
 
-        openstack_vm_manager.destroy(openstack_vm_options)
+        expect { openstack_vm_manager.destroy(openstack_vm_options) }.to(destroy_correct_server)
       end
 
       it 'calls destroy on the correct image' do
-        expect(image_service).to receive_message_chain(:images, :get).with(image.id).and_return(image)
-        expect(image).to receive(:destroy)
+        destroy_correct_image = change do
+          images.reload
+          images.find { |image| image.name == openstack_vm_options[:name] }
+        end.to(nil)
 
-        openstack_vm_manager.destroy(openstack_vm_options)
+        expect { openstack_vm_manager.destroy(openstack_vm_options) }.to(destroy_correct_image)
       end
     end
   end

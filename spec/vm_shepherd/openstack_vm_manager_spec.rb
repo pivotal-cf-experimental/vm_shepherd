@@ -3,6 +3,8 @@ require 'support/patched_fog'
 
 module VmShepherd
   RSpec.describe OpenstackVmManager do
+    include PatchedFog
+
     let(:openstack_options) do
       {
         auth_url: 'http://example.com',
@@ -93,6 +95,7 @@ module VmShepherd
 
         Fog.mock!
         Fog::Mock.reset
+        Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(compute_service).to receive(:addresses).and_return(addresses)
@@ -158,7 +161,6 @@ module VmShepherd
 
       it 'waits for the server to be ready' do
         openstack_vm_manager.deploy(path, openstack_vm_options)
-
         expect(instance.state).to eq('ACTIVE')
       end
 
@@ -171,8 +173,6 @@ module VmShepherd
     end
 
     describe '#destroy' do
-      include PatchedFog
-
       let(:path) { 'path/to/qcow2/file' }
       let(:file_size) { 42 }
 
@@ -192,6 +192,7 @@ module VmShepherd
 
         Fog.mock!
         Fog::Mock.reset
+        Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(compute_service).to receive(:addresses).and_return(addresses)

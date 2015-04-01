@@ -6,6 +6,7 @@ module PatchedFog
   def self.included(spec)
     spec.before do
       stub_const('::Fog::Image::OpenStack::Mock', PatchedFog::ImageMock)
+      stub_const('::Fog::Time', ::Time)
     end
   end
 

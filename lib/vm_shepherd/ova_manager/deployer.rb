@@ -2,7 +2,7 @@ require 'tmpdir'
 require 'fileutils'
 require 'rbvmomi'
 require 'rbvmomi/utils/deploy'
-require 'vsphere_clients'
+require 'vm_shepherd/ova_manager/vsphere_clients/cached_ovf_deployer'
 require 'vm_shepherd/ova_manager/base'
 require 'vm_shepherd/ova_manager/open_monkey_patch'
 

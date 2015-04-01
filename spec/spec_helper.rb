@@ -26,3 +26,13 @@ RSpec.configure do |config|
 
   Kernel.srand config.seed #this allows you to use `--seed` to deterministically reproduce failures
 end
+
+def vcenter_config_hash
+  {
+    vcenter_ip: ENV['VCENTER_IP'],
+    username: ENV['USERNAME'],
+    password: ENV['PASSWORD'],
+    datacenter_name: ENV['DATACENTER_NAME'],
+    datastore_name: ENV['DATASTORE_NAME'],
+  }
+end

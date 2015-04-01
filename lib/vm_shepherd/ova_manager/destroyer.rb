@@ -1,6 +1,6 @@
 require 'rbvmomi'
 require 'logger'
-require 'vsphere_clients/vm_folder_client'
+require 'vm_shepherd/ova_manager/vsphere_clients/vm_folder_client'
 require 'vm_shepherd/ova_manager/base'
 
 module VmShepherd

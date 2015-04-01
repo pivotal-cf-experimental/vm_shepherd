@@ -23,7 +23,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'ruby_vcloud_sdk', '~> 0.7.0'
 
   spec.add_dependency 'rbvmomi'
-  spec.add_dependency 'vsphere_clients'
 
   spec.add_development_dependency 'rake', '~> 10.0'
   spec.add_development_dependency 'rspec', '~> 3.2'

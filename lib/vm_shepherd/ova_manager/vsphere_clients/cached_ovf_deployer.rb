@@ -47,38 +47,39 @@ module VsphereClients
       networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
       network_mappings = Hash[networks.map { |x| [x, @network] }]
 
-      network_mappings_str = network_mappings.map { |k, v| "#{k} = #{v.name}" }
-      puts "networks: #{network_mappings_str.join(', ')} @ #{DateTime.now}"
+      puts "networks: #{network_mappings.inspect} @ #{DateTime.now}"
 
-      pc = @connection.serviceContent.propertyCollector
+      property_collector = @connection.serviceContent.propertyCollector
 
-      # OVFs need to be uploaded to a specific host. DRS won't just pick one
-      # for us, so we need to pick one wisely. The host needs to be connected,
-      # not be in maintenance mode and must have the destination datastore
-      # accessible.
       hosts = @cluster.host
-      hosts_props = pc.collectMultiple(
-        hosts,
-        'datastore', 'runtime.connectionState',
-        'runtime.inMaintenanceMode', 'name'
-      )
-      host = hosts.shuffle.find do |x|
-        host_props = hosts_props[x]
-        is_connected = host_props['runtime.connectionState'] == 'connected'
-        is_ds_accessible = host_props['datastore'].member?(@datastore)
-        is_connected && is_ds_accessible && !host_props['runtime.inMaintenanceMode']
-      end
-      if !host
+      host_properties_by_host =
+        property_collector.collectMultiple(
+          hosts,
+          'datastore',
+          'runtime.connectionState',
+          'runtime.inMaintenanceMode',
+          'name',
+        )
+
+      # OVFs need to be uploaded to a specific host. The host needs to be:
+      found_host =
+        hosts.shuffle.find do |host|
+          (host_properties_by_host[host]['runtime.connectionState'] == 'connected') && # connected
+            host_properties_by_host[host]['datastore'].member?(@datastore) && # must have the destination datastore
+            !host_properties_by_host[host]['runtime.inMaintenanceMode'] #not be in maintenance mode
+        end
+
+      if !found_host
         fail 'No host in the cluster available to upload OVF to'
       end
 
-      puts "Uploading OVF to #{hosts_props[host]['name']}... @ #{DateTime.now}"
+      puts "Uploading OVF to #{host_properties_by_host[found_host]['name']}... @ #{DateTime.now}"
       property_mappings = {}
 
       # To work around the VMFS 8-host limit (existed until ESX 5.0), as
       # well as just for organization purposes, we create one template per
       # cluster. This also provides us with additional isolation.
-      vm_name = template_name+"-#{@cluster.name}"
+      vm_name = "#{host_properties_by_host[host]}-#{@cluster.name}"
 
       vm = nil
       wait_for_template = false
@@ -89,15 +90,17 @@ module VsphereClients
       # single thread or process.
       run_without_interruptions do
         begin
-          vm = @connection.serviceContent.ovfManager.deployOVF(
-            uri: ovf_url,
-            vmName: vm_name,
-            vmFolder: @folder,
-            host: host,
-            resourcePool: resource_pool,
-            datastore: @datastore,
-            networkMappings: network_mappings,
-            propertyMappings: property_mappings)
+          vm =
+            @connection.serviceContent.ovfManager.deployOVF(
+              uri: ovf_url,
+              vmName: vm_name,
+              vmFolder: @folder,
+              host: found_host,
+              resourcePool: resource_pool,
+              datastore: @datastore,
+              networkMappings: network_mappings,
+              propertyMappings: property_mappings,
+            )
         rescue RbVmomi::Fault => fault
           # If two threads execute this script at the same time to upload
           # the same template under the same name, one will win and the other
@@ -121,7 +124,7 @@ module VsphereClients
           vm.add_delta_disk_layer_on_all_disks
           if opts[:config]
             # XXX: Should we add a version that does retries?
-            vm.ReconfigVM_Task(:spec => opts[:config]).wait_for_completion
+            vm.ReconfigVM_Task(spec: opts[:config]).wait_for_completion
           end
           vm.MarkAsTemplate
         end
@@ -131,7 +134,7 @@ module VsphereClients
       # uploading and preparing the template
       if wait_for_template
         puts "Template already exists, waiting for it to be ready @ #{DateTime.now}"
-        vm = wait_for_template_ready @folder, vm_name
+        vm = wait_for_template_ready(@folder, vm_name)
         puts "Template fully prepared and ready to be cloned @ #{DateTime.now}"
       end
 

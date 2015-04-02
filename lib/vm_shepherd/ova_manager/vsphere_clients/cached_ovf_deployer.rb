@@ -262,7 +262,7 @@ module VsphereClients
       end
       log 'Template VM found'
       sleep 2
-      while true
+      loop do
         runtime, template = vm.collect 'runtime', 'config.template'
         ready = runtime && runtime.host && runtime.powerState == 'poweredOff'
         ready = ready && template

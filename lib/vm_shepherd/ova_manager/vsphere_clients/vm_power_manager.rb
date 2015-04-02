@@ -1,3 +1,4 @@
+
 module VsphereClients
   class VmPowerManager
     def initialize(vm, logger)
@@ -26,7 +27,7 @@ module VsphereClients
 
     def with_retry(tries=2, &blk)
       blk.call
-    rescue Exception => e
+    rescue StandardError => e
       tries -= 1
       if e.message.start_with?('InvalidPowerState') && tries > 0
         retry

@@ -1,16 +1,5 @@
-require 'vm_shepherd/vapp_manager/deployer'
-require 'vm_shepherd/vapp_manager/destroyer'
-require 'vm_shepherd/ova_manager/deployer'
-require 'vm_shepherd/ova_manager/destroyer'
-require 'vm_shepherd/ami_manager'
-require 'vm_shepherd/openstack_vm_manager'
-
 module VmShepherd
   class Shepherd
-    VCLOUD_IAAS_TYPE = 'vcloud'.freeze
-    VSPHERE_IAAS_TYPE = 'vsphere'.freeze
-    AWS_IAAS_TYPE = 'aws'.freeze
-    OPENSTACK_IAAS_TYPE = 'openstack'.freeze
     VSPHERE_TEMPLATE_PREFIX = 'tpl'.freeze
 
     class InvalidIaas < StandardError
@@ -23,20 +12,20 @@ module VmShepherd
 
     def deploy(path:)
       case settings.iaas_type
-        when VCLOUD_IAAS_TYPE then
+        when VmShepherd::VCLOUD_IAAS_TYPE then
           vcloud_deployer.deploy(
             path,
             vcloud_deploy_options,
           )
-        when VSPHERE_IAAS_TYPE then
+        when VmShepherd::VSPHERE_IAAS_TYPE then
           vsphere_deployer.deploy(
             VSPHERE_TEMPLATE_PREFIX,
             path,
             vsphere_deploy_options,
           )
-        when AWS_IAAS_TYPE then
+        when VmShepherd::AWS_IAAS_TYPE then
           ami_manager.deploy(path)
-        when OPENSTACK_IAAS_TYPE then
+        when VmShepherd::OPENSTACK_IAAS_TYPE then
           openstack_vm_manager.deploy(path, openstack_vm_options)
         else
           fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
@@ -45,7 +34,7 @@ module VmShepherd
 
     def destroy
       case settings.iaas_type
-        when VCLOUD_IAAS_TYPE then
+        when VmShepherd::VCLOUD_IAAS_TYPE then
           VmShepherd::VappManager::Destroyer.new(
             {
               url: settings.vapp_deployer.creds.url,
@@ -59,7 +48,7 @@ module VmShepherd
             },
             Logger.new(STDOUT).tap { |l| l.level = Logger::Severity::ERROR }
           ).destroy(settings.vapp_deployer.vapp.name)
-        when VSPHERE_IAAS_TYPE then
+        when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::OvaManager::Destroyer.new(
             settings.vm_deployer.vsphere.datacenter,
             {
@@ -68,9 +57,9 @@ module VmShepherd
               password: settings.vm_deployer.vcenter_creds.password,
             }
           ).clean_folder(settings.vm_deployer.vsphere.folder)
-        when AWS_IAAS_TYPE then
+        when VmShepherd::AWS_IAAS_TYPE then
           ami_manager.destroy
-        when OPENSTACK_IAAS_TYPE then
+        when VmShepherd::OPENSTACK_IAAS_TYPE then
           openstack_vm_manager.destroy(openstack_vm_options)
         else
           fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")

@@ -1,4 +1,4 @@
-require 'vm_shepherd/shepherd'
+require 'vm_shepherd'
 require 'recursive_open_struct'
 
 module VmShepherd

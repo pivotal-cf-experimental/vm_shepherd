@@ -17,14 +17,14 @@ module VmShepherd
         @datacenter_name = datacenter_name
       end
 
-      def deploy(name_prefix, ova_path, ova_config, location)
+      def deploy(name_prefix, ova_path, ova_config, vsphere_config)
         ova_path = File.expand_path(ova_path.strip)
         ensure_no_running_vm(ova_config)
 
         tmp_dir = untar_vbox_ova(ova_path)
         ovf_path = obtain_ovf_path(tmp_dir)
 
-        deployer = build_deployer(location)
+        deployer = build_deployer(vsphere_config)
         template = deploy_ovf_template(name_prefix, deployer, ovf_path)
         vm = create_vm_from_template(deployer, template)
 
@@ -136,31 +136,31 @@ module VmShepherd
         wait_for('VM IP') { vm.guest_ip }
       end
 
-      def build_deployer(location)
-        raise 'Target folder must be set' unless location[:folder]
+      def build_deployer(vsphere_config)
+        raise 'Target folder must be set' unless vsphere_config[:folder]
 
         unless (datacenter = find_datacenter(datacenter_name))
           raise "Failed to find datacenter '#{datacenter_name}'"
         end
 
-        unless (cluster = datacenter.find_compute_resource(location[:cluster]))
-          raise "Failed to find cluster '#{location[:cluster]}'"
+        unless (cluster = datacenter.find_compute_resource(vsphere_config[:cluster]))
+          raise "Failed to find cluster '#{vsphere_config[:cluster]}'"
         end
 
-        unless (datastore = datacenter.find_datastore(location[:datastore]))
-          raise "Failed to find datastore '#{location[:datastore]}'"
+        unless (datastore = datacenter.find_datastore(vsphere_config[:datastore]))
+          raise "Failed to find datastore '#{vsphere_config[:datastore]}'"
         end
 
-        unless (network = datacenter.networkFolder.traverse(location[:network]))
-          raise "Failed to find network '#{location[:network]}'"
+        unless (network = datacenter.networkFolder.traverse(vsphere_config[:network]))
+          raise "Failed to find network '#{vsphere_config[:network]}'"
         end
 
-        resource_pool_name = location[:resource_pool] || location[:resource_pool_name]
+        resource_pool_name = vsphere_config[:resource_pool] || vsphere_config[:resource_pool_name]
         unless (resource_pool = find_resource_pool(cluster, resource_pool_name))
           raise "Failed to find resource pool '#{resource_pool_name}'"
         end
 
-        target_folder = datacenter.vmFolder.traverse(location[:folder], RbVmomi::VIM::Folder, true)
+        target_folder = datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)
 
         puts "--- Running: connecting to #{username}@#{host} @ #{DateTime.now}"
         VsphereClients::CachedOvfDeployer.new(

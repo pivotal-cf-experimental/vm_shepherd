@@ -13,4 +13,4 @@ docker run \
   --env=DATACENTER_NAME=${DATACENTER_NAME} \
   --env=DATASTORE_NAME=${DATASTORE_NAME} \
   ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME} \
-  /bin/sh -c 'bundle && bundle exec rspec --format documentation'
+  /bin/sh -c 'bundle && bundle exec rake -t'

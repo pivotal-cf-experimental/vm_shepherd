@@ -166,8 +166,9 @@ module VmShepherd
 
         target_folder = datacenter.vmFolder.traverse(location[:folder], RbVmomi::VIM::Folder, true)
 
+        log("connecting to #{@vcenter[:user]}@#{@vcenter[:host]}")
         VsphereClients::CachedOvfDeployer.new(
-          logged_connection,
+          connection,
           network,
           cluster,
           resource_pool,
@@ -185,13 +186,9 @@ module VmShepherd
         end
       end
 
-      def logged_connection
-        log("connecting to #{@vcenter[:user]}@#{@vcenter[:host]}") { connection }
-      end
-
       def log(title, &blk)
         puts "--- Running: #{title} @ #{DateTime.now}"
-        blk.call
+        blk.call if blk
       end
 
       def system_or_exit(*args)

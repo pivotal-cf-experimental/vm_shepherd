@@ -79,7 +79,6 @@ module VmShepherd
         deployer.upload_ovf_as_template(
           ovf_path,
           Time.new.strftime("#{name_prefix}-%F-%H-%M"),
-          run_without_interruptions: true,
         )
       end
 
@@ -166,8 +165,7 @@ module VmShepherd
           network,
           cluster,
           resource_pool,
-          target_folder, # template
-          target_folder, # vm
+          target_folder,
           datastore,
         )
       end

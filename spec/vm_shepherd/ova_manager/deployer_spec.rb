@@ -87,7 +87,6 @@ module VmShepherd
                   cluster,
                   a_resource_pool,
                   target_folder,
-                  target_folder,
                   datastore
                 ).and_return(cached_ova_deployer)
 
@@ -124,7 +123,6 @@ module VmShepherd
                 network,
                 cluster,
                 cluster_resource_pool,
-                target_folder,
                 target_folder,
                 datastore
               ).and_return(cached_ova_deployer)

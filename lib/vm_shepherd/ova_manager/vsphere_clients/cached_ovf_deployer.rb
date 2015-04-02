@@ -4,30 +4,23 @@ require 'rbvmomi'
 
 module VsphereClients
   class CachedOvfDeployer
-    attr_reader :resource_pool, :computer
+    attr_reader :resource_pool, :cluster
 
     # Constructor. Gets the VIM connection and important VIM objects
-    # @param vim [VIM] VIM Connection
+    # @param connection [VIM] VIM Connection
     # @param network [VIM::Network] Network to attach templates and VMs to
-    # @param computer [VIM::ComputeResource] Host/Cluster to deploy templates/VMs to
-    # @param template_folder [VIM::Folder] Folder in which all templates are kept
-    # @param vm_folder [VIM::Folder] Folder into which to deploy VMs
+    # @param cluster [VIM::ComputeResource] Host/Cluster to deploy templates/VMs to
+    # @param folder [VIM::Folder] Folder in which all templates are kept
     # @param datastore [VIM::Folder] Datastore to store template/VM in
-    def initialize(vim, network, computer, resource_pool, template_folder, vm_folder, datastore)
-      @vim = vim
+    def initialize(connection, network, cluster, resource_pool, folder, datastore)
+      @connection = connection
       @network = network
-      @computer = computer
+      @cluster = cluster
       @resource_pool = resource_pool
-      @template_folder = template_folder
-      @vmfolder = vm_folder
+      @folder = folder
       @datastore = datastore
     end
-
-    def log(x)
-      # XXX: Should find a better way for users to customize how logging is done
-      puts "#{Time.now}: #{x}"
-    end
-
+    
     # Uploads an OVF, prepares the resulting VM for linked cloning and then marks
     # it as a template. If another thread happens to race to do the same task,
     # the losing thread will not do the actual work, but instead wait for the
@@ -42,11 +35,8 @@ module VsphereClients
     # @option opts [int]  :run_without_interruptions Whether or not to disable
     #                                                SIGINT and SIGTERM during
     #                                                the OVF upload.
-    # @option opts [Hash] :config VM Config delta to apply after the OVF deploy is
-    #                             done. Allows the template to be customized, e.g.
-    #                             to set annotations.
     # @return [VIM::VirtualMachine] The template as a VIM::VirtualMachine instance
-    def upload_ovf_as_template(ovf_url, template_name, opts = {})
+    def upload_ovf_as_template(ovf_url, template_name)
       # The OVFManager expects us to know the names of the networks mentioned
       # in the OVF file so we can map them to VIM::Network objects. For
       # simplicity this function assumes we need to read the OVF file
@@ -58,15 +48,15 @@ module VsphereClients
       network_mappings = Hash[networks.map{|x| [x, @network]}]
 
       network_mappings_str = network_mappings.map{|k, v| "#{k} = #{v.name}"}
-      log "networks: #{network_mappings_str.join(', ')}"
+      puts "networks: #{network_mappings_str.join(', ')} @ #{DateTime.now}"
 
-      pc = @vim.serviceContent.propertyCollector
+      pc = @connection.serviceContent.propertyCollector
 
       # OVFs need to be uploaded to a specific host. DRS won't just pick one
       # for us, so we need to pick one wisely. The host needs to be connected,
       # not be in maintenance mode and must have the destination datastore
       # accessible.
-      hosts = @computer.host
+      hosts = @cluster.host
       hosts_props = pc.collectMultiple(
         hosts,
         'datastore', 'runtime.connectionState',
@@ -82,13 +72,13 @@ module VsphereClients
         fail 'No host in the cluster available to upload OVF to'
       end
 
-      log "Uploading OVF to #{hosts_props[host]['name']}..."
+      puts "Uploading OVF to #{hosts_props[host]['name']}... @ #{DateTime.now}"
       property_mappings = {}
 
       # To work around the VMFS 8-host limit (existed until ESX 5.0), as
       # well as just for organization purposes, we create one template per
       # cluster. This also provides us with additional isolation.
-      vm_name = template_name+"-#{@computer.name}"
+      vm_name = template_name+"-#{@cluster.name}"
 
       vm = nil
       wait_for_template = false
@@ -97,12 +87,12 @@ module VsphereClients
       # This is desirable, as other threads depend on this thread finishing
       # its prepare job and thus interrupting it has impacts beyond this
       # single thread or process.
-      run_without_interruptions(opts[:run_without_interruptions]) do
+      run_without_interruptions do
         begin
-          vm = @vim.serviceContent.ovfManager.deployOVF(
+          vm = @connection.serviceContent.ovfManager.deployOVF(
             uri: ovf_url,
             vmName: vm_name,
-            vmFolder: @template_folder,
+            vmFolder: @folder,
             host: host,
             resourcePool: resource_pool,
             datastore: @datastore,
@@ -140,31 +130,12 @@ module VsphereClients
       # The losing thread now needs to wait for the winning thread to finish
       # uploading and preparing the template
       if wait_for_template
-        log 'Template already exists, waiting for it to be ready'
-        vm = wait_for_template_ready @template_folder, vm_name
-        log 'Template fully prepared and ready to be cloned'
+        puts "Template already exists, waiting for it to be ready @ #{DateTime.now}"
+        vm = wait_for_template_ready @folder, vm_name
+        puts "Template fully prepared and ready to be cloned @ #{DateTime.now}"
       end
 
       vm
-    end
-
-    # Looks up a template by name in the configured template_path. Should be used
-    # before uploading the VM via upload_ovf_as_template, although that is
-    # not strictly required, but a lot more efficient.
-    # @param template_name [String] Name of the template to be used. A cluster
-    #                               specific post-fix will automatically be added.
-    # @return [VIM::VirtualMachine] The template as a VIM::VirtualMachine instance
-    #                               or nil
-    def lookup_template(template_name)
-      template_path = "#{template_name}-#{@computer.name}"
-      template = @template_folder.traverse(template_path, VIM::VirtualMachine)
-      if template
-        is_template = template.collect 'config.template'
-        if !is_template
-          template = nil
-        end
-      end
-      template
     end
 
     # Creates a linked clone of a template prepared with upload_ovf_as_template.
@@ -195,10 +166,10 @@ module VsphereClients
       }
       if opts[:is_template]
         wait_for_template = false
-        template_name = "#{vm_name}-#{@computer.name}"
+        template_name = "#{vm_name}-#{@cluster.name}"
         begin
           vm = template_vm.CloneVM_Task(
-            folder: @template_folder,
+            folder: @folder,
             name: template_name,
             spec: spec
           ).wait_for_completion
@@ -212,12 +183,12 @@ module VsphereClients
 
         if wait_for_template
           puts "#{Time.now}: Template already exists, waiting for it to be ready"
-          vm = wait_for_template_ready @template_folder, template_name
+          vm = wait_for_template_ready @folder, template_name
           puts "#{Time.now}: Template ready"
         end
       else
         vm = template_vm.CloneVM_Task(
-          folder: @vmfolder,
+          folder: @folder,
           name: vm_name,
           spec: spec
         ).wait_for_completion
@@ -230,19 +201,14 @@ module VsphereClients
     # Internal helper method that executes the passed in block while disabling
     # the handling of SIGINT and SIGTERM signals. Restores their handlers after
     # the block is executed.
-    # @param enabled [Boolean] If false, this function is a no-op
-    def run_without_interruptions(enabled)
-      if enabled
-        int_handler = Signal.trap('SIGINT', 'IGNORE')
-        term_handler = Signal.trap('SIGTERM', 'IGNORE')
-      end
+    def run_without_interruptions
+      int_handler = Signal.trap('SIGINT', 'IGNORE')
+      term_handler = Signal.trap('SIGTERM', 'IGNORE')
 
       yield
 
-      if enabled
-        Signal.trap('SIGINT', int_handler)
-        Signal.trap('SIGTERM', term_handler)
-      end
+      Signal.trap('SIGINT', int_handler)
+      Signal.trap('SIGTERM', term_handler)
     end
 
     # Internal helper method that waits for a template to be fully created. It
@@ -260,7 +226,7 @@ module VsphereClients
         # XXX: Optimize this
         vm = vm_folder.children.find{|x| x.name == vm_name}
       end
-      log 'Template VM found'
+      puts "Template VM found @ #{DateTime.now}"
       sleep 2
       loop do
         runtime, template = vm.collect 'runtime', 'config.template'

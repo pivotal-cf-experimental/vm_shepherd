@@ -32,19 +32,6 @@ module VsphereClients
       raise
     end
 
-    def folder_exists?(folder_name)
-      !find_folder(folder_name).nil?
-    end
-
-    def find_vms_by_folder_name(folder_name)
-      if (folder = find_folder(folder_name))
-        find_vms(folder)
-      else
-        @logger.info("vm_folder_client.find_vms_in_folder.missing folder=#{folder_name}")
-        []
-      end
-    end
-
     def datacenter
       @datacenter ||= begin
         match = connection.searchIndex.FindByInventoryPath(inventoryPath: @datacenter_name)
@@ -62,6 +49,10 @@ module VsphereClients
         ssl: true,
         insecure: true,
       )
+    end
+
+    def folder_exists?(folder_name)
+      !find_folder(folder_name).nil?
     end
 
     def find_folder(folder_name)

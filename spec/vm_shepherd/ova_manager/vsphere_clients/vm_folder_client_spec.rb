@@ -130,18 +130,6 @@ module VsphereClients
             vm_folder_client.delete_folder(bad_input)
           }.to raise_error(ArgumentError)
         end
-
-        it "raises an ArgumentError instead of checking for existance #{bad_input.inspect}" do
-          expect {
-            vm_folder_client.folder_exists?(bad_input)
-          }.to raise_error(ArgumentError)
-        end
-
-        it "raises an ArgumentError instead of looking for VMs #{bad_input.inspect}" do
-          expect {
-            vm_folder_client.find_vms_by_folder_name(bad_input)
-          }.to raise_error(ArgumentError)
-        end
       end
     end
 
@@ -259,101 +247,6 @@ module VsphereClients
 
               vm_folder_client.delete_folder(TEST_PLAYGROUND_FOLDER)
             end
-          end
-        end
-      end
-    end
-
-    describe '#folder_exists?' do
-      context 'when the folder exists' do
-        before do
-          vm_folder_client.delete_folder(TEST_PLAYGROUND_FOLDER)
-          vm_folder_client.create_folder(TEST_PLAYGROUND_FOLDER)
-        end
-
-        it 'returns true' do
-          expect(vm_folder_client.folder_exists?(TEST_PLAYGROUND_FOLDER)).to eq(true)
-        end
-      end
-
-      context 'when the folder does not exist' do
-        before do
-          vm_folder_client.delete_folder(TEST_PLAYGROUND_FOLDER)
-        end
-
-        it 'returns false' do
-          expect(vm_folder_client.folder_exists?(TEST_PLAYGROUND_FOLDER)).to eq(false)
-        end
-      end
-    end
-
-    describe '#find_vms_by_folder_name' do
-      context 'when folder is not found' do
-        it 'does not raise exception' do
-          expect {
-            expect(vm_folder_client.find_vms_by_folder_name('does_not_exist_folder')).to eq([])
-          }.not_to raise_error
-        end
-      end
-
-      context 'when folder is found' do
-        let(:vm1) { instance_double('RbVmomi::VIM::VirtualMachine') }
-        let(:vm2) { instance_double('RbVmomi::VIM::VirtualMachine') }
-
-        let(:folder) { instance_double('RbVmomi::VIM::Folder') }
-        let(:sub_folder) { instance_double('RbVmomi::VIM::Folder') }
-
-        let(:child_entity) { double('childEntity') }
-
-        before do
-          vm_folder = instance_double('RbVmomi::VIM::Folder')
-          allow(vm_folder).to receive(:traverse).with(TEST_PLAYGROUND_FOLDER) { folder }
-          allow(vm_folder_client.datacenter).to receive(:vmFolder).and_return(vm_folder)
-
-          allow(folder).to receive(:childEntity).and_return(child_entity)
-        end
-
-        context 'when folder has no VMs' do
-          before do
-            sub_folder_child_entity = double('childEntity')
-            allow(sub_folder_child_entity).to receive(:grep).with(RbVmomi::VIM::VirtualMachine) { [] }
-            allow(sub_folder_child_entity).to receive(:grep).with(RbVmomi::VIM::Folder) { [] }
-            allow(sub_folder).to receive(:childEntity).and_return(sub_folder_child_entity)
-
-            allow(child_entity).to receive(:grep).with(RbVmomi::VIM::VirtualMachine) { [] }
-            allow(folder).to receive(:childEntity).and_return(child_entity)
-          end
-
-          it 'returns empty array when folder is empty' do
-            allow(child_entity).to receive(:grep).with(RbVmomi::VIM::Folder) { [] }
-            expect(vm_folder_client.find_vms_by_folder_name(TEST_PLAYGROUND_FOLDER)).to eq([])
-          end
-
-          it 'returns empty array when folder has only an empty sub-folder' do
-            allow(child_entity).to receive(:grep).with(RbVmomi::VIM::Folder) { [sub_folder] }
-            expect(vm_folder_client.find_vms_by_folder_name(TEST_PLAYGROUND_FOLDER)).to eq([])
-          end
-        end
-
-        context 'when folder has VMs' do
-          before do
-            sub_folder_child_entity = double('childEntity')
-            allow(sub_folder_child_entity).to receive(:grep).with(RbVmomi::VIM::VirtualMachine) { [vm2] }
-            allow(sub_folder_child_entity).to receive(:grep).with(RbVmomi::VIM::Folder) { [] }
-            allow(sub_folder).to receive(:childEntity).and_return(sub_folder_child_entity)
-
-            allow(child_entity).to receive(:grep).with(RbVmomi::VIM::VirtualMachine) { [vm1] }
-            allow(folder).to receive(:childEntity).and_return(child_entity)
-          end
-
-          it 'returns VMs in folder' do
-            allow(child_entity).to receive(:grep).with(RbVmomi::VIM::Folder) { [] }
-            expect(vm_folder_client.find_vms_by_folder_name(TEST_PLAYGROUND_FOLDER)).to eq([vm1])
-          end
-
-          it 'returns VMs in folder and sub-folder' do
-            allow(child_entity).to receive(:grep).with(RbVmomi::VIM::Folder) { [sub_folder] }
-            expect(vm_folder_client.find_vms_by_folder_name(TEST_PLAYGROUND_FOLDER)).to eq([vm1, vm2])
           end
         end
       end

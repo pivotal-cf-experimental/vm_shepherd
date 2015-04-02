@@ -3,17 +3,22 @@ require 'vm_shepherd/ova_manager/destroyer'
 module VmShepherd
   module OvaManager
     RSpec.describe Destroyer do
-      subject(:destroyer) { Destroyer.new('datacenter_name', vcenter_config) }
-      let(:vcenter_config) { {host: 'host', user: 'user', password: 'password'} }
+      let(:host) { 'FAKE_HOST' }
+      let(:username) { 'FAKE_USERNAME' }
+      let(:password) { 'FAKE_PASSWORD' }
+      let(:datacenter) { 'FAKE_DATACENTER' }
+
       let(:vm_folder_client) { instance_double(VsphereClients::VmFolderClient) }
+
+      subject(:destroyer) { Destroyer.new(host, username, password, datacenter) }
 
       describe '#clean_folder' do
         it 'is wired up correctly' do
           expect(VsphereClients::VmFolderClient).to receive(:new).with(
-              vcenter_config[:host],
-              vcenter_config[:user],
-              vcenter_config[:password],
-              'datacenter_name',
+              host,
+              username,
+              password,
+              datacenter,
               instance_of(Logger),
             ).and_return(vm_folder_client)
 

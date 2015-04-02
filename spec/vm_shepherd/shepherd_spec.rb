@@ -193,12 +193,10 @@ module VmShepherd
 
         it 'uses OvaManager::Destroyer to destroy a vm' do
           expect(OvaManager::Destroyer).to receive(:new).with(
+              settings.vm_deployer.vcenter_creds.ip,
+              settings.vm_deployer.vcenter_creds.username,
+              settings.vm_deployer.vcenter_creds.password,
               settings.vm_deployer.vsphere.datacenter,
-              {
-                host: settings.vm_deployer.vcenter_creds.ip,
-                user: settings.vm_deployer.vcenter_creds.username,
-                password: settings.vm_deployer.vcenter_creds.password,
-              }
             ).and_return(destroyer)
           expect(destroyer).to receive(:clean_folder).with(settings.vm_deployer.vsphere.folder)
 

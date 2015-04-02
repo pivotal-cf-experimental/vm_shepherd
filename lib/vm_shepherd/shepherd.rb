@@ -50,12 +50,10 @@ module VmShepherd
           ).destroy(settings.vapp_deployer.vapp.name)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::OvaManager::Destroyer.new(
+            settings.vm_deployer.vcenter_creds.ip,
+            settings.vm_deployer.vcenter_creds.username,
+            settings.vm_deployer.vcenter_creds.password,
             settings.vm_deployer.vsphere.datacenter,
-            {
-              host: settings.vm_deployer.vcenter_creds.ip,
-              user: settings.vm_deployer.vcenter_creds.username,
-              password: settings.vm_deployer.vcenter_creds.password,
-            }
           ).clean_folder(settings.vm_deployer.vsphere.folder)
         when VmShepherd::AWS_IAAS_TYPE then
           ami_manager.destroy

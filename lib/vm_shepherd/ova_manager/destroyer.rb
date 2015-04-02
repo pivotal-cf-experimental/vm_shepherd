@@ -4,9 +4,11 @@ require 'vm_shepherd/ova_manager/vsphere_clients/vm_folder_client'
 module VmShepherd
   module OvaManager
     class Destroyer
-      def initialize(datacenter_name, vcenter)
-        @datacenter_name = datacenter_name
-        @vcenter = vcenter
+      def initialize(host, username, password, datacenter)
+        @host = host
+        @username = username
+        @password = password
+        @datacenter = datacenter
       end
 
       def clean_folder(folder_name)
@@ -16,12 +18,14 @@ module VmShepherd
 
       private
 
+      attr_reader :host, :username, :password, :datacenter
+
       def vm_folder_client
         @vm_folder_client ||= VsphereClients::VmFolderClient.new(
-          @vcenter[:host],
-          @vcenter[:user],
-          @vcenter[:password],
-          @datacenter_name,
+          host,
+          username,
+          password,
+          datacenter,
           Logger.new(STDERR)
         )
       end

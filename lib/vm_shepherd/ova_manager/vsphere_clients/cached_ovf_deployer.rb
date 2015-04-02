@@ -42,12 +42,12 @@ module VsphereClients
       # simplicity this function assumes we need to read the OVF file
       # ourselves to know the names, and we map all of them to the same
       # VIM::Network.
-      ovf = open(ovf_url, 'r'){|io| Nokogiri::XML(io.read)}
+      ovf = open(ovf_url, 'r') { |io| Nokogiri::XML(io.read) }
       ovf.remove_namespaces!
-      networks = ovf.xpath('//NetworkSection/Network').map{|x| x['name']}
-      network_mappings = Hash[networks.map{|x| [x, @network]}]
+      networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
+      network_mappings = Hash[networks.map { |x| [x, @network] }]
 
-      network_mappings_str = network_mappings.map{|k, v| "#{k} = #{v.name}"}
+      network_mappings_str = network_mappings.map { |k, v| "#{k} = #{v.name}" }
       puts "networks: #{network_mappings_str.join(', ')} @ #{DateTime.now}"
 
       pc = @connection.serviceContent.propertyCollector
@@ -224,7 +224,7 @@ module VsphereClients
       while !vm
         sleep 3
         # XXX: Optimize this
-        vm = vm_folder.children.find{|x| x.name == vm_name}
+        vm = vm_folder.children.find { |x| x.name == vm_name }
       end
       puts "Template VM found @ #{DateTime.now}"
       sleep 2

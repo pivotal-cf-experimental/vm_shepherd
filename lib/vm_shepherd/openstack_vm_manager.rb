@@ -32,7 +32,7 @@ module VmShepherd
         key_name: vm_options[:key_name],
         security_groups: security_groups,
         nics: [
-          {net_id: network.id, v4_fixed_ip: vm_options[:private_ip]}
+          { net_id: network.id, v4_fixed_ip: vm_options[:private_ip] }
         ],
       )
       server.wait_for { ready? }
@@ -47,10 +47,12 @@ module VmShepherd
     def destroy(vm_options)
       ip = service.addresses.find { |address| address.ip == vm_options[:public_ip] }
       server = service.servers.get(ip.instance_id)
-      image = image_service.images.get(server.image['id'])
+      if server
+        image = image_service.images.get(server.image['id'])
 
-      server.destroy
-      image.destroy
+        server.destroy
+        image.destroy
+      end
     end
 
     def service

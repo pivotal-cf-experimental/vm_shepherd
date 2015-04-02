@@ -222,6 +222,16 @@ module VmShepherd
 
         expect { openstack_vm_manager.destroy(openstack_vm_options) }.to(destroy_correct_image)
       end
+
+      context 'when the server does not exist' do
+        before do
+          allow(servers).to receive(:get).and_return(nil)
+        end
+
+        it 'returns without error' do
+          expect { openstack_vm_manager.destroy(openstack_vm_options) }.not_to raise_error
+        end
+      end
     end
   end
 end

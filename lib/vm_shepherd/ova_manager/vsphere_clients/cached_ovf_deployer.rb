@@ -146,7 +146,7 @@ module VsphereClients
     # two level templates are being used, this function can wait for another
     # thread to finish creating the second level template. See class comments
     # for the concept of multi level templates.
-    # @param template_name [String] Name of the template to be used. A cluster
+    # @param template_vm [String] Name of the template to be used. A cluster
     #                               specific post-fix will automatically be added.
     # @param vm_name [String] Name of the new VM that is being created via cloning.
     # @param config [Hash] VM Config delta to apply after the VM is cloned.
@@ -156,47 +156,21 @@ module VsphereClients
     #                                 again and collision and de-duping logic kicks
     #                                 in.
     # @return [VIM::VirtualMachine] The VIM::VirtualMachine instance of the clone
-    def linked_clone(template_vm, vm_name, config, opts = {})
-      spec = {
-        location: {
-          pool: resource_pool,
-          datastore: @datastore,
-          diskMoveType: :moveChildMostDiskBacking,
-        },
-        powerOn: false,
-        template: false,
-        config: config,
-      }
-      if opts[:is_template]
-        wait_for_template = false
-        template_name = "#{vm_name}-#{@cluster.name}"
-        begin
-          vm = template_vm.CloneVM_Task(
-            folder: @folder,
-            name: template_name,
-            spec: spec
-          ).wait_for_completion
-        rescue RbVmomi::Fault => fault
-          if fault.fault.is_a?(RbVmomi::VIM::DuplicateName)
-            wait_for_template = true
-          else
-            raise
-          end
-        end
-
-        if wait_for_template
-          puts "#{Time.now}: Template already exists, waiting for it to be ready"
-          vm = wait_for_template_ready @folder, template_name
-          puts "#{Time.now}: Template ready"
-        end
-      else
-        vm = template_vm.CloneVM_Task(
-          folder: @folder,
-          name: vm_name,
-          spec: spec
-        ).wait_for_completion
-      end
-      vm
+    def linked_clone(template_vm, vm_name, config)
+      template_vm.CloneVM_Task(
+        folder: @folder,
+        name: vm_name,
+        spec: {
+          location: {
+            pool: resource_pool,
+            datastore: @datastore,
+            diskMoveType: :moveChildMostDiskBacking,
+          },
+          powerOn: false,
+          template: false,
+          config: config,
+        }
+      ).wait_for_completion
     end
 
     private

@@ -2,7 +2,6 @@ require 'tmpdir'
 require 'fileutils'
 require 'rbvmomi'
 require 'rbvmomi/utils/deploy'
-require 'vm_shepherd/ova_manager/vsphere_clients/cached_ovf_deployer'
 require 'vm_shepherd/ova_manager/open_monkey_patch'
 
 module VmShepherd
@@ -18,20 +17,23 @@ module VmShepherd
       end
 
       def deploy(name_prefix, ova_path, ova_config, vsphere_config)
+        raise 'Target folder must be set' unless vsphere_config[:folder]
+
+        fail("Failed to find datacenter '#{datacenter_name}'") unless datacenter
+
         ova_path = File.expand_path(ova_path.strip)
         ensure_no_running_vm(ova_config)
 
         tmp_dir = untar_vbox_ova(ova_path)
-        ovf_path = obtain_ovf_path(tmp_dir)
+        ovf_file_path = ovf_file_path_from_dir(tmp_dir)
 
-        deployer = build_deployer(vsphere_config)
-        template = deploy_ovf_template(name_prefix, deployer, ovf_path)
-        vm = create_vm_from_template(deployer, template)
+        template = deploy_ovf_template(name_prefix, ovf_file_path, vsphere_config)
+        vm = create_vm_from_template(template, vsphere_config)
 
         reconfigure_vm(vm, ova_config)
         power_on_vm(vm)
       ensure
-        FileUtils.remove_entry_secure(tmp_dir, force: true)
+        FileUtils.remove_entry_secure(ovf_file_path, force: true)
       end
 
       private
@@ -69,19 +71,79 @@ module VmShepherd
         end
       end
 
-      def obtain_ovf_path(dir)
-        raise 'Failed to find ovf' unless (file_path = Dir["#{dir}/*.ovf"].first)
+      def ovf_file_path_from_dir(dir)
+        Dir["#{dir}/*.ovf"].first || fail('Failed to find ovf')
+      end
+
+      def file_path_to_file_uri(file_path)
         "file://#{file_path}"
       end
 
-      def deploy_ovf_template(name_prefix, deployer, ovf_path)
+      def deploy_ovf_template(name_prefix, ovf_file_path, vsphere_config)
         puts "--- Running: Uploading template @ #{DateTime.now}"
-        deployer.upload_ovf_as_template(ovf_path, Time.new.strftime("#{name_prefix}-%F-%H-%M"))
+
+        ovf = Nokogiri::XML(File.read(ovf_file_path))
+        ovf.remove_namespaces!
+        networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
+        network_mappings = Hash[networks.map { |ovf_network| [ovf_network, network(vsphere_config)] }]
+
+        property_collector = connection.serviceContent.propertyCollector
+
+        hosts = cluster(vsphere_config).host
+        host_properties_by_host =
+          property_collector.collectMultiple(
+            hosts,
+            'datastore',
+            'runtime.connectionState',
+            'runtime.inMaintenanceMode',
+            'name',
+          )
+
+        found_host = # OVFs need to be uploaded to a specific host. The host needs to be:
+          hosts.shuffle.find do |host|
+            (host_properties_by_host[host]['runtime.connectionState'] == 'connected') && # connected
+              host_properties_by_host[host]['datastore'].member?(datastore(vsphere_config)) && # must have the destination datastore
+              !host_properties_by_host[host]['runtime.inMaintenanceMode'] #not be in maintenance mode
+          end || fail('No host in the cluster available to upload OVF to')
+
+        puts "Uploading OVF to #{host_properties_by_host[found_host]['name']} @ #{DateTime.now}"
+
+        vm =
+          connection.serviceContent.ovfManager.deployOVF(
+            uri: file_path_to_file_uri(ovf_file_path),
+            vmName: "#{Time.new.strftime("#{name_prefix}-%F-%H-%M")}-#{cluster(vsphere_config).name}",
+            vmFolder: target_folder(vsphere_config),
+            host: found_host,
+            resourcePool: resource_pool(vsphere_config),
+            datastore: datastore(vsphere_config),
+            networkMappings: network_mappings,
+            propertyMappings: {},
+          )
+        vm.add_delta_disk_layer_on_all_disks
+        vm.MarkAsTemplate
+
+        puts "Marked VM as Template @ #{DateTime.now}"
+
+        vm
       end
 
-      def create_vm_from_template(deployer, template)
+      def create_vm_from_template(template, vsphere_config)
         puts "--- Running: Cloning template @ #{DateTime.now}"
-        deployer.linked_clone(template, "#{template.name}-vm", {numCPUs: 2, memoryMB: 2048})
+
+        template.CloneVM_Task(
+          folder: target_folder(vsphere_config),
+          name: "#{template.name}-vm",
+          spec: {
+            location: {
+              pool: resource_pool(vsphere_config),
+              datastore: datastore(vsphere_config),
+              diskMoveType: :moveChildMostDiskBacking,
+            },
+            powerOn: false,
+            template: false,
+            config: {numCPUs: 2, memoryMB: 2048},
+          }
+        ).wait_for_completion
       end
 
       def reconfigure_vm(vm, ova_config)
@@ -133,38 +195,28 @@ module VmShepherd
         wait_for('VM IP') { vm.guest_ip }
       end
 
-      def build_deployer(vsphere_config)
-        raise 'Target folder must be set' unless vsphere_config[:folder]
+      def target_folder(vsphere_config)
+        datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)
+      end
 
-        fail("Failed to find datacenter '#{datacenter_name}'") unless datacenter
+      def cluster(vsphere_config)
+        datacenter.find_compute_resource(vsphere_config[:cluster]) ||
+          fail("Failed to find cluster '#{vsphere_config[:cluster]}'")
+      end
 
-        unless (cluster = datacenter.find_compute_resource(vsphere_config[:cluster]))
-          raise "Failed to find cluster '#{vsphere_config[:cluster]}'"
-        end
+      def network(vsphere_config)
+        datacenter.networkFolder.traverse(vsphere_config[:network]) ||
+          fail("Failed to find network '#{vsphere_config[:network]}'")
+      end
 
-        unless (datastore = datacenter.find_datastore(vsphere_config[:datastore]))
-          raise "Failed to find datastore '#{vsphere_config[:datastore]}'"
-        end
+      def resource_pool(vsphere_config)
+        find_resource_pool(cluster(vsphere_config), vsphere_config[:resource_pool]) ||
+          fail("Failed to find resource pool '#{vsphere_config[:resource_pool]}'")
+      end
 
-        unless (network = datacenter.networkFolder.traverse(vsphere_config[:network]))
-          raise "Failed to find network '#{vsphere_config[:network]}'"
-        end
-
-        unless (resource_pool = find_resource_pool(cluster, vsphere_config[:resource_pool]))
-          raise "Failed to find resource pool '#{vsphere_config[:resource_pool]}'"
-        end
-
-        target_folder = datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)
-
-        puts "--- Running: connecting to #{username}@#{host} @ #{DateTime.now}"
-        VsphereClients::CachedOvfDeployer.new(
-          connection,
-          network,
-          cluster,
-          resource_pool,
-          target_folder,
-          datastore,
-        )
+      def datastore(vsphere_config)
+        datacenter.find_datastore(vsphere_config[:datastore]) ||
+          fail("Failed to find datastore '#{vsphere_config[:datastore]}'")
       end
 
       def find_resource_pool(cluster, resource_pool_name)

@@ -79,7 +79,7 @@ module VsphereClients
       # To work around the VMFS 8-host limit (existed until ESX 5.0), as
       # well as just for organization purposes, we create one template per
       # cluster. This also provides us with additional isolation.
-      vm_name = "#{host_properties_by_host[host]}-#{@cluster.name}"
+      vm_name = "#{template_name}-#{@cluster.name}"
 
       vm = nil
       wait_for_template = false

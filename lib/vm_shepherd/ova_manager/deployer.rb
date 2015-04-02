@@ -18,7 +18,7 @@ module VmShepherd
 
       def deploy(name_prefix, ova_path, ova_config)
         ova_path = File.expand_path(ova_path.strip)
-        check_vm_status(ova_config)
+        ensure_no_running_vm(ova_config)
 
         tmp_dir = untar_vbox_ova(ova_path)
         ovf_path = obtain_ovf_path(tmp_dir)
@@ -51,19 +51,17 @@ module VmShepherd
         )
       end
 
-      def check_vm_status(ova_config)
-        log('Checking for existing VM') do # Bad idea to redeploy VM over existing running VM
-          ip = ova_config[:external_ip] || ova_config[:ip]
-          port = ova_config[:external_port] || 443
-          raise "VM exists at #{ip}" if system("nc -z -w 5 #{ip} #{port}")
-        end
+      def ensure_no_running_vm(ova_config)
+        puts "--- Running: Checking for existing VM @ #{DateTime.now}"
+        ip = ova_config[:external_ip] || ova_config[:ip]
+        port = ova_config[:external_port] || 443
+        fail("VM exists at #{ip}") if system("nc -z -w 5 #{ip} #{port}")
       end
 
       def untar_vbox_ova(ova_path)
-        log("Untarring #{ova_path}") do
-          Dir.mktmpdir.tap do |dir|
-            system_or_exit("cd #{dir} && tar xfv '#{ova_path}'")
-          end
+        puts "--- Running: Untarring #{ova_path} @ #{DateTime.now}"
+        Dir.mktmpdir.tap do |dir|
+          system_or_exit("cd #{dir} && tar xfv '#{ova_path}'")
         end
       end
 
@@ -73,22 +71,17 @@ module VmShepherd
       end
 
       def deploy_ovf_template(name_prefix, deployer, ovf_path)
-        log('Uploading template') do
-          deployer.upload_ovf_as_template(
-            ovf_path,
-            Time.new.strftime("#{name_prefix}-%F-%H-%M"),
-            run_without_interruptions: true,
-          )
-        end
+        puts "--- Running: Uploading template @ #{DateTime.now}"
+        deployer.upload_ovf_as_template(
+          ovf_path,
+          Time.new.strftime("#{name_prefix}-%F-%H-%M"),
+          run_without_interruptions: true,
+        )
       end
 
       def create_vm_from_template(deployer, template)
-        log('Cloning template') do
-          deployer.linked_clone(template, "#{template.name}-vm", {
-              :numCPUs => 2,
-              :memoryMB => 2048,
-            })
-        end
+        puts "--- Running: Cloning template @ #{DateTime.now}"
+        deployer.linked_clone(template, "#{template.name}-vm", {numCPUs: 2, memoryMB: 2048})
       end
 
       def reconfigure_vm(vm, ova_config)
@@ -100,46 +93,44 @@ module VmShepherd
           'ntp_servers' => ova_config[:ntp_servers],
         }
 
-        log("Reconfiguring VM using #{ip_configuration.inspect}") do
-          property_specs = []
+        puts "--- Running: Reconfiguring VM using #{ip_configuration.inspect} @ #{DateTime.now}"
+        property_specs = []
 
-          # Order of ip configuration keys must match
-          # order of OVF template properties.
-          ip_configuration.each_with_index do |(key, value), i|
-            property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
-              spec.operation = 'edit'
-              spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-                p.key = i
-                p.label = key
-                p.value = value
-              end
-            end
-          end
-
+        # Order of ip configuration keys must match
+        # order of OVF template properties.
+        ip_configuration.each_with_index do |(key, value), i|
           property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
             spec.operation = 'edit'
             spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-              p.key = ip_configuration.length
-              p.label = 'admin_password'
-              p.value = ova_config[:vm_password]
+              p.key = i
+              p.label = key
+              p.value = value
             end
           end
-
-          vm_config_spec = RbVmomi::VIM::VmConfigSpec.new
-          vm_config_spec.ovfEnvironmentTransport = ['com.vmware.guestInfo']
-          vm_config_spec.property = property_specs
-
-          vmachine_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
-          vmachine_spec.vAppConfig = vm_config_spec
-          vm.ReconfigVM_Task(spec: vmachine_spec).wait_for_completion
         end
+
+        property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
+          spec.operation = 'edit'
+          spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
+            p.key = ip_configuration.length
+            p.label = 'admin_password'
+            p.value = ova_config[:vm_password]
+          end
+        end
+
+        vm_config_spec = RbVmomi::VIM::VmConfigSpec.new
+        vm_config_spec.ovfEnvironmentTransport = ['com.vmware.guestInfo']
+        vm_config_spec.property = property_specs
+
+        vmachine_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
+        vmachine_spec.vAppConfig = vm_config_spec
+        vm.ReconfigVM_Task(spec: vmachine_spec).wait_for_completion
       end
 
       def power_on_vm(vm)
-        log('Powering on VM') do
-          vm.PowerOnVM_Task.wait_for_completion
-          wait_for('VM IP') { vm.guest_ip }
-        end
+        puts "--- Running: Powering on VM @ #{DateTime.now}"
+        vm.PowerOnVM_Task.wait_for_completion
+        wait_for('VM IP') { vm.guest_ip }
       end
 
       def build_deployer(location)
@@ -166,7 +157,7 @@ module VmShepherd
 
         target_folder = datacenter.vmFolder.traverse(location[:folder], RbVmomi::VIM::Folder, true)
 
-        log("connecting to #{@vcenter[:user]}@#{@vcenter[:host]}")
+        puts "--- Running: connecting to #{@vcenter[:user]}@#{@vcenter[:host]} @ #{DateTime.now}"
         VsphereClients::CachedOvfDeployer.new(
           connection,
           network,
@@ -184,11 +175,6 @@ module VmShepherd
         else
           cluster.resourcePool
         end
-      end
-
-      def log(title, &blk)
-        puts "--- Running: #{title} @ #{DateTime.now}"
-        blk.call if blk
       end
 
       def system_or_exit(*args)

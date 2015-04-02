@@ -20,7 +20,20 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require 'vm_shepherd'
+
+settings =  # An OpenStruct with the expected IaaS specific settings.
+            # => See YAML under spec/fixtures/shepherd/ for expected values
+
+# create a new VM
+shep = VmShepherd::Shepherd.new(settings: settings)
+shep.deploy(path: 'path/to/vm.image')
+
+# destroy an existing VM
+shep = VmShepherd::Shepherd.new(settings: settings)
+shep.destroy
+```
 
 ## Contributing
 

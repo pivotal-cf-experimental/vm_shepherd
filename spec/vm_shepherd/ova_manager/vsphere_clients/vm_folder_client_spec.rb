@@ -11,12 +11,10 @@ module VsphereClients
     let(:username) { vcenter_config_hash[:username] }
     let(:password) { vcenter_config_hash[:password] }
     let(:datacenter_name) { vcenter_config_hash[:datacenter_name] }
-    let(:datastore_name) { vcenter_config_hash[:datastore_name] }
-    let(:datastore_name) { vcenter_config_hash[:datastore_name] }
     let(:logger) { Logger.new(STDERR).tap { |l| l.level = Logger::FATAL } }
 
     subject(:vm_folder_client) do
-      VmFolderClient.new(vcenter_ip, username, password, datacenter_name, datastore_name, logger)
+      VmFolderClient.new(vcenter_ip, username, password, datacenter_name, logger)
     end
 
     after(:all) do
@@ -25,7 +23,6 @@ module VsphereClients
         vcenter_config_hash[:username],
         vcenter_config_hash[:password],
         vcenter_config_hash[:datacenter_name],
-        vcenter_config_hash[:datastore_name],
         Logger.new(STDERR).tap { |l| l.level = Logger::FATAL },
       ).delete_folder(TEST_PLAYGROUND_FOLDER)
     end

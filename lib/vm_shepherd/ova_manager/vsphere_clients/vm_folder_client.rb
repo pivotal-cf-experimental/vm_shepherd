@@ -2,13 +2,12 @@ require 'rbvmomi'
 
 module VsphereClients
   class VmFolderClient
-    def initialize(vcenter_ip, username, password, datacenter_name, datastore_name, logger)
+    def initialize(vcenter_ip, username, password, datacenter_name, logger)
       puts "vcenterIP: #{vcenter_ip}"
       @vcenter_ip = vcenter_ip
       @username = username
       @password = password
       @datacenter_name = datacenter_name
-      @datastore_name = datastore_name
       @logger = logger
     end
 

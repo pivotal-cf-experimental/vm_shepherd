@@ -1,11 +1,9 @@
-require 'rbvmomi'
 require 'logger'
 require 'vm_shepherd/ova_manager/vsphere_clients/vm_folder_client'
-require 'vm_shepherd/ova_manager/base'
 
 module VmShepherd
   module OvaManager
-    class Destroyer < Base
+    class Destroyer
       def initialize(datacenter_name, vcenter)
         @datacenter_name = datacenter_name
         @vcenter = vcenter
@@ -20,7 +18,10 @@ module VmShepherd
 
       def vm_folder_client
         @vm_folder_client ||= VsphereClients::VmFolderClient.new(
-          find_datacenter(@datacenter_name),
+          @vcenter[:host],
+          @vcenter[:user],
+          @vcenter[:password],
+          @datacenter_name,
           Logger.new(STDERR)
         )
       end

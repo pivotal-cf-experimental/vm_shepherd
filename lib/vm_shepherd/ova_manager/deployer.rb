@@ -76,10 +76,7 @@ module VmShepherd
 
       def deploy_ovf_template(name_prefix, deployer, ovf_path)
         puts "--- Running: Uploading template @ #{DateTime.now}"
-        deployer.upload_ovf_as_template(
-          ovf_path,
-          Time.new.strftime("#{name_prefix}-%F-%H-%M"),
-        )
+        deployer.upload_ovf_as_template(ovf_path, Time.new.strftime("#{name_prefix}-%F-%H-%M"))
       end
 
       def create_vm_from_template(deployer, template)

@@ -20,7 +20,7 @@ module VsphereClients
       @folder = folder
       @datastore = datastore
     end
-    
+
     # Uploads an OVF, prepares the resulting VM for linked cloning and then marks
     # it as a template. If another thread happens to race to do the same task,
     # the losing thread will not do the actual work, but instead wait for the

@@ -154,9 +154,8 @@ module VmShepherd
           raise "Failed to find network '#{vsphere_config[:network]}'"
         end
 
-        resource_pool_name = vsphere_config[:resource_pool] || vsphere_config[:resource_pool_name]
-        unless (resource_pool = find_resource_pool(cluster, resource_pool_name))
-          raise "Failed to find resource pool '#{resource_pool_name}'"
+        unless (resource_pool = find_resource_pool(cluster, vsphere_config[:resource_pool]))
+          raise "Failed to find resource pool '#{vsphere_config[:resource_pool]}'"
         end
 
         target_folder = datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)

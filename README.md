@@ -1,6 +1,6 @@
 # VmShepherd
 
-TODO: Write a gem description
+Gem for deploying and destroying a VM on different IAASs such as AWS, vSphere, vCloud, and Openstack
 
 ## Installation
 

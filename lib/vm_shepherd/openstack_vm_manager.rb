@@ -31,19 +31,21 @@ module VmShepherd
         image_ref: image.id,
         key_name: vm_options[:key_name],
         security_groups: security_groups,
-        nics: [{net_id: network.id}],
+        nics: [
+          {net_id: network.id, v4_fixed_ip: vm_options[:private_ip]}
+        ],
       )
       server.wait_for { ready? }
       say('Finished launching an instance')
 
-      say('Assigning an IP to the instance')
-      ip = service.addresses.find { |address| address.instance_id.nil? && address.ip == vm_options[:ip] }
+      say('Assigning a Public IP to the instance')
+      ip = service.addresses.find { |address| address.instance_id.nil? && address.ip == vm_options[:public_ip] }
       ip.server = server
-      say('Finished assigning an IP to the instance')
+      say('Finished assigning a Public IP to the instance')
     end
 
     def destroy(vm_options)
-      ip = service.addresses.find { |address| address.ip == vm_options[:ip] }
+      ip = service.addresses.find { |address| address.ip == vm_options[:public_ip] }
       server = service.servers.get(ip.instance_id)
       image = image_service.images.get(server.image['id'])
 

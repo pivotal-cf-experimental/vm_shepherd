@@ -1,7 +1,7 @@
 iaas_type: openstack
 vm_deployer:
   creds:
-    auth_url: 'http://example.com'
+    auth_url: 'http://example.com/version/tokens'
     username: 'username'
     api_key: 'api-key'
     tenant: 'tenant'
@@ -15,4 +15,5 @@ vm_deployer:
       - 'security-group-A'
       - 'security-group-B'
       - 'security-group-C'
-    ip: 198.11.195.5
+    public_ip: 198.11.195.5
+    private_ip: 192.168.100.100

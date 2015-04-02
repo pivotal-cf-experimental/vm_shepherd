@@ -7,7 +7,7 @@ module VmShepherd
 
     let(:openstack_options) do
       {
-        auth_url: 'http://example.com',
+        auth_url: 'http://example.com/version/tokens',
         username: 'username',
         api_key: 'api-key',
         tenant: 'tenant',
@@ -24,7 +24,8 @@ module VmShepherd
           'security-group-B',
           'security-group-C',
         ],
-        ip: '192.168.27.129',
+        public_ip: '192.168.27.129', #magik ip to Fog::Mock
+        private_ip: '192.168.27.100',
       }
     end
 
@@ -149,10 +150,13 @@ module VmShepherd
           openstack_vm_manager.deploy(path, openstack_vm_options)
         end
 
-        it 'assigns the correct network id' do
+        it 'assigns the correct private network information' do
           assigned_network = network_service.networks.find { |network| network.name == openstack_vm_options[:network_name] }
           expect(servers).to receive(:create).with(
-              hash_including(:nics => [{ net_id: assigned_network.id }])
+              hash_including(:nics => [
+                  { net_id: assigned_network.id, v4_fixed_ip: openstack_vm_options[:private_ip]}
+                ]
+              )
             ).and_call_original
 
           openstack_vm_manager.deploy(path, openstack_vm_options)
@@ -166,7 +170,7 @@ module VmShepherd
 
       it 'assigns an IP to the instance' do
         openstack_vm_manager.deploy(path, openstack_vm_options)
-        ip = addresses.find { |address| address.ip == openstack_vm_options[:ip] }
+        ip = addresses.find { |address| address.ip == openstack_vm_options[:public_ip] }
 
         expect(ip.instance_id).to eq(instance.id)
       end

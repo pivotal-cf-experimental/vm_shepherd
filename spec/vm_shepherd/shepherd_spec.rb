@@ -119,7 +119,7 @@ module VmShepherd
         let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
         let(:openstack_options) do
           {
-            auth_url: 'http://example.com',
+            auth_url: 'http://example.com/version/tokens',
             username: 'username',
             api_key: 'api-key',
             tenant: 'tenant',
@@ -136,7 +136,8 @@ module VmShepherd
               'security-group-B',
               'security-group-C',
             ],
-            ip: '198.11.195.5',
+            public_ip: '198.11.195.5',
+            private_ip: '192.168.100.100',
           }
         end
 
@@ -237,7 +238,7 @@ module VmShepherd
         let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
         let(:openstack_options) do
           {
-            auth_url: 'http://example.com',
+            auth_url: 'http://example.com/version/tokens',
             username: 'username',
             api_key: 'api-key',
             tenant: 'tenant',
@@ -254,7 +255,8 @@ module VmShepherd
               'security-group-B',
               'security-group-C',
             ],
-            ip: '198.11.195.5',
+            public_ip: '198.11.195.5',
+            private_ip: '192.168.100.100',
           }
         end
 

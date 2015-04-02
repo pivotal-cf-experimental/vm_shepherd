@@ -172,7 +172,8 @@ module VmShepherd
         network_name: settings.vm_deployer.vm.network_name,
         key_name: settings.vm_deployer.vm.key_name,
         security_group_names: settings.vm_deployer.vm.security_group_names,
-        ip: settings.vm_deployer.vm.ip,
+        public_ip: settings.vm_deployer.vm.public_ip,
+        private_ip: settings.vm_deployer.vm.private_ip,
       }
     end
   end

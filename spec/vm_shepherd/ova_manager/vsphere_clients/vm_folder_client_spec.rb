@@ -133,6 +133,41 @@ module VsphereClients
       end
     end
 
+    describe '#power_off' do
+      let(:vm) { instance_double('RbVmomi::VIM::VirtualMachine', name: 'vm-name', runtime: vm_runtime) }
+      let(:vm_runtime) { double(:runtime) }
+
+      context 'when runtime is not powered off' do
+        before { allow(vm_runtime).to receive_messages(powerState: 'non-powered-off') }
+        let(:power_off_task) { instance_double('RbVmomi::VIM::Task') }
+
+        it 'powers the vm off' do
+          expect(vm).to receive(:PowerOffVM_Task).and_return(power_off_task)
+          expect(power_off_task).to receive(:wait_for_completion)
+
+          vm_folder_client.power_off(vm)
+        end
+
+        it 'tries to power off vm one more time if first power off fails' do
+          error = RuntimeError.new('InvalidPowerState: message for invalid power state')
+
+          expect(vm).to receive(:PowerOffVM_Task).twice.and_return(power_off_task)
+          expect(power_off_task).to receive(:wait_for_completion).twice.and_raise(error)
+
+          expect { vm_folder_client.power_off(vm) }.to raise_error(error)
+        end
+      end
+
+      context 'when runtime is powered off' do
+        before { allow(vm_runtime).to receive_messages(powerState: 'poweredOff') }
+
+        it 'does not try to power off the machine' do
+          expect(vm).not_to receive(:PowerOffVM_Task)
+          vm_folder_client.power_off(vm)
+        end
+      end
+    end
+
     describe '#delete_folder' do
       context 'when folder does not exist' do
         it 'does not raise an error so that action is idempotent' do

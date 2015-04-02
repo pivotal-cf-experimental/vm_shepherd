@@ -1,5 +1,4 @@
 require 'rbvmomi'
-require 'vm_shepherd/ova_manager/vsphere_clients/vm_power_manager'
 
 module VsphereClients
   class VmFolderClient
@@ -22,7 +21,7 @@ module VsphereClients
     def delete_folder(folder_name)
       return unless (folder = find_folder(folder_name))
 
-      find_vms(folder).each { |vm| VmPowerManager.new(vm, @logger).power_off }
+      find_vms(folder).each { |vm| power_off(vm) }
 
       @logger.info("vm_folder_client.delete_folder.delete folder=#{folder_name}")
       folder.Destroy_Task.wait_for_completion
@@ -36,6 +35,23 @@ module VsphereClients
       @datacenter ||= begin
         match = connection.searchIndex.FindByInventoryPath(inventoryPath: @datacenter_name)
         match if match and match.is_a?(RbVmomi::VIM::Datacenter)
+      end
+    end
+
+    def power_off(vm)
+      power_state = vm.runtime.powerState
+
+      @logger.info("vm_folder_client.delete_folder.power_off vm=#{vm.name} power_state=#{power_state}")
+
+      unless power_state == 'poweredOff'
+        # Trying to catch
+        # 'InvalidPowerState: The attempted operation cannot be performed
+        # in the current state (Powered off). (RbVmomi::Fault)'
+        # (http://projects.puppetlabs.com/issues/16020)
+        with_retry do
+          @logger.info("vm_folder_client.delete_folder.power_off vm=#{vm.name}")
+          vm.PowerOffVM_Task.wait_for_completion
+        end
       end
     end
 
@@ -68,6 +84,17 @@ module VsphereClients
 
     def folder_name_is_valid?(folder_name)
       /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/.match(folder_name)
+    end
+
+    def with_retry(tries=2, &blk)
+      blk.call
+    rescue StandardError => e
+      tries -= 1
+      if e.message.start_with?('InvalidPowerState') && tries > 0
+        retry
+      else
+        raise
+      end
     end
   end
 end

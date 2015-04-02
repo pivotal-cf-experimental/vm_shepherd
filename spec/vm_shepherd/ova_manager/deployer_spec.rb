@@ -133,60 +133,6 @@ module VmShepherd
           end
         end
       end
-
-      describe '#find_datacenter' do
-        let(:location) do
-          {
-            connection: connection,
-            network: 'network',
-            cluster: 'cluster',
-            folder: 'target_folder',
-            datastore: 'datastore',
-            datacenter: 'datacenter',
-          }
-        end
-
-        it 'should return datacenter with valid name' do
-          expect(deployer.find_datacenter('valid_datacenter')).to be(datacenter)
-        end
-
-        it 'should return nil with invalid name' do
-          allow(search_index).to receive(:FindByInventoryPath).and_return(nil)
-
-          expect(deployer.find_datacenter('does_not_exist')).to be_nil
-        end
-
-        it 'should return nil when find returns non-datacenter' do
-          allow(search_index).to receive(:FindByInventoryPath).and_return(double)
-
-          expect(deployer.find_datacenter('non_a_datacenter')).to be_nil
-        end
-      end
-
-      describe '#connection' do
-        let(:location) do
-          {
-            connection: connection,
-            network: 'network',
-            cluster: 'cluster',
-            folder: 'target_folder',
-            datastore: 'datastore',
-            datacenter: 'datacenter',
-          }
-        end
-
-        it 'should return a connection' do
-          conn = deployer.send(:connection)
-          expect(conn).to be(connection)
-        end
-
-        it 'should return the same connection on subsequent invocations' do
-          conn = deployer.send(:connection)
-          conn_again = deployer.send(:connection)
-          expect(conn).to be(conn_again)
-          expect(RbVmomi::VIM).to have_received(:connect).once
-        end
-      end
     end
   end
 end

@@ -34,15 +34,16 @@ module VmShepherd
         FileUtils.remove_entry_secure(tmp_dir, force: true)
       end
 
-      def find_datacenter(name)
-        match = connection.searchIndex.FindByInventoryPath(inventoryPath: name)
-        return unless match and match.is_a?(RbVmomi::VIM::Datacenter)
-        match
-      end
-
       private
 
       attr_reader :host, :username, :password, :datacenter_name
+
+      def datacenter
+        @datacenter ||= begin
+          match = connection.searchIndex.FindByInventoryPath(inventoryPath: @datacenter_name)
+          match if match and match.is_a?(RbVmomi::VIM::Datacenter)
+        end
+      end
 
       def connection
         @connection ||= RbVmomi::VIM.connect(
@@ -139,9 +140,7 @@ module VmShepherd
       def build_deployer(vsphere_config)
         raise 'Target folder must be set' unless vsphere_config[:folder]
 
-        unless (datacenter = find_datacenter(datacenter_name))
-          raise "Failed to find datacenter '#{datacenter_name}'"
-        end
+        fail("Failed to find datacenter '#{datacenter_name}'") unless datacenter
 
         unless (cluster = datacenter.find_compute_resource(vsphere_config[:cluster]))
           raise "Failed to find cluster '#{vsphere_config[:cluster]}'"

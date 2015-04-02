@@ -3,16 +3,15 @@ require 'fileutils'
 require 'rbvmomi'
 require 'rbvmomi/utils/deploy'
 require 'vm_shepherd/ova_manager/vsphere_clients/cached_ovf_deployer'
-require 'vm_shepherd/ova_manager/base'
 require 'vm_shepherd/ova_manager/open_monkey_patch'
 
 module VmShepherd
   module OvaManager
-    class Deployer < Base
+    class Deployer
       attr_reader :location
 
       def initialize(vcenter, location)
-        super(vcenter)
+        @vcenter = vcenter
         @location = location
         raise 'Target folder must be set' unless @location[:folder]
       end
@@ -34,7 +33,23 @@ module VmShepherd
         FileUtils.remove_entry_secure(tmp_dir, force: true)
       end
 
+      def find_datacenter(name)
+        match = connection.searchIndex.FindByInventoryPath(inventoryPath: name)
+        return unless match and match.is_a?(RbVmomi::VIM::Datacenter)
+        match
+      end
+
       private
+
+      def connection
+        @connection ||= RbVmomi::VIM.connect(
+          host: @vcenter.fetch(:host),
+          user: @vcenter.fetch(:user),
+          password: @vcenter.fetch(:password),
+          ssl: true,
+          insecure: true,
+        )
+      end
 
       def check_vm_status(ova_config)
         log('Checking for existing VM') do # Bad idea to redeploy VM over existing running VM

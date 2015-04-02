@@ -4,7 +4,7 @@ require 'vm_shepherd/ova_manager/deployer'
 module VmShepherd
   module OvaManager
     RSpec.describe Deployer do
-      let(:connection) { double('connection') }
+      let(:connection) { instance_double(RbVmomi::VIM) }
       let(:cluster) { double('cluster', resourcePool: cluster_resource_pool) }
       let(:cluster_resource_pool) { double(:cluster_resource_pool, resourcePool: [a_resource_pool, another_resource_pool]) }
 
@@ -14,7 +14,10 @@ module VmShepherd
       let(:target_folder) { double('target_folder') }
       let(:datastore) { double('datastore') }
       let(:network) { double('network', name: 'network') }
-      let(:datacenter) { double('datacenter', network: [network]) }
+
+      let(:search_index) { double('searchIndex') }
+      let(:datacenter) { instance_double(RbVmomi::VIM::Datacenter, network: [network]) }
+
       let(:cached_ova_deployer) {
         double('CachedOvaDeployer', upload_ovf_as_template: template, linked_clone: linked_clone)
       }
@@ -48,9 +51,11 @@ module VmShepherd
               password: vcenter_config[:password],
               ssl: true,
               insecure: true
-            }).and_return connection
+            }).and_return(connection)
 
-        allow(deployer).to receive(:find_datacenter).and_return(datacenter)
+        allow(connection).to receive(:searchIndex).and_return(search_index)
+        allow(search_index).to receive(:FindByInventoryPath).and_return(datacenter)
+        allow(datacenter).to receive(:is_a?).with(RbVmomi::VIM::Datacenter).and_return(true)
 
         allow(datacenter).to receive_message_chain(:vmFolder, :traverse).
             with('target_folder', RbVmomi::VIM::Folder, true).and_return(target_folder)
@@ -61,50 +66,79 @@ module VmShepherd
           )
       end
 
-      context 'resource pool is a parameter' do
-        let(:location) {
-          {
-            connection: connection,
-            network: 'network',
-            cluster: 'cluster',
-            folder: 'target_folder',
-            datastore: 'datastore',
-            datacenter: 'datacenter',
-            resource_pool: resource_pool_name
-          }
-        }
+      describe '#deploy' do
+        context 'resource pool is a parameter' do
+          let(:location) do
+            {
+              connection: connection,
+              network: 'network',
+              cluster: 'cluster',
+              folder: 'target_folder',
+              datastore: 'datastore',
+              datacenter: 'datacenter',
+              resource_pool: resource_pool_name
+            }
+          end
 
-        context 'resource pool can be found' do
-          let(:resource_pool_name) { a_resource_pool.name }
+          context 'resource pool can be found' do
+            let(:resource_pool_name) { a_resource_pool.name }
 
-          it 'uses VsphereClient::CachedOvfDeployer to deploy an OVA within a resource pool' do
+            it 'uses VsphereClient::CachedOvfDeployer to deploy an OVA within a resource pool' do
+              expect(VsphereClients::CachedOvfDeployer).to receive(:new).with(
+                  connection,
+                  network,
+                  cluster,
+                  a_resource_pool,
+                  target_folder,
+                  target_folder,
+                  datastore
+                ).and_return(cached_ova_deployer)
+
+              deployer.deploy('foo', ova_path, {ip: '1.1.1.1'})
+            end
+          end
+
+          context 'resource pool cannot be found' do
+            let(:resource_pool_name) { 'i am no body' }
+
+            it 'uses VsphereClient::CachedOvfDeployer to deploy an OVA within a resource pool' do
+              expect {
+                deployer.deploy('foo', ova_path, {ip: '1.1.1.1'})
+              }.to raise_error(/Failed to find resource pool '#{resource_pool_name}'/)
+            end
+          end
+        end
+
+        context 'when there is no resource pool in location' do
+          let(:location) do
+            {
+              connection: connection,
+              network: 'network',
+              cluster: 'cluster',
+              folder: 'target_folder',
+              datastore: 'datastore',
+              datacenter: 'datacenter',
+            }
+          end
+
+          it 'uses the cluster resource pool' do
             expect(VsphereClients::CachedOvfDeployer).to receive(:new).with(
                 connection,
                 network,
                 cluster,
-                a_resource_pool,
+                cluster_resource_pool,
                 target_folder,
                 target_folder,
                 datastore
               ).and_return(cached_ova_deployer)
 
-            deployer.deploy('foo', ova_path, { ip: '1.1.1.1' })
-          end
-        end
-
-        context 'resource pool cannot be found' do
-          let(:resource_pool_name) { 'i am no body' }
-
-          it 'uses VsphereClient::CachedOvfDeployer to deploy an OVA within a resource pool' do
-            expect {
-              deployer.deploy('foo', ova_path, { ip: '1.1.1.1' })
-            }.to raise_error(/Failed to find resource pool '#{resource_pool_name}'/)
+            deployer.deploy('foo', ova_path, {ip: '1.1.1.1'})
           end
         end
       end
 
-      context 'when there is no resource pool in location' do
-        let(:location) {
+      describe '#find_datacenter' do
+        let(:location) do
           {
             connection: connection,
             network: 'network',
@@ -113,20 +147,47 @@ module VmShepherd
             datastore: 'datastore',
             datacenter: 'datacenter',
           }
-        }
+        end
 
-        it 'uses the cluster resource pool' do
-          expect(VsphereClients::CachedOvfDeployer).to receive(:new).with(
-              connection,
-              network,
-              cluster,
-              cluster_resource_pool,
-              target_folder,
-              target_folder,
-              datastore
-            ).and_return(cached_ova_deployer)
+        it 'should return datacenter with valid name' do
+          expect(deployer.find_datacenter('valid_datacenter')).to be(datacenter)
+        end
 
-          deployer.deploy('foo', ova_path, { ip: '1.1.1.1' })
+        it 'should return nil with invalid name' do
+          allow(search_index).to receive(:FindByInventoryPath).and_return(nil)
+
+          expect(deployer.find_datacenter('does_not_exist')).to be_nil
+        end
+
+        it 'should return nil when find returns non-datacenter' do
+          allow(search_index).to receive(:FindByInventoryPath).and_return(double)
+
+          expect(deployer.find_datacenter('non_a_datacenter')).to be_nil
+        end
+      end
+
+      describe '#connection' do
+        let(:location) do
+          {
+            connection: connection,
+            network: 'network',
+            cluster: 'cluster',
+            folder: 'target_folder',
+            datastore: 'datastore',
+            datacenter: 'datacenter',
+          }
+        end
+
+        it 'should return a connection' do
+          conn = deployer.send(:connection)
+          expect(conn).to be(connection)
+        end
+
+        it 'should return the same connection on subsequent invocations' do
+          conn = deployer.send(:connection)
+          conn_again = deployer.send(:connection)
+          expect(conn).to be(conn_again)
+          expect(RbVmomi::VIM).to have_received(:connect).once
         end
       end
     end

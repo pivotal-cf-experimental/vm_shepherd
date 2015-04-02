@@ -36,7 +36,7 @@ module VsphereClients
       ovf = open(ovf_url, 'r') { |io| Nokogiri::XML(io.read) }
       ovf.remove_namespaces!
       networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
-      network_mappings = Hash[networks.map { |x| [x, @network] }]
+      network_mappings = Hash[networks.map { |ovf_network| [ovf_network, @network] }]
 
       puts "networks: #{network_mappings.inspect} @ #{DateTime.now}"
 

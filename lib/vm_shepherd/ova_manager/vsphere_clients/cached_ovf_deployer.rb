@@ -85,21 +85,6 @@ module VsphereClients
       vm
     end
 
-    # Creates a linked clone of a template prepared with upload_ovf_as_template.
-    # The function waits for completion on the clone task. Optionally, in case
-    # two level templates are being used, this function can wait for another
-    # thread to finish creating the second level template. See class comments
-    # for the concept of multi level templates.
-    # @param template_vm [String] Name of the template to be used. A cluster
-    #                               specific post-fix will automatically be added.
-    # @param vm_name [String] Name of the new VM that is being created via cloning.
-    # @param config [Hash] VM Config delta to apply after the VM is cloned.
-    #                      Allows the template to be customized, e.g. to adjust
-    #                      CPU or Memory sizes or set annotations.
-    # @option opts [int] :is_template If true, the clone is assumed to be a template
-    #                                 again and collision and de-duping logic kicks
-    #                                 in.
-    # @return [VIM::VirtualMachine] The VIM::VirtualMachine instance of the clone
     def linked_clone(template_vm, vm_name, config)
       template_vm.CloneVM_Task(
         folder: @folder,

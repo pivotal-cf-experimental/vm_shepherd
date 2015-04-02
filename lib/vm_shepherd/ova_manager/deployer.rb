@@ -10,23 +10,21 @@ module VmShepherd
     class Deployer
       attr_reader :location
 
-      def initialize(host, username, password, datacenter_name, location)
+      def initialize(host, username, password, datacenter_name)
         @host = host
         @username = username
         @password = password
         @datacenter_name = datacenter_name
-        @location = location
-        raise 'Target folder must be set' unless @location[:folder]
       end
 
-      def deploy(name_prefix, ova_path, ova_config)
+      def deploy(name_prefix, ova_path, ova_config, location)
         ova_path = File.expand_path(ova_path.strip)
         ensure_no_running_vm(ova_config)
 
         tmp_dir = untar_vbox_ova(ova_path)
         ovf_path = obtain_ovf_path(tmp_dir)
 
-        deployer = build_deployer(@location)
+        deployer = build_deployer(location)
         template = deploy_ovf_template(name_prefix, deployer, ovf_path)
         vm = create_vm_from_template(deployer, template)
 
@@ -139,6 +137,8 @@ module VmShepherd
       end
 
       def build_deployer(location)
+        raise 'Target folder must be set' unless location[:folder]
+
         unless (datacenter = find_datacenter(datacenter_name))
           raise "Failed to find datacenter '#{datacenter_name}'"
         end

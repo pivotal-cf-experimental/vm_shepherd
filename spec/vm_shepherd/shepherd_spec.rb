@@ -58,13 +58,6 @@ module VmShepherd
                 settings.vm_deployer.vcenter_creds.username,
                 settings.vm_deployer.vcenter_creds.password,
                 settings.vm_deployer.vsphere.datacenter,
-                {
-                  cluster: settings.vm_deployer.vsphere.cluster,
-                  resource_pool: settings.vm_deployer.vsphere.resource_pool,
-                  datastore: settings.vm_deployer.vsphere.datastore,
-                  network: settings.vm_deployer.vsphere.network,
-                  folder: settings.vm_deployer.vsphere.folder,
-                },
               ).and_return(deployer)
 
           expect(deployer).to receive(:deploy).with(
@@ -76,7 +69,14 @@ module VmShepherd
                 netmask: settings.vm_deployer.vm.netmask,
                 dns: settings.vm_deployer.vm.dns,
                 ntp_servers: settings.vm_deployer.vm.ntp_servers,
-              }
+              },
+              {
+                cluster: settings.vm_deployer.vsphere.cluster,
+                resource_pool: settings.vm_deployer.vsphere.resource_pool,
+                datastore: settings.vm_deployer.vsphere.datastore,
+                network: settings.vm_deployer.vsphere.network,
+                folder: settings.vm_deployer.vsphere.folder,
+              },
             )
 
           manager.deploy(path: 'FAKE_PATH')

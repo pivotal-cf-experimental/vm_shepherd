@@ -29,7 +29,7 @@ module VmShepherd
       let(:password) { 'FAKE_PASSWORD' }
       let(:datacenter_name) { 'FAKE_DATACENTER' }
 
-      subject(:deployer) { Deployer.new(host, username, password, datacenter_name, location) }
+      subject(:deployer) { Deployer.new(host, username, password, datacenter_name) }
 
       before do
         allow(deployer).to receive(:system).with(/cd .* && tar xfv .*/).and_call_original
@@ -91,7 +91,7 @@ module VmShepherd
                   datastore
                 ).and_return(cached_ova_deployer)
 
-              deployer.deploy('foo', ova_path, {ip: '1.1.1.1'})
+              deployer.deploy('foo', ova_path, {ip: '1.1.1.1'}, location)
             end
           end
 
@@ -100,7 +100,7 @@ module VmShepherd
 
             it 'uses VsphereClient::CachedOvfDeployer to deploy an OVA within a resource pool' do
               expect {
-                deployer.deploy('foo', ova_path, {ip: '1.1.1.1'})
+                deployer.deploy('foo', ova_path, {ip: '1.1.1.1'}, location)
               }.to raise_error(/Failed to find resource pool '#{resource_pool_name}'/)
             end
           end
@@ -129,7 +129,7 @@ module VmShepherd
                 datastore
               ).and_return(cached_ova_deployer)
 
-            deployer.deploy('foo', ova_path, {ip: '1.1.1.1'})
+            deployer.deploy('foo', ova_path, {ip: '1.1.1.1'}, location)
           end
         end
       end

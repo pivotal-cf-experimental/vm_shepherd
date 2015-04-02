@@ -18,10 +18,25 @@ module VmShepherd
             vcloud_deploy_options,
           )
         when VmShepherd::VSPHERE_IAAS_TYPE then
+          vm = settings.vm_deployer.vm
+          vsphere = settings.vm_deployer.vsphere
           vsphere_deployer.deploy(
             VSPHERE_TEMPLATE_PREFIX,
             path,
-            vsphere_deploy_options,
+            {
+              ip: vm.ip,
+              gateway: vm.gateway,
+              netmask: vm.netmask,
+              dns: vm.dns,
+              ntp_servers: vm.ntp_servers,
+            },
+            {
+              cluster: vsphere.cluster,
+              resource_pool: vsphere.resource_pool,
+              datastore: vsphere.datastore,
+              network: vsphere.network,
+              folder: vsphere.folder,
+            }
           )
         when VmShepherd::AWS_IAAS_TYPE then
           ami_manager.deploy(path)
@@ -113,31 +128,12 @@ module VmShepherd
 
     def vsphere_deployer
       vcenter_creds = settings.vm_deployer.vcenter_creds
-      vsphere = settings.vm_deployer.vsphere
       VmShepherd::OvaManager::Deployer.new(
         vcenter_creds.ip,
         vcenter_creds.username,
         vcenter_creds.password,
-        vsphere.datacenter,
-        {
-          cluster: vsphere.cluster,
-          resource_pool: vsphere.resource_pool,
-          datastore: vsphere.datastore,
-          network: vsphere.network,
-          folder: vsphere.folder,
-        }
+        settings.vm_deployer.vsphere.datacenter,
       )
-    end
-
-    def vsphere_deploy_options
-      vm = settings.vm_deployer.vm
-      {
-        ip: vm.ip,
-        gateway: vm.gateway,
-        netmask: vm.netmask,
-        dns: vm.dns,
-        ntp_servers: vm.ntp_servers,
-      }
     end
 
     def ami_manager

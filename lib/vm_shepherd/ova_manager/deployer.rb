@@ -10,8 +10,11 @@ module VmShepherd
     class Deployer
       attr_reader :location
 
-      def initialize(vcenter, location)
-        @vcenter = vcenter
+      def initialize(host, username, password, datacenter_name, location)
+        @host = host
+        @username = username
+        @password = password
+        @datacenter_name = datacenter_name
         @location = location
         raise 'Target folder must be set' unless @location[:folder]
       end
@@ -41,11 +44,13 @@ module VmShepherd
 
       private
 
+      attr_reader :host, :username, :password, :datacenter_name
+
       def connection
         @connection ||= RbVmomi::VIM.connect(
-          host: @vcenter.fetch(:host),
-          user: @vcenter.fetch(:user),
-          password: @vcenter.fetch(:password),
+          host: host,
+          user: username,
+          password: password,
           ssl: true,
           insecure: true,
         )
@@ -134,8 +139,8 @@ module VmShepherd
       end
 
       def build_deployer(location)
-        unless (datacenter = find_datacenter(location[:datacenter]))
-          raise "Failed to find datacenter '#{location[:datacenter]}'"
+        unless (datacenter = find_datacenter(datacenter_name))
+          raise "Failed to find datacenter '#{datacenter_name}'"
         end
 
         unless (cluster = datacenter.find_compute_resource(location[:cluster]))
@@ -157,7 +162,7 @@ module VmShepherd
 
         target_folder = datacenter.vmFolder.traverse(location[:folder], RbVmomi::VIM::Folder, true)
 
-        puts "--- Running: connecting to #{@vcenter[:user]}@#{@vcenter[:host]} @ #{DateTime.now}"
+        puts "--- Running: connecting to #{username}@#{host} @ #{DateTime.now}"
         VsphereClients::CachedOvfDeployer.new(
           connection,
           network,

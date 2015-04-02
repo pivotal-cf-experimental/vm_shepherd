@@ -115,13 +115,11 @@ module VmShepherd
       vcenter_creds = settings.vm_deployer.vcenter_creds
       vsphere = settings.vm_deployer.vsphere
       VmShepherd::OvaManager::Deployer.new(
+        vcenter_creds.ip,
+        vcenter_creds.username,
+        vcenter_creds.password,
+        vsphere.datacenter,
         {
-          host: vcenter_creds.ip,
-          user: vcenter_creds.username,
-          password: vcenter_creds.password,
-        },
-        {
-          datacenter: vsphere.datacenter,
           cluster: vsphere.cluster,
           resource_pool: vsphere.resource_pool,
           datastore: vsphere.datastore,

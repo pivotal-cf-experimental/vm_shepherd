@@ -24,15 +24,12 @@ module VmShepherd
       let(:template) { double('template', name: 'template name') }
       let(:ova_path) { File.join(SPEC_ROOT, 'fixtures', 'ova_manager', 'foo.ova') }
       let(:linked_clone) { double('linked clone', guest_ip: '1.1.1.1') }
-      let(:vcenter_config) {
-        {
-          host: 'foo',
-          user: 'bar',
-          password: 'secret'
-        }
-      }
+      let(:host) { 'FAKE_HOST' }
+      let(:username) { 'FAKE_USERNAME' }
+      let(:password) { 'FAKE_PASSWORD' }
+      let(:datacenter_name) { 'FAKE_DATACENTER' }
 
-      subject(:deployer) { Deployer.new(vcenter_config, location) }
+      subject(:deployer) { Deployer.new(host, username, password, datacenter_name, location) }
 
       before do
         allow(deployer).to receive(:system).with(/cd .* && tar xfv .*/).and_call_original
@@ -46,9 +43,9 @@ module VmShepherd
         allow(linked_clone).to receive_message_chain(:PowerOnVM_Task, :wait_for_completion)
 
         allow(RbVmomi::VIM).to receive(:connect).with({
-              host: vcenter_config[:host],
-              user: vcenter_config[:user],
-              password: vcenter_config[:password],
+              host: host,
+              user: username,
+              password: password,
               ssl: true,
               insecure: true
             }).and_return(connection)

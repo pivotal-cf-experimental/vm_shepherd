@@ -141,10 +141,6 @@ module VmShepherd
       Dir["#{dir}/*.ovf"].first || fail('Failed to find ovf')
     end
 
-    def file_path_to_file_uri(file_path)
-      "file://#{file_path}"
-    end
-
     def deploy_ovf_template(name_prefix, ovf_file_path, vsphere_config)
       logger.info('--- Running: Uploading template')
 
@@ -176,7 +172,7 @@ module VmShepherd
 
       vm =
         connection.serviceContent.ovfManager.deployOVF(
-          uri: file_path_to_file_uri(ovf_file_path),
+          uri: ovf_file_path,
           vmName: "#{Time.new.strftime("#{name_prefix}-%F-%H-%M")}-#{cluster(vsphere_config).name}",
           vmFolder: target_folder(vsphere_config),
           host: found_host,

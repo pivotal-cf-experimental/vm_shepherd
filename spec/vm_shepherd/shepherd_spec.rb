@@ -60,7 +60,6 @@ module VmShepherd
               ).and_return(ova_manager)
 
           expect(ova_manager).to receive(:deploy).with(
-              Shepherd::VSPHERE_TEMPLATE_PREFIX,
               'FAKE_PATH',
               {
                 ip: settings.vm_deployer.vm.ip,

@@ -1,7 +1,5 @@
 module VmShepherd
   class Shepherd
-    VSPHERE_TEMPLATE_PREFIX = 'tpl'.freeze
-
     class InvalidIaas < StandardError
 
     end
@@ -37,7 +35,6 @@ module VmShepherd
             settings.vm_deployer.vcenter_creds.password,
             settings.vm_deployer.vsphere.datacenter,
           ).deploy(
-            VSPHERE_TEMPLATE_PREFIX,
             path,
             {
               ip: settings.vm_deployer.vm.ip,

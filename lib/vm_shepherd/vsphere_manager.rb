@@ -3,6 +3,8 @@ require 'rbvmomi'
 
 module VmShepherd
   class VsphereManager
+    TEMPLATE_PREFIX = 'tpl'.freeze
+
     def initialize(host, username, password, datacenter_name)
       @host = host
       @username = username
@@ -11,7 +13,7 @@ module VmShepherd
       @logger = Logger.new(STDERR)
     end
 
-    def deploy(name_prefix, ova_path, ova_config, vsphere_config)
+    def deploy(ova_path, ova_config, vsphere_config)
       raise 'Target folder must be set' unless vsphere_config[:folder]
 
       fail("Failed to find datacenter '#{datacenter_name}'") unless datacenter
@@ -22,7 +24,7 @@ module VmShepherd
       tmp_dir = untar_vbox_ova(ova_path)
       ovf_file_path = ovf_file_path_from_dir(tmp_dir)
 
-      template = deploy_ovf_template(name_prefix, ovf_file_path, vsphere_config)
+      template = deploy_ovf_template(TEMPLATE_PREFIX, ovf_file_path, vsphere_config)
       vm = create_vm_from_template(template, vsphere_config)
 
       reconfigure_vm(vm, ova_config)

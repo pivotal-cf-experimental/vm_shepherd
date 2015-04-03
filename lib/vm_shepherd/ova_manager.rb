@@ -1,3 +1,5 @@
+require 'rbvmomi'
+
 module VmShepherd
   class OvaManager
     def initialize(host, username, password, datacenter_name)

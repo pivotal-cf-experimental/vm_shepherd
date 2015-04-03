@@ -102,13 +102,24 @@ module VmShepherd
     end
 
     def deploy_ovf_template(ovf_file_path, vsphere_config)
-      logger.info('--- Running: Uploading template')
+      template_name = [TEMPLATE_PREFIX, Time.new.strftime('%F-%H-%M'), cluster(vsphere_config).name].join('-')
+      logger.info("BEGIN deploy_ovf ovf_file=#{ovf_file_path} template_name=#{template_name}")
+      connection.serviceContent.ovfManager.deployOVF(
+        uri: ovf_file_path,
+        vmName: template_name,
+        vmFolder: target_folder(vsphere_config),
+        host: find_deploy_host(vsphere_config),
+        resourcePool: resource_pool(vsphere_config),
+        datastore: datastore(vsphere_config),
+        networkMappings: create_network_mappings(ovf_file_path, vsphere_config),
+        propertyMappings: {},
+      ).tap do |ovf_template|
+        ovf_template.add_delta_disk_layer_on_all_disks
+        ovf_template.MarkAsTemplate
+      end
+    end
 
-      ovf = Nokogiri::XML(File.read(ovf_file_path))
-      ovf.remove_namespaces!
-      networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
-      network_mappings = Hash[networks.map { |ovf_network| [ovf_network, network(vsphere_config)] }]
-
+    def find_deploy_host(vsphere_config)
       property_collector = connection.serviceContent.propertyCollector
 
       hosts = cluster(vsphere_config).host
@@ -121,32 +132,18 @@ module VmShepherd
           'name',
         )
 
-      found_host = # OVFs need to be uploaded to a specific host. The host needs to be:
-        hosts.shuffle.find do |host|
-          (host_properties_by_host[host]['runtime.connectionState'] == 'connected') && # connected
-            host_properties_by_host[host]['datastore'].member?(datastore(vsphere_config)) && # must have the destination datastore
-            !host_properties_by_host[host]['runtime.inMaintenanceMode'] #not be in maintenance mode
-        end || fail('No host in the cluster available to upload OVF to')
+      hosts.shuffle.find do |host|
+        (host_properties_by_host[host]['runtime.connectionState'] == 'connected') && # connected
+          host_properties_by_host[host]['datastore'].member?(datastore(vsphere_config)) && # must have the destination datastore
+          !host_properties_by_host[host]['runtime.inMaintenanceMode'] #not be in maintenance mode
+      end || fail('ERROR finding host to upload OVF to')
+    end
 
-      logger.info("BEGIN deploy_ovf ovf_file=#{ovf_file_path} host=#{host_properties_by_host[found_host]['name']}")
-
-      vm =
-        connection.serviceContent.ovfManager.deployOVF(
-          uri: ovf_file_path,
-          vmName: "#{Time.new.strftime("#{TEMPLATE_PREFIX}-%F-%H-%M")}-#{cluster(vsphere_config).name}",
-          vmFolder: target_folder(vsphere_config),
-          host: found_host,
-          resourcePool: resource_pool(vsphere_config),
-          datastore: datastore(vsphere_config),
-          networkMappings: network_mappings,
-          propertyMappings: {},
-        )
-      vm.add_delta_disk_layer_on_all_disks
-      vm.MarkAsTemplate
-
-      logger.info("END   deploy_ovf ovf_file=#{ovf_file_path} host=#{host_properties_by_host[found_host]['name']}")
-
-      vm
+    def create_network_mappings(ovf_file_path, vsphere_config)
+      ovf = Nokogiri::XML(File.read(ovf_file_path))
+      ovf.remove_namespaces!
+      networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
+      Hash[networks.map { |ovf_network| [ovf_network, network(vsphere_config)] }]
     end
 
     def create_vm_from_template(template, vsphere_config)
@@ -176,6 +173,20 @@ module VmShepherd
     end
 
     def create_virtual_machine_config_spec(vm_config)
+      logger.info('BEGIN VmConfigSpec creation')
+      vm_config_spec = RbVmomi::VIM::VmConfigSpec.new
+      vm_config_spec.ovfEnvironmentTransport = ['com.vmware.guestInfo']
+      vm_config_spec.property = create_vapp_property_specs(vm_config)
+      logger.info("END  VmConfigSpec creation: #{vm_config_spec.inspect}")
+
+      logger.info('BEGIN VirtualMachineConfigSpec creation')
+      virtual_machine_config_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
+      virtual_machine_config_spec.vAppConfig = vm_config_spec
+      logger.info("END  VirtualMachineConfigSpec creation #{virtual_machine_config_spec.inspect}")
+      virtual_machine_config_spec
+    end
+
+    def create_vapp_property_specs(vm_config)
       ip_configuration = {
         'ip0' => vm_config[:ip],
         'netmask0' => vm_config[:netmask],
@@ -208,18 +219,7 @@ module VmShepherd
         end
       end
       logger.info("END   VAppPropertySpec creation vapp_property_specs=#{vapp_property_specs.inspect}")
-
-      logger.info('BEGIN VmConfigSpec creation')
-      vm_config_spec = RbVmomi::VIM::VmConfigSpec.new
-      vm_config_spec.ovfEnvironmentTransport = ['com.vmware.guestInfo']
-      vm_config_spec.property = vapp_property_specs
-      logger.info("END  VmConfigSpec creation: #{vm_config_spec.inspect}")
-
-      logger.info('BEGIN VirtualMachineConfigSpec creation')
-      virtual_machine_config_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
-      virtual_machine_config_spec.vAppConfig = vm_config_spec
-      logger.info("END  VirtualMachineConfigSpec creation #{virtual_machine_config_spec.inspect}")
-      virtual_machine_config_spec
+      vapp_property_specs
     end
 
     def power_on_vm(vm)

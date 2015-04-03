@@ -33,7 +33,7 @@ module VmShepherd
         reconfigure_vm(vm, ova_config)
         power_on_vm(vm)
       ensure
-        FileUtils.remove_entry_secure(ovf_file_path, force: true)
+        FileUtils.remove_entry_secure(ovf_file_path, force: true) unless ovf_file_path.nil?
       end
 
       private

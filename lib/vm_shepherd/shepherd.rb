@@ -13,19 +13,17 @@ module VmShepherd
     def deploy(path:)
       case settings.iaas_type
         when VmShepherd::VCLOUD_IAAS_TYPE then
-          creds = settings.vapp_deployer.creds
-          vdc = settings.vapp_deployer.vdc
           VmShepherd::VcloudManager.new(
             {
-              url: creds.url,
-              organization: creds.organization,
-              user: creds.user,
-              password: creds.password,
+              url: settings.vapp_deployer.creds.url,
+              organization: settings.vapp_deployer.creds.organization,
+              user: settings.vapp_deployer.creds.user,
+              password: settings.vapp_deployer.creds.password,
             },
             {
-              vdc: vdc.name,
-              catalog: vdc.catalog,
-              network: vdc.network,
+              vdc: settings.vapp_deployer.vdc.name,
+              catalog: settings.vapp_deployer.vdc.catalog,
+              network: settings.vapp_deployer.vdc.network,
             },
             debug_logger
           ).deploy(
@@ -33,28 +31,27 @@ module VmShepherd
             vcloud_deploy_options,
           )
         when VmShepherd::VSPHERE_IAAS_TYPE then
-          vm_deployer_settings = settings.vm_deployer
           VmShepherd::OvaManager.new(
-            vm_deployer_settings.vcenter_creds.ip,
-            vm_deployer_settings.vcenter_creds.username,
-            vm_deployer_settings.vcenter_creds.password,
-            vm_deployer_settings.vsphere.datacenter,
+            settings.vm_deployer.vcenter_creds.ip,
+            settings.vm_deployer.vcenter_creds.username,
+            settings.vm_deployer.vcenter_creds.password,
+            settings.vm_deployer.vsphere.datacenter,
           ).deploy(
             VSPHERE_TEMPLATE_PREFIX,
             path,
             {
-              ip: vm_deployer_settings.vm.ip,
-              gateway: vm_deployer_settings.vm.gateway,
-              netmask: vm_deployer_settings.vm.netmask,
-              dns: vm_deployer_settings.vm.dns,
-              ntp_servers: vm_deployer_settings.vm.ntp_servers,
+              ip: settings.vm_deployer.vm.ip,
+              gateway: settings.vm_deployer.vm.gateway,
+              netmask: settings.vm_deployer.vm.netmask,
+              dns: settings.vm_deployer.vm.dns,
+              ntp_servers: settings.vm_deployer.vm.ntp_servers,
             },
             {
-              cluster: vm_deployer_settings.vsphere.cluster,
-              resource_pool: vm_deployer_settings.vsphere.resource_pool,
-              datastore: vm_deployer_settings.vsphere.datastore,
-              network: vm_deployer_settings.vsphere.network,
-              folder: vm_deployer_settings.vsphere.folder,
+              cluster: settings.vm_deployer.vsphere.cluster,
+              resource_pool: settings.vm_deployer.vsphere.resource_pool,
+              datastore: settings.vm_deployer.vsphere.datastore,
+              network: settings.vm_deployer.vsphere.network,
+              folder: settings.vm_deployer.vsphere.folder,
             }
           )
         when VmShepherd::AWS_IAAS_TYPE then
@@ -79,8 +76,9 @@ module VmShepherd
             {
               vdc: settings.vapp_deployer.vdc.name,
               catalog: settings.vapp_deployer.vdc.catalog,
+              network: settings.vapp_deployer.vdc.network,
             },
-            Logger.new(STDOUT).tap { |l| l.level = Logger::Severity::ERROR }
+            logger
           ).destroy(settings.vapp_deployer.vapp.name)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::OvaManager.new(

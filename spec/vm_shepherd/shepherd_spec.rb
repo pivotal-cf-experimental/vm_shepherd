@@ -174,6 +174,7 @@ module VmShepherd
               {
                 vdc: settings.vapp_deployer.vdc.name,
                 catalog: settings.vapp_deployer.vdc.catalog,
+                network: settings.vapp_deployer.vdc.network,
               },
               instance_of(Logger)
             ).and_return(vcloud_manager)

@@ -13,11 +13,11 @@ module VmShepherd
       @logger = Logger.new(STDERR)
     end
 
-    def deploy(ova_path, ova_config, vsphere_config)
+    def deploy(ova_path, vm_config, vsphere_config)
       raise ArgumentError unless folder_name_is_valid?(vsphere_config[:folder])
 
       ova_path = File.expand_path(ova_path.strip)
-      ensure_no_running_vm(ova_config)
+      ensure_no_running_vm(vm_config)
 
       tmp_dir = untar_vbox_ova(ova_path)
       ovf_file_path = ovf_file_path_from_dir(tmp_dir)
@@ -25,7 +25,7 @@ module VmShepherd
       template = deploy_ovf_template(TEMPLATE_PREFIX, ovf_file_path, vsphere_config)
       vm = create_vm_from_template(template, vsphere_config)
 
-      reconfigure_vm(vm, ova_config)
+      reconfigure_vm(vm, vm_config)
       power_on_vm(vm)
     ensure
       FileUtils.remove_entry_secure(ovf_file_path, force: true) unless ovf_file_path.nil?
@@ -168,13 +168,20 @@ module VmShepherd
       logger.info("END   clone_vm_task tempalte=#{template.name}")
     end
 
-    def reconfigure_vm(vm, ova_config)
+    def reconfigure_vm(vm, vm_config)
+      virtual_machine_config_spec = create_virtual_machine_config_spec(vm_config)
+      logger.info("BEGIN reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+      vm.ReconfigVM_Task(spec: virtual_machine_config_spec).wait_for_completion
+      logger.info("END   reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+    end
+
+    def create_virtual_machine_config_spec(vm_config)
       ip_configuration = {
-        'ip0' => ova_config[:ip],
-        'netmask0' => ova_config[:netmask],
-        'gateway' => ova_config[:gateway],
-        'DNS' => ova_config[:dns],
-        'ntp_servers' => ova_config[:ntp_servers],
+        'ip0' => vm_config[:ip],
+        'netmask0' => vm_config[:netmask],
+        'gateway' => vm_config[:gateway],
+        'DNS' => vm_config[:dns],
+        'ntp_servers' => vm_config[:ntp_servers],
       }
 
       vapp_property_specs = []
@@ -197,7 +204,7 @@ module VmShepherd
         spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
           p.key = ip_configuration.length
           p.label = 'admin_password'
-          p.value = ova_config[:vm_password]
+          p.value = vm_config[:vm_password]
         end
       end
       logger.info("END   VAppPropertySpec creation vapp_property_specs=#{vapp_property_specs.inspect}")
@@ -212,10 +219,7 @@ module VmShepherd
       virtual_machine_config_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
       virtual_machine_config_spec.vAppConfig = vm_config_spec
       logger.info("END  VirtualMachineConfigSpec creation #{virtual_machine_config_spec.inspect}")
-
-      logger.info("BEGIN reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
-      vm.ReconfigVM_Task(spec: virtual_machine_config_spec).wait_for_completion
-      logger.info("END   reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+      virtual_machine_config_spec
     end
 
     def power_on_vm(vm)

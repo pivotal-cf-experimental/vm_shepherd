@@ -22,7 +22,7 @@ module VmShepherd
       tmp_dir = untar_vbox_ova(ova_path)
       ovf_file_path = ovf_file_path_from_dir(tmp_dir)
 
-      template = deploy_ovf_template(TEMPLATE_PREFIX, ovf_file_path, vsphere_config)
+      template = deploy_ovf_template(ovf_file_path, vsphere_config)
       vm = create_vm_from_template(template, vsphere_config)
 
       reconfigure_vm(vm, vm_config)
@@ -101,7 +101,7 @@ module VmShepherd
       Dir["#{dir}/*.ovf"].first || fail('Failed to find ovf')
     end
 
-    def deploy_ovf_template(name_prefix, ovf_file_path, vsphere_config)
+    def deploy_ovf_template(ovf_file_path, vsphere_config)
       logger.info('--- Running: Uploading template')
 
       ovf = Nokogiri::XML(File.read(ovf_file_path))
@@ -133,7 +133,7 @@ module VmShepherd
       vm =
         connection.serviceContent.ovfManager.deployOVF(
           uri: ovf_file_path,
-          vmName: "#{Time.new.strftime("#{name_prefix}-%F-%H-%M")}-#{cluster(vsphere_config).name}",
+          vmName: "#{Time.new.strftime("#{TEMPLATE_PREFIX}-%F-%H-%M")}-#{cluster(vsphere_config).name}",
           vmFolder: target_folder(vsphere_config),
           host: found_host,
           resourcePool: resource_pool(vsphere_config),

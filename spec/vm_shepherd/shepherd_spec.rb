@@ -10,10 +10,10 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vcloud.yml')))
         end
-        let(:deployer) { instance_double(VappManager::Deployer) }
+        let(:vcloud_manager) { instance_double(VcloudManager) }
 
-        it 'uses VappManager::Deployer to launch a vm' do
-          expect(VappManager::Deployer).to receive(:new).
+        it 'uses VcloudManager::Deployer to launch a vm' do
+          expect(VcloudManager).to receive(:new).
               with(
                 {
                   url: settings.vapp_deployer.creds.url,
@@ -27,9 +27,9 @@ module VmShepherd
                   network: settings.vapp_deployer.vdc.network,
                 },
                 instance_of(Logger)
-              ).and_return(deployer)
+              ).and_return(vcloud_manager)
 
-          expect(deployer).to receive(:deploy).with(
+          expect(vcloud_manager).to receive(:deploy).with(
               'FAKE_PATH',
               {
                 name: settings.vapp_deployer.vapp.name,
@@ -161,10 +161,10 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vcloud.yml')))
         end
-        let(:destroyer) { instance_double(VappManager::Destroyer) }
+        let(:vcloud_manager) { instance_double(VcloudManager) }
 
-        it 'uses VappManager::Destroyer to destroy a vm' do
-          expect(VappManager::Destroyer).to receive(:new).with(
+        it 'uses VcloudManager::Destroyer to destroy a vm' do
+          expect(VcloudManager).to receive(:new).with(
               {
                 url: settings.vapp_deployer.creds.url,
                 organization: settings.vapp_deployer.creds.organization,
@@ -176,8 +176,8 @@ module VmShepherd
                 catalog: settings.vapp_deployer.vdc.catalog,
               },
               instance_of(Logger)
-            ).and_return(destroyer)
-          expect(destroyer).to receive(:destroy).with(settings.vapp_deployer.vapp.name)
+            ).and_return(vcloud_manager)
+          expect(vcloud_manager).to receive(:destroy).with(settings.vapp_deployer.vapp.name)
 
           manager.destroy
         end

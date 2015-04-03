@@ -13,7 +13,22 @@ module VmShepherd
     def deploy(path:)
       case settings.iaas_type
         when VmShepherd::VCLOUD_IAAS_TYPE then
-          vcloud_deployer.deploy(
+          creds = settings.vapp_deployer.creds
+          vdc = settings.vapp_deployer.vdc
+          VmShepherd::VcloudManager.new(
+            {
+              url: creds.url,
+              organization: creds.organization,
+              user: creds.user,
+              password: creds.password,
+            },
+            {
+              vdc: vdc.name,
+              catalog: vdc.catalog,
+              network: vdc.network,
+            },
+            debug_logger
+          ).deploy(
             path,
             vcloud_deploy_options,
           )
@@ -54,7 +69,7 @@ module VmShepherd
     def destroy
       case settings.iaas_type
         when VmShepherd::VCLOUD_IAAS_TYPE then
-          VmShepherd::VappManager::Destroyer.new(
+          VmShepherd::VcloudManager.new(
             {
               url: settings.vapp_deployer.creds.url,
               organization: settings.vapp_deployer.creds.organization,
@@ -97,25 +112,6 @@ module VmShepherd
       Logger.new(STDOUT).tap do |lggr|
         lggr.level = Logger::Severity::DEBUG
       end
-    end
-
-    def vcloud_deployer
-      creds = settings.vapp_deployer.creds
-      vdc = settings.vapp_deployer.vdc
-      VmShepherd::VappManager::Deployer.new(
-        {
-          url: creds.url,
-          organization: creds.organization,
-          user: creds.user,
-          password: creds.password,
-        },
-        {
-          vdc: vdc.name,
-          catalog: vdc.catalog,
-          network: vdc.network,
-        },
-        debug_logger
-      )
     end
 
     def vcloud_deploy_options

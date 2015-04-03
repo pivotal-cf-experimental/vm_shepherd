@@ -49,18 +49,17 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vsphere.yml')))
         end
-        let(:deployer) { instance_double(OvaManager::Deployer) }
+        let(:ova_manager) { instance_double(OvaManager) }
 
         it 'uses OvaManager::Deployer to launch a vm' do
-          expect(OvaManager::Deployer).to receive(:new).
-              with(
-                settings.vm_deployer.vcenter_creds.ip,
+          expect(OvaManager).to receive(:new).with(
+              settings.vm_deployer.vcenter_creds.ip,
                 settings.vm_deployer.vcenter_creds.username,
                 settings.vm_deployer.vcenter_creds.password,
                 settings.vm_deployer.vsphere.datacenter,
-              ).and_return(deployer)
+              ).and_return(ova_manager)
 
-          expect(deployer).to receive(:deploy).with(
+          expect(ova_manager).to receive(:deploy).with(
               Shepherd::VSPHERE_TEMPLATE_PREFIX,
               'FAKE_PATH',
               {
@@ -188,16 +187,16 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vsphere.yml')))
         end
-        let(:destroyer) { instance_double(OvaManager::Destroyer) }
+        let(:ova_manager) { instance_double(OvaManager) }
 
         it 'uses OvaManager::Destroyer to destroy a vm' do
-          expect(OvaManager::Destroyer).to receive(:new).with(
+          expect(OvaManager).to receive(:new).with(
               settings.vm_deployer.vcenter_creds.ip,
               settings.vm_deployer.vcenter_creds.username,
               settings.vm_deployer.vcenter_creds.password,
               settings.vm_deployer.vsphere.datacenter,
-            ).and_return(destroyer)
-          expect(destroyer).to receive(:destroy).with(settings.vm_deployer.vsphere.folder)
+            ).and_return(ova_manager)
+          expect(ova_manager).to receive(:destroy).with(settings.vm_deployer.vsphere.folder)
 
           manager.destroy
         end

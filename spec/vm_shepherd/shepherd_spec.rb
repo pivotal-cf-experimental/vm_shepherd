@@ -49,10 +49,10 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vsphere.yml')))
         end
-        let(:ova_manager) { instance_double(OvaManager) }
+        let(:ova_manager) { instance_double(VsphereManager) }
 
-        it 'uses OvaManager::Deployer to launch a vm' do
-          expect(OvaManager).to receive(:new).with(
+        it 'uses VsphereManager::Deployer to launch a vm' do
+          expect(VsphereManager).to receive(:new).with(
               settings.vm_deployer.vcenter_creds.ip,
                 settings.vm_deployer.vcenter_creds.username,
                 settings.vm_deployer.vcenter_creds.password,
@@ -86,7 +86,7 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'aws.yml')))
         end
-        let(:ams_manager) { instance_double(AmiManager) }
+        let(:ams_manager) { instance_double(AwsManager) }
         let(:ami_file_path) { 'PATH_TO_AMI_FILE' }
         let(:aws_options) do
           {
@@ -102,7 +102,7 @@ module VmShepherd
         end
 
         it 'uses AwsManager::Deployer to launch a VM' do
-          expect(AmiManager).to receive(:new).with(aws_options).and_return(ams_manager)
+          expect(AwsManager).to receive(:new).with(aws_options).and_return(ams_manager)
           expect(ams_manager).to receive(:deploy).with(ami_file_path)
           manager.deploy(path: ami_file_path)
         end
@@ -188,10 +188,10 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vsphere.yml')))
         end
-        let(:ova_manager) { instance_double(OvaManager) }
+        let(:ova_manager) { instance_double(VsphereManager) }
 
-        it 'uses OvaManager::Destroyer to destroy a vm' do
-          expect(OvaManager).to receive(:new).with(
+        it 'uses VsphereManager::Destroyer to destroy a vm' do
+          expect(VsphereManager).to receive(:new).with(
               settings.vm_deployer.vcenter_creds.ip,
               settings.vm_deployer.vcenter_creds.username,
               settings.vm_deployer.vcenter_creds.password,
@@ -207,7 +207,7 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'aws.yml')))
         end
-        let(:ams_manager) { instance_double(AmiManager) }
+        let(:ams_manager) { instance_double(AwsManager) }
         let(:ami_destroy_options) do
           {
             aws_access_key: 'aws-access-key',
@@ -222,7 +222,7 @@ module VmShepherd
         end
 
         it 'uses AwsManager::Deployer to launch a VM' do
-          expect(AmiManager).to receive(:new).with(ami_destroy_options).and_return(ams_manager)
+          expect(AwsManager).to receive(:new).with(ami_destroy_options).and_return(ams_manager)
           expect(ams_manager).to receive(:destroy)
           manager.destroy
         end

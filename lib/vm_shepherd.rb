@@ -1,8 +1,8 @@
 require 'vm_shepherd/shepherd'
-require 'vm_shepherd/ami_manager'
+require 'vm_shepherd/aws_manager'
 require 'vm_shepherd/openstack_manager'
 require 'vm_shepherd/vcloud_manager'
-require 'vm_shepherd/ova_manager'
+require 'vm_shepherd/vsphere_manager'
 
 module VmShepherd
   AWS_IAAS_TYPE = 'aws'.freeze

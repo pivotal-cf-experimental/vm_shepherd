@@ -1,7 +1,7 @@
-require 'vm_shepherd/ami_manager'
+require 'vm_shepherd/aws_manager'
 
 module VmShepherd
-  RSpec.describe AmiManager do
+  RSpec.describe AwsManager do
     let(:access_key) { 'access-key' }
     let(:secret_key) { 'secret-key' }
     let(:ami_id) { 'ami-deadbeef' }
@@ -21,7 +21,7 @@ module VmShepherd
       }
     end
 
-    subject(:ami_manager) { AmiManager.new(aws_options) }
+    subject(:ami_manager) { AwsManager.new(aws_options) }
 
     before do
       expect(AWS).to receive(:config).with(
@@ -63,9 +63,9 @@ module VmShepherd
 
         it 'stops retrying after 60 times' do
           expect(instances).to receive(:create).and_raise(AWS::EC2::Errors::InvalidIPAddress::InUse).
-              exactly(AmiManager::RETRY_LIMIT).times
+              exactly(AwsManager::RETRY_LIMIT).times
 
-          expect { ami_manager.deploy(ami_file_path) }.to raise_error(AmiManager::RetryLimitExceeded)
+          expect { ami_manager.deploy(ami_file_path) }.to raise_error(AwsManager::RetryLimitExceeded)
         end
       end
 
@@ -77,7 +77,7 @@ module VmShepherd
 
       it 'handles API endpoints not knowing (right away) about the instance created' do
         expect(instance).to receive(:status).and_raise(AWS::EC2::Errors::InvalidInstanceID::NotFound).
-            exactly(AmiManager::RETRY_LIMIT - 1).times
+            exactly(AwsManager::RETRY_LIMIT - 1).times
         expect(instance).to receive(:status).and_return(:running).once
 
         ami_manager.deploy(ami_file_path)
@@ -85,9 +85,9 @@ module VmShepherd
 
       it 'stops retrying after 60 times' do
         expect(instance).to receive(:status).and_return(:pending).
-            exactly(AmiManager::RETRY_LIMIT).times
+            exactly(AwsManager::RETRY_LIMIT).times
 
-        expect { ami_manager.deploy(ami_file_path) }.to raise_error(AmiManager::RetryLimitExceeded)
+        expect { ami_manager.deploy(ami_file_path) }.to raise_error(AwsManager::RetryLimitExceeded)
       end
 
       it 'attaches the elastic IP' do
@@ -130,7 +130,7 @@ module VmShepherd
         let(:instances) { [instance1, instance2, persistent_instance] }
 
         context 'when the do not terminate tag is present' do
-          let(:persist_tag) { { AmiManager::DO_NOT_TERMINATE_TAG_KEY => 'any value' } }
+          let(:persist_tag) { { AwsManager::DO_NOT_TERMINATE_TAG_KEY => 'any value' } }
           it 'does not attempt to terminate this instance' do
             expect(instance1).to receive(:terminate)
             expect(instance2).to receive(:terminate)

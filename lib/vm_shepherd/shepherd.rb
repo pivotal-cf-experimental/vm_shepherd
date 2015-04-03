@@ -31,7 +31,7 @@ module VmShepherd
             vcloud_deploy_options,
           )
         when VmShepherd::VSPHERE_IAAS_TYPE then
-          VmShepherd::OvaManager.new(
+          VmShepherd::VsphereManager.new(
             settings.vm_deployer.vcenter_creds.ip,
             settings.vm_deployer.vcenter_creds.username,
             settings.vm_deployer.vcenter_creds.password,
@@ -81,7 +81,7 @@ module VmShepherd
             logger
           ).destroy(settings.vapp_deployer.vapp.name)
         when VmShepherd::VSPHERE_IAAS_TYPE then
-          VmShepherd::OvaManager.new(
+          VmShepherd::VsphereManager.new(
             settings.vm_deployer.vcenter_creds.ip,
             settings.vm_deployer.vcenter_creds.username,
             settings.vm_deployer.vcenter_creds.password,
@@ -126,7 +126,7 @@ module VmShepherd
 
     def ami_manager
       vm_deployer = settings.vm_deployer
-      VmShepherd::AmiManager.new(
+      VmShepherd::AwsManager.new(
         aws_access_key: vm_deployer.aws_access_key,
         aws_secret_key: vm_deployer.aws_secret_key,
         ssh_key_name: vm_deployer.ssh_key_name,

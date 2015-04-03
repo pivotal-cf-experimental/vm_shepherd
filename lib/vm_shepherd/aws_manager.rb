@@ -1,7 +1,7 @@
 require 'aws-sdk-v1'
 
 module VmShepherd
-  class AmiManager
+  class AwsManager
     class RetryLimitExceeded < StandardError
     end
 

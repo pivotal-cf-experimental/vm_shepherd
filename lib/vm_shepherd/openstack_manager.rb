@@ -1,7 +1,7 @@
 require 'fog'
 
 module VmShepherd
-  class OpenstackVmManager
+  class OpenstackManager
     def initialize(auth_url:, username:, api_key:, tenant:)
       @auth_url = auth_url
       @username = username

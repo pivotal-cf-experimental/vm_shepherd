@@ -145,7 +145,7 @@ module VmShepherd
     end
 
     def openstack_vm_manager
-      OpenstackVmManager.new(
+      OpenstackManager.new(
         auth_url: settings.vm_deployer.creds.auth_url,
         username: settings.vm_deployer.creds.username,
         api_key: settings.vm_deployer.creds.api_key,

@@ -1,8 +1,8 @@
-require 'vm_shepherd/openstack_vm_manager'
+require 'vm_shepherd/openstack_manager'
 require 'support/patched_fog'
 
 module VmShepherd
-  RSpec.describe OpenstackVmManager do
+  RSpec.describe OpenstackManager do
     include PatchedFog
 
     let(:openstack_options) do
@@ -29,7 +29,7 @@ module VmShepherd
       }
     end
 
-    subject(:openstack_vm_manager) { OpenstackVmManager.new(openstack_options) }
+    subject(:openstack_vm_manager) { OpenstackManager.new(openstack_options) }
 
     describe '#service' do
       it 'creates a Fog::Compute connection' do

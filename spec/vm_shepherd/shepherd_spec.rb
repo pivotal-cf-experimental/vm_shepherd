@@ -112,7 +112,7 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'openstack.yml')))
         end
-        let(:qcow2_manager) { instance_double(OpenstackVmManager) }
+        let(:qcow2_manager) { instance_double(OpenstackManager) }
         let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
         let(:openstack_options) do
           {
@@ -139,7 +139,7 @@ module VmShepherd
         end
 
         it 'uses QCow2Manager to launch a VM' do
-          expect(OpenstackVmManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
+          expect(OpenstackManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
           expect(qcow2_manager).to receive(:deploy).with(qcow2_file_path, openstack_vm_options)
           manager.deploy(path: qcow2_file_path)
         end
@@ -231,7 +231,7 @@ module VmShepherd
         let(:settings) do
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'openstack.yml')))
         end
-        let(:qcow2_manager) { instance_double(OpenstackVmManager) }
+        let(:qcow2_manager) { instance_double(OpenstackManager) }
         let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
         let(:openstack_options) do
           {
@@ -258,7 +258,7 @@ module VmShepherd
         end
 
         it 'uses QCow2Manager to destroy a VM' do
-          expect(OpenstackVmManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
+          expect(OpenstackManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
           expect(qcow2_manager).to receive(:destroy).with(openstack_vm_options)
           manager.destroy
         end

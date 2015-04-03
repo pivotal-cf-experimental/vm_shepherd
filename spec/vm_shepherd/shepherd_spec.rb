@@ -197,7 +197,7 @@ module VmShepherd
               settings.vm_deployer.vcenter_creds.password,
               settings.vm_deployer.vsphere.datacenter,
             ).and_return(destroyer)
-          expect(destroyer).to receive(:clean_folder).with(settings.vm_deployer.vsphere.folder)
+          expect(destroyer).to receive(:destroy).with(settings.vm_deployer.vsphere.folder)
 
           manager.destroy
         end

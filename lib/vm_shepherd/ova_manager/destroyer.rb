@@ -11,8 +11,8 @@ module VmShepherd
         @logger = Logger.new(STDERR)
       end
 
-      def clean_folder(folder_name)
-        delete_folder(folder_name)
+      def destroy(folder_name)
+        delete_folder_and_vms(folder_name)
         create_folder(folder_name)
       end
 
@@ -43,15 +43,15 @@ module VmShepherd
         datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
       end
 
-      def delete_folder(folder_name)
+      def delete_folder_and_vms(folder_name)
         return unless (folder = find_folder(folder_name))
 
         find_vms(folder).each { |vm| power_off(vm) }
 
-        logger.info("vm_folder_client.delete_folder.delete folder=#{folder_name}")
+        logger.info("vm_folder_client.delete_folder_and_vms.delete folder=#{folder_name}")
         folder.Destroy_Task.wait_for_completion
       rescue RbVmomi::Fault => e
-        logger.error("vm_folder_client.delete_folder.failed folder=#{folder_name}")
+        logger.error("vm_folder_client.delete_folder_and_vms.failed folder=#{folder_name}")
         logger.error(e)
         raise
       end
@@ -59,7 +59,7 @@ module VmShepherd
       def power_off(vm)
         power_state = vm.runtime.powerState
 
-        logger.info("vm_folder_client.delete_folder.power_off vm=#{vm.name} power_state=#{power_state}")
+        logger.info("vm_folder_client.delete_folder_and_vms.power_off vm=#{vm.name} power_state=#{power_state}")
 
         unless power_state == 'poweredOff'
           # Trying to catch
@@ -67,7 +67,7 @@ module VmShepherd
           # in the current state (Powered off). (RbVmomi::Fault)'
           # (http://projects.puppetlabs.com/issues/16020)
           with_retry do
-            logger.info("vm_folder_client.delete_folder.power_off vm=#{vm.name}")
+            logger.info("vm_folder_client.delete_folder_and_vms.power_off vm=#{vm.name}")
             vm.PowerOffVM_Task.wait_for_completion
           end
         end

@@ -13,6 +13,7 @@ module VmShepherd
         @username = username
         @password = password
         @datacenter_name = datacenter_name
+        @logger = Logger.new(STDERR)
       end
 
       def deploy(name_prefix, ova_path, ova_config, vsphere_config)
@@ -37,7 +38,7 @@ module VmShepherd
 
       private
 
-      attr_reader :host, :username, :password, :datacenter_name
+      attr_reader :host, :username, :password, :datacenter_name, :logger
 
       def datacenter
         @datacenter ||= begin
@@ -57,14 +58,14 @@ module VmShepherd
       end
 
       def ensure_no_running_vm(ova_config)
-        puts "--- Running: Checking for existing VM @ #{DateTime.now}"
+        logger.info('--- Running: Checking for existing VM')
         ip = ova_config[:external_ip] || ova_config[:ip]
         port = ova_config[:external_port] || 443
         fail("VM exists at #{ip}") if system("nc -z -w 5 #{ip} #{port}")
       end
 
       def untar_vbox_ova(ova_path)
-        puts "--- Running: Untarring #{ova_path} @ #{DateTime.now}"
+        logger.info("--- Running: Untarring #{ova_path}")
         Dir.mktmpdir.tap do |dir|
           system_or_exit("cd #{dir} && tar xfv '#{ova_path}'")
         end
@@ -79,7 +80,7 @@ module VmShepherd
       end
 
       def deploy_ovf_template(name_prefix, ovf_file_path, vsphere_config)
-        puts "--- Running: Uploading template @ #{DateTime.now}"
+        logger.info('--- Running: Uploading template')
 
         ovf = Nokogiri::XML(File.read(ovf_file_path))
         ovf.remove_namespaces!
@@ -105,7 +106,7 @@ module VmShepherd
               !host_properties_by_host[host]['runtime.inMaintenanceMode'] #not be in maintenance mode
           end || fail('No host in the cluster available to upload OVF to')
 
-        puts "Uploading OVF to #{host_properties_by_host[found_host]['name']} @ #{DateTime.now}"
+        logger.info("BEGIN: Uploading OVF to #{host_properties_by_host[found_host]['name']}")
 
         vm =
           connection.serviceContent.ovfManager.deployOVF(
@@ -121,13 +122,13 @@ module VmShepherd
         vm.add_delta_disk_layer_on_all_disks
         vm.MarkAsTemplate
 
-        puts "Marked VM as Template @ #{DateTime.now}"
+        logger.info("END: Uploading OVF to #{host_properties_by_host[found_host]['name']}")
 
         vm
       end
 
       def create_vm_from_template(template, vsphere_config)
-        puts "--- Running: Cloning template @ #{DateTime.now}"
+        logger.info('--- Running: Cloning template')
 
         template.CloneVM_Task(
           folder: target_folder(vsphere_config),
@@ -154,7 +155,7 @@ module VmShepherd
           'ntp_servers' => ova_config[:ntp_servers],
         }
 
-        puts "--- Running: Reconfiguring VM using #{ip_configuration.inspect} @ #{DateTime.now}"
+        logger.info("--- Running: Reconfiguring VM using #{ip_configuration.inspect}")
         property_specs = []
 
         # Order of ip configuration keys must match
@@ -189,7 +190,7 @@ module VmShepherd
       end
 
       def power_on_vm(vm)
-        puts "--- Running: Powering on VM @ #{DateTime.now}"
+        logger.info('--- Running: Powering on VM')
         vm.PowerOnVM_Task.wait_for_completion
         wait_for('VM IP') { vm.guest_ip }
       end
@@ -227,21 +228,21 @@ module VmShepherd
       end
 
       def system_or_exit(*args)
-        puts "--- Running: #{args} @ #{DateTime.now}"
+        logger.info("--- Running: #{args}")
         system(*args) || fail('FAILED')
       end
 
       def wait_for(title, &blk)
         Timeout.timeout(7*60) do
           until (value = blk.call)
-            puts '--- Waiting for 30 secs'
+            logger.info('--- Waiting for 30 secs')
             sleep 30
           end
-          puts "--- Value obtained for #{title} is #{value}"
+          logger.info("--- Value obtained for #{title} is #{value}")
           value
         end
       rescue Timeout::Error
-        puts "--- Timed out waiting for #{title}"
+        logger.error("--- Timed out waiting for #{title}")
         raise
       end
     end

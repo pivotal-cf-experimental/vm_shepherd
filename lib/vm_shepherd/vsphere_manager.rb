@@ -14,9 +14,7 @@ module VmShepherd
     end
 
     def deploy(ova_path, ova_config, vsphere_config)
-      raise 'Target folder must be set' unless vsphere_config[:folder]
-
-      fail("Failed to find datacenter '#{datacenter_name}'") unless datacenter
+      raise ArgumentError unless folder_name_is_valid?(vsphere_config[:folder])
 
       ova_path = File.expand_path(ova_path.strip)
       ensure_no_running_vm(ova_config)
@@ -34,74 +32,30 @@ module VmShepherd
     end
 
     def destroy(folder_name)
+      fail("#{folder_name.inspect} is not a valid folder name") unless folder_name_is_valid?(folder_name)
+
       delete_folder_and_vms(folder_name)
-      create_folder(folder_name)
+
+      fail("#{folder_name.inspect} already exists") unless datacenter.vmFolder.traverse(folder_name).nil?
+
+      datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
     end
 
     private
 
     attr_reader :host, :username, :password, :datacenter_name, :logger
 
-    def connection
-      @connection ||= RbVmomi::VIM.connect(
-        host: host,
-        user: username,
-        password: password,
-        ssl: true,
-        insecure: true,
-      )
-    end
-
-    def datacenter
-      @datacenter ||= begin
-        match = connection.searchIndex.FindByInventoryPath(inventoryPath: datacenter_name)
-        match if match and match.is_a?(RbVmomi::VIM::Datacenter)
-      end
-    end
-
-    def create_folder(folder_name)
-      raise ArgumentError unless folder_name_is_valid?(folder_name)
-      raise ArgumentError if folder_exists?(folder_name)
-      datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
-    end
-
     def delete_folder_and_vms(folder_name)
-      return unless (folder = find_folder(folder_name))
+      return unless (folder = datacenter.vmFolder.traverse(folder_name))
 
       find_vms(folder).each { |vm| power_off(vm) }
 
-      logger.info("vm_folder_client.delete_folder_and_vms.delete folder=#{folder_name}")
+      logger.info("BEGIN folder.destroy_task folder=#{folder_name}")
       folder.Destroy_Task.wait_for_completion
+      logger.info("END   folder.destroy_task folder=#{folder_name}")
     rescue RbVmomi::Fault => e
-      logger.error("vm_folder_client.delete_folder_and_vms.failed folder=#{folder_name}")
-      logger.error(e)
+      logger.info("ERROR folder.destroy_task folder=#{folder_name}", e)
       raise
-    end
-
-    def power_off(vm)
-      power_state = vm.runtime.powerState
-
-      logger.info("vm_folder_client.delete_folder_and_vms.power_off vm=#{vm.name} power_state=#{power_state}")
-
-      unless power_state == 'poweredOff'
-        # Trying to catch
-        # 'InvalidPowerState: The attempted operation cannot be performed
-        # in the current state (Powered off). (RbVmomi::Fault)'
-        # (http://projects.puppetlabs.com/issues/16020)
-        with_retry do
-          logger.info("vm_folder_client.delete_folder_and_vms.power_off vm=#{vm.name}")
-          vm.PowerOffVM_Task.wait_for_completion
-        end
-      end
-    end
-
-    def folder_exists?(folder_name)
-      !find_folder(folder_name).nil?
-    end
-
-    def find_folder(folder_name)
-      raise ArgumentError unless folder_name_is_valid?(folder_name)
-      datacenter.vmFolder.traverse(folder_name)
     end
 
     def find_vms(folder)
@@ -110,19 +64,23 @@ module VmShepherd
       vms.flatten
     end
 
-    def folder_name_is_valid?(folder_name)
-      /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/.match(folder_name)
+    def power_off(vm)
+      2.times do
+        break if vm.runtime.powerState == 'poweredOff'
+
+        begin
+          logger.info("BEGIN vm.power_off_task vm=#{vm.name}, power_state=#{vm.runtime.powerState}")
+          vm.PowerOffVM_Task.wait_for_completion
+          logger.info("END   vm.power_off_task vm=#{vm.name}")
+        rescue StandardError => e
+          logger.info("ERROR vm.power_off_task vm=#{vm.name}")
+          raise unless e.message.start_with?('InvalidPowerState')
+        end
+      end
     end
 
-    def with_retry(tries=2, &blk)
-      blk.call
-    rescue StandardError => e
-      tries -= 1
-      if e.message.start_with?('InvalidPowerState') && tries > 0
-        retry
-      else
-        raise
-      end
+    def folder_name_is_valid?(folder_name)
+      /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/.match(folder_name)
     end
 
     def ensure_no_running_vm(ova_config)
@@ -170,7 +128,7 @@ module VmShepherd
             !host_properties_by_host[host]['runtime.inMaintenanceMode'] #not be in maintenance mode
         end || fail('No host in the cluster available to upload OVF to')
 
-      logger.info("BEGIN: Uploading OVF to #{host_properties_by_host[found_host]['name']}")
+      logger.info("BEGIN deploy_ovf ovf_file=#{ovf_file_path} host=#{host_properties_by_host[found_host]['name']}")
 
       vm =
         connection.serviceContent.ovfManager.deployOVF(
@@ -186,14 +144,13 @@ module VmShepherd
       vm.add_delta_disk_layer_on_all_disks
       vm.MarkAsTemplate
 
-      logger.info("END: Uploading OVF to #{host_properties_by_host[found_host]['name']}")
+      logger.info("END   deploy_ovf ovf_file=#{ovf_file_path} host=#{host_properties_by_host[found_host]['name']}")
 
       vm
     end
 
     def create_vm_from_template(template, vsphere_config)
-      logger.info('--- Running: Cloning template')
-
+      logger.info("BEGIN clone_vm_task tempalte=#{template.name}")
       template.CloneVM_Task(
         folder: target_folder(vsphere_config),
         name: "#{template.name}-vm",
@@ -208,6 +165,7 @@ module VmShepherd
           config: {numCPUs: 2, memoryMB: 2048},
         }
       ).wait_for_completion
+      logger.info("END   clone_vm_task tempalte=#{template.name}")
     end
 
     def reconfigure_vm(vm, ova_config)
@@ -219,13 +177,12 @@ module VmShepherd
         'ntp_servers' => ova_config[:ntp_servers],
       }
 
-      logger.info("--- Running: Reconfiguring VM using #{ip_configuration.inspect}")
-      property_specs = []
+      vapp_property_specs = []
 
-      # Order of ip configuration keys must match
-      # order of OVF template properties.
+      logger.info("BEGIN VAppPropertySpec creation configuration=#{ip_configuration.inspect}")
+      # IP Configuration key order must match OVF template property order
       ip_configuration.each_with_index do |(key, value), i|
-        property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
+        vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
           spec.operation = 'edit'
           spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
             p.key = i
@@ -235,7 +192,7 @@ module VmShepherd
         end
       end
 
-      property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
+      vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
         spec.operation = 'edit'
         spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
           p.key = ip_configuration.length
@@ -243,20 +200,52 @@ module VmShepherd
           p.value = ova_config[:vm_password]
         end
       end
+      logger.info("END   VAppPropertySpec creation vapp_property_specs=#{vapp_property_specs.inspect}")
 
+      logger.info('BEGIN VmConfigSpec creation')
       vm_config_spec = RbVmomi::VIM::VmConfigSpec.new
       vm_config_spec.ovfEnvironmentTransport = ['com.vmware.guestInfo']
-      vm_config_spec.property = property_specs
+      vm_config_spec.property = vapp_property_specs
+      logger.info("END  VmConfigSpec creation: #{vm_config_spec.inspect}")
 
-      vmachine_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
-      vmachine_spec.vAppConfig = vm_config_spec
-      vm.ReconfigVM_Task(spec: vmachine_spec).wait_for_completion
+      logger.info('BEGIN VirtualMachineConfigSpec creation')
+      virtual_machine_config_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
+      virtual_machine_config_spec.vAppConfig = vm_config_spec
+      logger.info("END  VirtualMachineConfigSpec creation #{virtual_machine_config_spec.inspect}")
+
+      logger.info("BEGIN reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+      vm.ReconfigVM_Task(spec: virtual_machine_config_spec).wait_for_completion
+      logger.info("END   reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
     end
 
     def power_on_vm(vm)
-      logger.info('--- Running: Powering on VM')
+      logger.info('BEGIN power_on_vm_task')
       vm.PowerOnVM_Task.wait_for_completion
-      wait_for('VM IP') { vm.guest_ip }
+      logger.info('END  power_on_vm_task')
+
+      Timeout.timeout(7*60) do
+        until vm.guest_ip
+          logger.info('BEGIN polling for VM IP address')
+          sleep 30
+        end
+        logger.info("END   polling for VM IP address #{vm.guest_ip.inspect}")
+      end
+    end
+
+    def connection
+      RbVmomi::VIM.connect(
+        host: host,
+        user: username,
+        password: password,
+        ssl: true,
+        insecure: true,
+      )
+    end
+
+    def datacenter
+      connection.searchIndex.FindByInventoryPath(inventoryPath: datacenter_name).tap do |dc|
+        fail("ERROR finding datacenter #{datacenter_name.inspect}") unless dc.is_a?(RbVmomi::VIM::Datacenter)
+      end
     end
 
     def target_folder(vsphere_config)
@@ -265,22 +254,22 @@ module VmShepherd
 
     def cluster(vsphere_config)
       datacenter.find_compute_resource(vsphere_config[:cluster]) ||
-        fail("Failed to find cluster '#{vsphere_config[:cluster]}'")
+        fail("ERROR finding cluster #{vsphere_config[:cluster].inspect}")
     end
 
     def network(vsphere_config)
       datacenter.networkFolder.traverse(vsphere_config[:network]) ||
-        fail("Failed to find network '#{vsphere_config[:network]}'")
+        fail("ERROR finding network #{vsphere_config[:network].inspect}")
     end
 
     def resource_pool(vsphere_config)
       find_resource_pool(cluster(vsphere_config), vsphere_config[:resource_pool]) ||
-        fail("Failed to find resource pool '#{vsphere_config[:resource_pool]}'")
+        fail("ERROR finding resource_pool #{vsphere_config[:resource_pool].inspect}")
     end
 
     def datastore(vsphere_config)
       datacenter.find_datastore(vsphere_config[:datastore]) ||
-        fail("Failed to find datastore '#{vsphere_config[:datastore]}'")
+        fail("ERROR finding datastore #{vsphere_config[:datastore].inspect}")
     end
 
     def find_resource_pool(cluster, resource_pool_name)
@@ -291,23 +280,10 @@ module VmShepherd
       end
     end
 
-    def system_or_exit(*args)
-      logger.info("--- Running: #{args}")
-      system(*args) || fail('FAILED')
-    end
-
-    def wait_for(title, &blk)
-      Timeout.timeout(7*60) do
-        until (value = blk.call)
-          logger.info('--- Waiting for 30 secs')
-          sleep 30
-        end
-        logger.info("--- Value obtained for #{title} is #{value}")
-        value
-      end
-    rescue Timeout::Error
-      logger.error("--- Timed out waiting for #{title}")
-      raise
+    def system_or_exit(command)
+      logger.info("BEGIN running #{command.inspect}")
+      system(command) || fail("ERROR running #{command.inspect}")
+      logger.info("END   running #{command.inspect}")
     end
   end
 end

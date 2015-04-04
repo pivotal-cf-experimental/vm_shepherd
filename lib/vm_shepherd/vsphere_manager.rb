@@ -45,6 +45,35 @@ module VmShepherd
 
     attr_reader :host, :username, :password, :datacenter_name, :logger
 
+    def folder_name_is_valid?(folder_name)
+      /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/.match(folder_name)
+    end
+
+    def ensure_no_running_vm(ova_config)
+      logger.info('--- Running: Checking for existing VM')
+      ip = ova_config[:ip]
+      port = ova_config[:external_port] || 443
+      fail("VM exists at #{ip}") if system("nc -z -w 5 #{ip} #{port}")
+    end
+
+    def untar_vbox_ova(ova_path)
+      logger.info("--- Running: Untarring #{ova_path}")
+      Dir.mktmpdir.tap do |dir|
+        system("cd #{dir} && tar xfv '#{ova_path}'") || fail("ERROR: Untarring #{ova_path}")
+      end
+    end
+
+    def ovf_file_path_from_dir(dir)
+      Dir["#{dir}/*.ovf"].first || fail('Failed to find ovf')
+    end
+
+    def create_network_mappings(ovf_file_path, vsphere_config)
+      ovf = Nokogiri::XML(File.read(ovf_file_path))
+      ovf.remove_namespaces!
+      networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
+      Hash[networks.map { |ovf_network| [ovf_network, network(vsphere_config)] }]
+    end
+
     def delete_folder_and_vms(folder_name)
       return unless (folder = datacenter.vmFolder.traverse(folder_name))
 
@@ -79,28 +108,6 @@ module VmShepherd
       end
     end
 
-    def folder_name_is_valid?(folder_name)
-      /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/.match(folder_name)
-    end
-
-    def ensure_no_running_vm(ova_config)
-      logger.info('--- Running: Checking for existing VM')
-      ip = ova_config[:external_ip] || ova_config[:ip]
-      port = ova_config[:external_port] || 443
-      fail("VM exists at #{ip}") if system("nc -z -w 5 #{ip} #{port}")
-    end
-
-    def untar_vbox_ova(ova_path)
-      logger.info("--- Running: Untarring #{ova_path}")
-      Dir.mktmpdir.tap do |dir|
-        system_or_exit("cd #{dir} && tar xfv '#{ova_path}'")
-      end
-    end
-
-    def ovf_file_path_from_dir(dir)
-      Dir["#{dir}/*.ovf"].first || fail('Failed to find ovf')
-    end
-
     def deploy_ovf_template(ovf_file_path, vsphere_config)
       template_name = [TEMPLATE_PREFIX, Time.new.strftime('%F-%H-%M'), cluster(vsphere_config).name].join('-')
       logger.info("BEGIN deploy_ovf ovf_file=#{ovf_file_path} template_name=#{template_name}")
@@ -109,7 +116,7 @@ module VmShepherd
         vmName: template_name,
         vmFolder: target_folder(vsphere_config),
         host: find_deploy_host(vsphere_config),
-        resourcePool: resource_pool(vsphere_config),
+        resourcePool: resource_pool(cluster(vsphere_config), vsphere_config),
         datastore: datastore(vsphere_config),
         networkMappings: create_network_mappings(ovf_file_path, vsphere_config),
         propertyMappings: {},
@@ -137,13 +144,6 @@ module VmShepherd
           host_properties_by_host[host]['datastore'].member?(datastore(vsphere_config)) && # must have the destination datastore
           !host_properties_by_host[host]['runtime.inMaintenanceMode'] #not be in maintenance mode
       end || fail('ERROR finding host to upload OVF to')
-    end
-
-    def create_network_mappings(ovf_file_path, vsphere_config)
-      ovf = Nokogiri::XML(File.read(ovf_file_path))
-      ovf.remove_namespaces!
-      networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
-      Hash[networks.map { |ovf_network| [ovf_network, network(vsphere_config)] }]
     end
 
     def create_vm_from_template(template, vsphere_config)
@@ -272,28 +272,17 @@ module VmShepherd
         fail("ERROR finding network #{vsphere_config[:network].inspect}")
     end
 
-    def resource_pool(vsphere_config)
-      find_resource_pool(cluster(vsphere_config), vsphere_config[:resource_pool]) ||
-        fail("ERROR finding resource_pool #{vsphere_config[:resource_pool].inspect}")
+    def resource_pool(cluster, vsphere_config)
+      if vsphere_config[:resource_pool]
+        cluster.resourcePool.resourcePool.find { |rp| rp.name == vsphere_config[:resource_pool] }
+      else
+        cluster.resourcePool
+      end || fail("ERROR finding resource_pool #{vsphere_config[:resource_pool].inspect}")
     end
 
     def datastore(vsphere_config)
       datacenter.find_datastore(vsphere_config[:datastore]) ||
         fail("ERROR finding datastore #{vsphere_config[:datastore].inspect}")
-    end
-
-    def find_resource_pool(cluster, resource_pool_name)
-      if resource_pool_name
-        cluster.resourcePool.resourcePool.find { |rp| rp.name == resource_pool_name }
-      else
-        cluster.resourcePool
-      end
-    end
-
-    def system_or_exit(command)
-      logger.info("BEGIN running #{command.inspect}")
-      system(command) || fail("ERROR running #{command.inspect}")
-      logger.info("END   running #{command.inspect}")
     end
   end
 end

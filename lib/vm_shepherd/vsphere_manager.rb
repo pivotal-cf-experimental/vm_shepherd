@@ -37,8 +37,6 @@ module VmShepherd
       fail("#{folder_name.inspect} is not a valid folder name") unless folder_name_is_valid?(folder_name)
 
       delete_folder_and_vms(folder_name)
-
-      fail("#{folder_name.inspect} already exists") unless datacenter.vmFolder.traverse(folder_name).nil?
     end
 
     private
@@ -82,6 +80,8 @@ module VmShepherd
       logger.info("BEGIN folder.destroy_task folder=#{folder_name}")
       folder.Destroy_Task.wait_for_completion
       logger.info("END   folder.destroy_task folder=#{folder_name}")
+
+      fail("#{folder_name.inspect} already exists") unless datacenter.vmFolder.traverse(folder_name).nil?
     rescue RbVmomi::Fault => e
       logger.info("ERROR folder.destroy_task folder=#{folder_name}", e)
       raise

@@ -22,6 +22,7 @@ module VmShepherd
       tmp_dir = untar_vbox_ova(ova_path)
       ovf_file_path = ovf_file_path_from_dir(tmp_dir)
 
+      datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
       template = deploy_ovf_template(ovf_file_path, vsphere_config)
       vm = create_vm_from_template(template, vsphere_config)
 
@@ -37,8 +38,6 @@ module VmShepherd
       delete_folder_and_vms(folder_name)
 
       fail("#{folder_name.inspect} already exists") unless datacenter.vmFolder.traverse(folder_name).nil?
-
-      datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
     end
 
     private

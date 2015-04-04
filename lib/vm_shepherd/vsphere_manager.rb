@@ -14,7 +14,7 @@ module VmShepherd
     end
 
     def deploy(ova_path, vm_config, vsphere_config)
-      raise ArgumentError unless folder_name_is_valid?(vsphere_config[:folder])
+      fail("#{vsphere_config[:folder].inspect} is not a valid folder name") unless folder_name_is_valid?(vsphere_config[:folder])
 
       ova_path = File.expand_path(ova_path.strip)
       ensure_no_running_vm(vm_config)

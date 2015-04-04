@@ -76,7 +76,8 @@ module VmShepherd
     end
 
     def delete_folder_and_vms(folder_name)
-      return unless (folder = datacenter.vmFolder.traverse(folder_name))
+      folder = datacenter.vmFolder.traverse(folder_name) ||
+        fail("ERROR no folder found with name=#{folder_name.inspect}")
 
       find_vms(folder).each { |vm| power_off(vm) }
 

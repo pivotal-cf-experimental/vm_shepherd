@@ -15,26 +15,19 @@ module VmShepherd
     end
 
     def deploy(ova_path, vm_config, vsphere_config)
-      fail("#{vsphere_config[:folder].inspect} is not a valid folder name") unless folder_name_is_valid?(vsphere_config[:folder])
+      validate_folder_name!(vsphere_config[:folder])
 
-      ova_path = File.expand_path(ova_path.strip)
       ensure_no_running_vm(vm_config)
 
-      tmp_dir = untar_vbox_ova(ova_path)
-      ovf_file_path = ovf_file_path_from_dir(tmp_dir)
+      ovf_file_path = extract_ovf_from(ova_path)
 
-      datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
-      template = deploy_ovf_template(ovf_file_path, vsphere_config)
-      vm = create_vm_from_template(template, vsphere_config)
-
-      reconfigure_vm(vm, vm_config)
-      power_on_vm(vm)
+      boot_vm(ovf_file_path, vm_config, vsphere_config)
     ensure
       FileUtils.remove_entry_secure(ovf_file_path, force: true) unless ovf_file_path.nil?
     end
 
     def destroy(folder_name)
-      fail("#{folder_name.inspect} is not a valid folder name") unless folder_name_is_valid?(folder_name)
+      validate_folder_name!(folder_name)
 
       delete_folder_and_vms(folder_name)
     end
@@ -43,8 +36,8 @@ module VmShepherd
 
     attr_reader :host, :username, :password, :datacenter_name, :logger
 
-    def folder_name_is_valid?(folder_name)
-      VALID_FOLDER_REGEX.match(folder_name)
+    def validate_folder_name!(folder_name)
+      VALID_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid folder name")
     end
 
     def ensure_no_running_vm(ova_config)
@@ -54,15 +47,16 @@ module VmShepherd
       fail("VM exists at #{ip}") if system("nc -z -w 5 #{ip} #{port}")
     end
 
-    def untar_vbox_ova(ova_path)
-      logger.info("--- Running: Untarring #{ova_path}")
-      Dir.mktmpdir.tap do |dir|
-        system("cd #{dir} && tar xfv '#{ova_path}'") || fail("ERROR: Untarring #{ova_path}")
-      end
-    end
+    def extract_ovf_from(ova_path)
+      logger.info("BEGIN extract_ovf_from #{ova_path}")
+      ova_path = File.expand_path(ova_path.strip)
 
-    def ovf_file_path_from_dir(dir)
-      Dir["#{dir}/*.ovf"].first || fail('Failed to find ovf')
+      untar_dir = Dir.mktmpdir
+
+      system("cd #{untar_dir} && tar xfv '#{ova_path}'") || fail("ERROR: Untarring #{ova_path}")
+
+      Dir["#{untar_dir}/*.ovf"].first.tap { logger.info("END   extract_ovf_from #{ova_path}") } ||
+        fail('Failed to find ovf')
     end
 
     def create_network_mappings(ovf_file_path, vsphere_config)
@@ -70,6 +64,15 @@ module VmShepherd
       ovf.remove_namespaces!
       networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
       Hash[networks.map { |ovf_network| [ovf_network, network(vsphere_config)] }]
+    end
+
+    def boot_vm(ovf_file_path, vm_config, vsphere_config)
+      datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)
+      template = deploy_ovf_template(ovf_file_path, vsphere_config)
+      vm = create_vm_from_template(template, vsphere_config)
+
+      reconfigure_vm(vm, vm_config)
+      power_on_vm(vm)
     end
 
     def delete_folder_and_vms(folder_name)

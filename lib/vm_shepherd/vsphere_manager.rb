@@ -40,11 +40,11 @@ module VmShepherd
       VALID_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid folder name")
     end
 
-    def ensure_no_running_vm(ova_config)
-      logger.info('--- Running: Checking for existing VM')
-      ip = ova_config[:ip]
-      port = ova_config[:external_port] || 443
-      fail("VM exists at #{ip}") if system("nc -z -w 5 #{ip} #{port}")
+    def ensure_no_running_vm(vm_config)
+      ip_port = "#{vm_config.fetch(:ip)} #{vm_config.fetch(:external_port, 443)}"
+      logger.info("BEGIN checking for VM at #{ip_port}")
+      fail("VM exists at #{ip_port}") if system("nc -z -w 5 #{ip_port}")
+      logger.info("END   checking for VM at #{ip_port}")
     end
 
     def extract_ovf_from(ova_path)

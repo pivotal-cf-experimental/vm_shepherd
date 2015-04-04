@@ -161,29 +161,35 @@ module VmShepherd
           template: false,
           config: {numCPUs: 2, memoryMB: 2048},
         }
-      ).wait_for_completion
-      logger.info("END   clone_vm_task tempalte=#{template.name}")
+      ).wait_for_completion.tap {
+        logger.info("END   clone_vm_task tempalte=#{template.name}")
+      }
     end
 
     def reconfigure_vm(vm, vm_config)
       virtual_machine_config_spec = create_virtual_machine_config_spec(vm_config)
       logger.info("BEGIN reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
-      vm.ReconfigVM_Task(spec: virtual_machine_config_spec).wait_for_completion
-      logger.info("END   reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+      vm.ReconfigVM_Task(
+        spec: virtual_machine_config_spec
+      ).wait_for_completion.tap {
+        logger.info("END   reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+      }
     end
 
     def create_virtual_machine_config_spec(vm_config)
       logger.info('BEGIN VmConfigSpec creation')
-      vm_config_spec = RbVmomi::VIM::VmConfigSpec.new
-      vm_config_spec.ovfEnvironmentTransport = ['com.vmware.guestInfo']
-      vm_config_spec.property = create_vapp_property_specs(vm_config)
+      vm_config_spec =
+        RbVmomi::VIM::VmConfigSpec.new.tap do |vcs|
+          vcs.ovfEnvironmentTransport = ['com.vmware.guestInfo']
+          vcs.property = create_vapp_property_specs(vm_config)
+        end
       logger.info("END  VmConfigSpec creation: #{vm_config_spec.inspect}")
 
       logger.info('BEGIN VirtualMachineConfigSpec creation')
-      virtual_machine_config_spec = RbVmomi::VIM::VirtualMachineConfigSpec.new
-      virtual_machine_config_spec.vAppConfig = vm_config_spec
-      logger.info("END  VirtualMachineConfigSpec creation #{virtual_machine_config_spec.inspect}")
-      virtual_machine_config_spec
+      RbVmomi::VIM::VirtualMachineConfigSpec.new.tap do |virtual_machine_config_spec|
+        virtual_machine_config_spec.vAppConfig = vm_config_spec
+        logger.info("END  VirtualMachineConfigSpec creation #{virtual_machine_config_spec.inspect}")
+      end
     end
 
     def create_vapp_property_specs(vm_config)

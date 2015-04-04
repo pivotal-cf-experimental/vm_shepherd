@@ -4,6 +4,7 @@ require 'rbvmomi'
 module VmShepherd
   class VsphereManager
     TEMPLATE_PREFIX = 'tpl'.freeze
+    VALID_FOLDER_REGEX = /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/
 
     def initialize(host, username, password, datacenter_name)
       @host = host
@@ -45,7 +46,7 @@ module VmShepherd
     attr_reader :host, :username, :password, :datacenter_name, :logger
 
     def folder_name_is_valid?(folder_name)
-      /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/.match(folder_name)
+      VALID_FOLDER_REGEX.match(folder_name)
     end
 
     def ensure_no_running_vm(ova_config)

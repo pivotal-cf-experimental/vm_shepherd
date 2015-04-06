@@ -120,7 +120,7 @@ module VmShepherd
         vmName: template_name,
         vmFolder: target_folder(vsphere_config),
         host: find_deploy_host(vsphere_config),
-        resourcePool: resource_pool(cluster(vsphere_config), vsphere_config),
+        resourcePool: resource_pool(vsphere_config),
         datastore: datastore(vsphere_config),
         networkMappings: create_network_mappings(ovf_file_path, vsphere_config),
         propertyMappings: {},
@@ -276,7 +276,8 @@ module VmShepherd
         fail("ERROR finding network #{vsphere_config[:network].inspect}")
     end
 
-    def resource_pool(cluster, vsphere_config)
+    def resource_pool(vsphere_config)
+      cluster = cluster(vsphere_config)
       if vsphere_config[:resource_pool]
         cluster.resourcePool.resourcePool.find { |rp| rp.name == vsphere_config[:resource_pool] }
       else

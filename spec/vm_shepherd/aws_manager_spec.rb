@@ -112,10 +112,18 @@ module VmShepherd
       let(:subnet1_instances) { [instance1] }
       let(:subnet2_instances) { [instance2] }
 
+      let(:instance1_volume) { instance_double(AWS::EC2::Volume)}
+      let(:instance1_attachment) do
+        instance_double(AWS::EC2::Attachment, volume: instance1_volume, delete_on_termination: true)
+      end
+
       before do
         allow(ec2).to receive(:subnets).and_return(subnets)
         allow(subnets).to receive(:[]).with('public-subnet-id').and_return(subnet1)
         allow(subnets).to receive(:[]).with('private-subnet-id').and_return(subnet2)
+
+        allow(instance1).to receive(:attachments).and_return({'/dev/test' => instance1_attachment})
+        allow(instance2).to receive(:attachments).and_return({})
       end
 
       it 'terminates all VMs in the subnet' do
@@ -136,6 +144,35 @@ module VmShepherd
             expect(instance2).to receive(:terminate)
             expect(persistent_instance).not_to receive(:terminate)
 
+            ami_manager.destroy
+          end
+        end
+      end
+
+      context 'when the instance has volumes that are NOT delete_on_termination' do
+        let(:instance1_attachment) do
+          instance_double(AWS::EC2::Attachment, volume: instance1_volume, delete_on_termination: false)
+        end
+
+        before do
+          allow(instance1).to receive(:terminate)
+          allow(instance2).to receive(:terminate)
+        end
+
+        it 'deletes the volumes' do
+          expect(instance1_volume).to receive(:delete)
+
+          ami_manager.destroy
+        end
+
+        context 'when the instance has not finished termination' do
+          before do
+            expect(instance1_volume).to receive(:delete).and_raise(AWS::EC2::Errors::VolumeInUse)
+            expect(instance1_volume).to receive(:delete).and_return(nil)
+            allow(ami_manager).to receive(:sleep)
+          end
+
+          it 'retries the delete' do
             ami_manager.destroy
           end
         end

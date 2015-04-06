@@ -48,16 +48,33 @@ module VmShepherd
         AWS.ec2.subnets[aws_options.fetch(:private_subnet_id)]
       ]
 
+      volumes = []
       subnets.each do |subnet|
         subnet.instances.each do |instance|
-          instance.terminate unless instance.tags.to_h.fetch(DO_NOT_TERMINATE_TAG_KEY, false)
+          unless instance.tags.to_h.fetch(DO_NOT_TERMINATE_TAG_KEY, false)
+            instance.attachments.each do |_, attachment|
+              volumes.push(attachment.volume) unless attachment.delete_on_termination
+            end
+            instance.terminate
+          end
         end
       end
+      destroy_volumes(volumes)
     end
 
     private
     attr_reader :aws_options
 
+    def destroy_volumes(volumes)
+      volumes.each do |volume|
+        begin
+          volume.delete
+        rescue AWS::EC2::Errors::VolumeInUse
+          sleep 5
+          retry
+        end
+      end
+    end
 
     def retry_ignoring_error_until(exception_class, &block)
       tries = 0

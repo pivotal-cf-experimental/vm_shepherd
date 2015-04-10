@@ -42,7 +42,7 @@ module VmShepherd
       instance.add_tag('Name', value: aws_options.fetch(:vm_name))
     end
 
-    def destroy
+    def clean_environment
       subnets = [
         AWS.ec2.subnets[aws_options.fetch(:public_subnet_id)],
         AWS.ec2.subnets[aws_options.fetch(:private_subnet_id)]
@@ -62,7 +62,12 @@ module VmShepherd
       destroy_volumes(volumes)
     end
 
-    def clean_environment
+    def destroy
+      AWS.ec2.elastic_ips.each do |elastic_ip|
+        if elastic_ip.allocation_id == aws_options.fetch(:elastic_ip_id)
+          elastic_ip.instance.terminate if elastic_ip.instance
+        end
+      end
     end
 
     private

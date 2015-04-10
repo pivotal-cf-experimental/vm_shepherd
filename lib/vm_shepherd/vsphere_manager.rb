@@ -7,6 +7,8 @@ module VmShepherd
     VALID_FOLDER_REGEX = /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/
     VALID_DISK_FOLDER_REGEX = /\A[\w-]{1,80}\z/
 
+    attr_writer :logger
+
     def initialize(host, username, password, datacenter_name)
       @host = host
       @username = username
@@ -27,15 +29,10 @@ module VmShepherd
       FileUtils.remove_entry_secure(ovf_file_path, force: true) unless ovf_file_path.nil?
     end
 
-    def destroy(folder_name)
-      validate_folder_name!(folder_name)
-
-      delete_folder_and_vms(folder_name)
-    end
-
     def clean_environment(datacenter_folders_to_clean:, datastore:, datastore_folders_to_clean:)
       datacenter_folders_to_clean.each do |folder_name|
-        destroy(folder_name)
+        validate_folder_name!(folder_name)
+        delete_folder_and_vms(folder_name)
       end
 
       datastore_folders_to_clean.each do |folder_name|
@@ -53,6 +50,20 @@ module VmShepherd
           logger.info("ERROR datastore_folder.destroy_task folder=#{folder_name} #{e.inspect}")
         end
       end
+    end
+
+    def destroy(ip_address)
+      vm = datacenter.vmFolder.findByIp(ip_address)
+      return unless vm
+      power_off_vm(vm)
+      destroy_vm(vm)
+    end
+
+    def destroy_vm(vm)
+      vm_name = vm.name
+      logger.info("BEGIN vm.destroy_task vm=#{vm_name}")
+      vm.Destroy_Task.wait_for_completion
+      logger.info("END   vm.destroy_task vm=#{vm_name}")
     end
 
     private
@@ -102,7 +113,7 @@ module VmShepherd
       folder = datacenter.vmFolder.traverse(folder_name) ||
         fail("ERROR no folder found with name=#{folder_name.inspect}")
 
-      find_vms(folder).each { |vm| power_off(vm) }
+      find_vms(folder).each { |vm| power_off_vm(vm) }
 
       logger.info("BEGIN folder.destroy_task folder=#{folder_name}")
       folder.Destroy_Task.wait_for_completion
@@ -120,7 +131,7 @@ module VmShepherd
       vms.flatten
     end
 
-    def power_off(vm)
+    def power_off_vm(vm)
       2.times do
         break if vm.runtime.powerState == 'poweredOff'
 

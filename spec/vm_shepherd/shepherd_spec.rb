@@ -12,7 +12,7 @@ module VmShepherd
         end
         let(:vcloud_manager) { instance_double(VcloudManager) }
 
-        it 'uses VcloudManager::Deployer to launch a vm' do
+        it 'uses VcloudManager to launch a vm' do
           expect(VcloudManager).to receive(:new).
               with(
                 {
@@ -51,7 +51,7 @@ module VmShepherd
         end
         let(:ova_manager) { instance_double(VsphereManager) }
 
-        it 'uses VsphereManager::Deployer to launch a vm' do
+        it 'uses VsphereManager to launch a vm' do
           expect(VsphereManager).to receive(:new).with(
               settings.vm_deployer.vcenter_creds.ip,
                 settings.vm_deployer.vcenter_creds.username,
@@ -100,7 +100,7 @@ module VmShepherd
           }
         end
 
-        it 'uses AwsManager::Deployer to launch a VM' do
+        it 'uses AwsManager to launch a VM' do
           expect(AwsManager).to receive(:new).with(aws_options).and_return(ams_manager)
           expect(ams_manager).to receive(:deploy).with(ami_file_path)
           manager.deploy(path: ami_file_path)
@@ -137,7 +137,7 @@ module VmShepherd
           }
         end
 
-        it 'uses QCow2Manager to launch a VM' do
+        it 'uses OpenstackManager to launch a VM' do
           expect(OpenstackManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
           expect(qcow2_manager).to receive(:deploy).with(qcow2_file_path, openstack_vm_options)
           manager.deploy(path: qcow2_file_path)
@@ -162,7 +162,7 @@ module VmShepherd
         end
         let(:vcloud_manager) { instance_double(VcloudManager) }
 
-        it 'uses VcloudManager::Destroyer to destroy a vm' do
+        it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
               {
                 url: settings.vapp_deployer.creds.url,
@@ -189,7 +189,7 @@ module VmShepherd
         end
         let(:ova_manager) { instance_double(VsphereManager) }
 
-        it 'uses VsphereManager::Destroyer to destroy a vm' do
+        it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
               settings.vm_deployer.vcenter_creds.ip,
               settings.vm_deployer.vcenter_creds.username,
@@ -220,7 +220,7 @@ module VmShepherd
           }
         end
 
-        it 'uses AwsManager::Deployer to launch a VM' do
+        it 'uses AwsManager to destroy a VM' do
           expect(AwsManager).to receive(:new).with(ami_destroy_options).and_return(ams_manager)
           expect(ams_manager).to receive(:destroy)
           manager.destroy
@@ -257,7 +257,7 @@ module VmShepherd
           }
         end
 
-        it 'uses QCow2Manager to destroy a VM' do
+        it 'uses OpenstackManager to destroy a VM' do
           expect(OpenstackManager).to receive(:new).with(openstack_options).and_return(qcow2_manager)
           expect(qcow2_manager).to receive(:destroy).with(openstack_vm_options)
           manager.destroy
@@ -270,7 +270,7 @@ module VmShepherd
         end
 
         it 'raises an exception' do
-          expect { manager.deploy(path: 'FAKE_PATH') }.to raise_error(Shepherd::InvalidIaas)
+          expect { manager.destroy }.to raise_error(Shepherd::InvalidIaas)
         end
       end
     end

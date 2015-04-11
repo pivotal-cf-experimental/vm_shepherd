@@ -61,6 +61,9 @@ module VmShepherd
       say('Done destroying Ops Manager instances')
     end
 
+    def clean_environment
+    end
+
     def service
       @service ||= Fog::Compute.new(
         provider: 'openstack',

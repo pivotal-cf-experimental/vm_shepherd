@@ -93,6 +93,43 @@ module VmShepherd
       end
     end
 
+    def clean_environment
+      case settings.iaas_type
+        when VmShepherd::VCLOUD_IAAS_TYPE then
+          VmShepherd::VcloudManager.new(
+            {
+              url: settings.vapp_deployer.creds.url,
+              organization: settings.vapp_deployer.creds.organization,
+              user: settings.vapp_deployer.creds.user,
+              password: settings.vapp_deployer.creds.password,
+            },
+            {
+              vdc: settings.vapp_deployer.vdc.name,
+              catalog: settings.vapp_deployer.vdc.catalog,
+              network: settings.vapp_deployer.vdc.network,
+            },
+            logger
+          ).clean_environment
+        when VmShepherd::VSPHERE_IAAS_TYPE then
+          VmShepherd::VsphereManager.new(
+            settings.vm_deployer.vcenter_creds.ip,
+            settings.vm_deployer.vcenter_creds.username,
+            settings.vm_deployer.vcenter_creds.password,
+            settings.vm_deployer.vsphere.datacenter,
+          ).clean_environment(
+            datacenter_folders_to_clean: settings.vm_deployer.vsphere.datacenter_folders_to_clean,
+            datastore: settings.vm_deployer.vsphere.datastore,
+            datastore_folders_to_clean: settings.vm_deployer.vsphere.datastore_folders_to_clean,
+          )
+        when VmShepherd::AWS_IAAS_TYPE then
+          ami_manager.clean_environment
+        when VmShepherd::OPENSTACK_IAAS_TYPE then
+          openstack_vm_manager.clean_environment
+        else
+          fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
+      end
+    end
+
     private
 
     attr_reader :settings

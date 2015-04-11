@@ -32,6 +32,9 @@ module VmShepherd
       delete_catalog
     end
 
+    def clean_environment
+    end
+
     private
 
     def check_vapp_status(vapp_config)

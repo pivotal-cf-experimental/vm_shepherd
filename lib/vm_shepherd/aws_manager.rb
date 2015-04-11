@@ -55,6 +55,9 @@ module VmShepherd
       end
     end
 
+    def clean_environment
+    end
+
     private
     attr_reader :aws_options
 

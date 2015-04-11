@@ -5,6 +5,7 @@ module VmShepherd
   class VsphereManager
     TEMPLATE_PREFIX = 'tpl'.freeze
     VALID_FOLDER_REGEX = /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/
+    VALID_DISK_FOLDER_REGEX = /\A[\w-]{1,80}\z/
 
     def initialize(host, username, password, datacenter_name)
       @host = host
@@ -30,6 +31,28 @@ module VmShepherd
       validate_folder_name!(folder_name)
 
       delete_folder_and_vms(folder_name)
+    end
+
+    def clean_environment(datacenter_folders_to_clean:, datastore:, datastore_folders_to_clean:)
+      datacenter_folders_to_clean.each do |folder_name|
+        destroy(folder_name)
+      end
+
+      datastore_folders_to_clean.each do |folder_name|
+        VALID_DISK_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid disk folder name")
+        begin
+          logger.info("BEGIN datastore_folder.destroy_task folder=#{folder_name}")
+
+          connection.serviceContent.fileManager.DeleteDatastoreFile_Task(
+            datacenter: datacenter,
+            name: "[#{datastore}] #{folder_name}"
+          ).wait_for_completion
+
+          logger.info("END   datastore_folder.destroy_task folder=#{folder_name}")
+        rescue RbVmomi::Fault => e
+          logger.info("ERROR datastore_folder.destroy_task folder=#{folder_name} #{e.inspect}")
+        end
+      end
     end
 
     private
@@ -87,7 +110,7 @@ module VmShepherd
 
       fail("#{folder_name.inspect} already exists") unless datacenter.vmFolder.traverse(folder_name).nil?
     rescue RbVmomi::Fault => e
-      logger.info("ERROR folder.destroy_task folder=#{folder_name}", e)
+      logger.info("ERROR folder.destroy_task folder=#{folder_name} #{e.inspect}")
       raise
     end
 

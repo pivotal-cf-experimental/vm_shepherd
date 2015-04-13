@@ -197,7 +197,7 @@ module VmShepherd
               settings.vm_deployer.vcenter_creds.password,
               settings.vm_deployer.vsphere.datacenter,
             ).and_return(ova_manager)
-          expect(ova_manager).to receive(:destroy).with(settings.vm_deployer.vsphere.folder)
+          expect(ova_manager).to receive(:destroy).with(settings.vm_deployer.vm.ip)
 
           manager.destroy
         end
@@ -208,7 +208,7 @@ module VmShepherd
           RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'aws.yml')))
         end
         let(:ams_manager) { instance_double(AwsManager) }
-        let(:ami_destroy_options) do
+        let(:ami_options) do
           {
             aws_access_key: 'aws-access-key',
             aws_secret_key: 'aws-secret-key',
@@ -222,7 +222,7 @@ module VmShepherd
         end
 
         it 'uses AwsManager to destroy a VM' do
-          expect(AwsManager).to receive(:new).with(ami_destroy_options).and_return(ams_manager)
+          expect(AwsManager).to receive(:new).with(ami_options).and_return(ams_manager)
           expect(ams_manager).to receive(:destroy)
           manager.destroy
         end

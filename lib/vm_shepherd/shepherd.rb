@@ -1,8 +1,6 @@
 module VmShepherd
   class Shepherd
-    class InvalidIaas < StandardError
-
-    end
+    class InvalidIaas < StandardError; end
 
     def initialize(settings:)
       @settings = settings
@@ -83,7 +81,7 @@ module VmShepherd
             settings.vm_deployer.vcenter_creds.username,
             settings.vm_deployer.vcenter_creds.password,
             settings.vm_deployer.vsphere.datacenter,
-          ).destroy(settings.vm_deployer.vsphere.folder)
+          ).destroy(settings.vm_deployer.vm.ip)
         when VmShepherd::AWS_IAAS_TYPE then
           ami_manager.destroy
         when VmShepherd::OPENSTACK_IAAS_TYPE then

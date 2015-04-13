@@ -6,6 +6,7 @@ module VmShepherd
     let(:secret_key) { 'secret-key' }
     let(:ami_id) { 'ami-deadbeef' }
     let(:ami_file_path) { Tempfile.new('ami-id-file').tap { |f| f.write("#{ami_id}\n"); f.close }.path }
+    let(:elastic_ip_id) { 'elastic-ip-id' }
     let(:ec2) { double('AWS.ec2') }
 
     let(:aws_options) do
@@ -16,7 +17,7 @@ module VmShepherd
         security_group_id: 'security-group-id',
         public_subnet_id: 'public-subnet-id',
         private_subnet_id: 'private-subnet-id',
-        elastic_ip_id: 'elastic-ip-id',
+        elastic_ip_id: elastic_ip_id,
         vm_name: 'Ops Manager: clean_install_spec'
       }
     end
@@ -103,7 +104,7 @@ module VmShepherd
       end
     end
 
-    describe '#destroy' do
+    describe '#clean_environment' do
       let(:subnets) { instance_double(AWS::EC2::SubnetCollection) }
       let(:subnet1) { instance_double(AWS::EC2::Subnet, instances: subnet1_instances) }
       let(:subnet2) { instance_double(AWS::EC2::Subnet, instances: subnet2_instances) }
@@ -130,7 +131,7 @@ module VmShepherd
         expect(instance1).to receive(:terminate)
         expect(instance2).to receive(:terminate)
 
-        ami_manager.destroy
+        ami_manager.clean_environment
       end
 
       context 'when an instance has the magical tag' do
@@ -144,7 +145,7 @@ module VmShepherd
             expect(instance2).to receive(:terminate)
             expect(persistent_instance).not_to receive(:terminate)
 
-            ami_manager.destroy
+            ami_manager.clean_environment
           end
         end
       end
@@ -162,7 +163,7 @@ module VmShepherd
         it 'deletes the volumes' do
           expect(instance1_volume).to receive(:delete)
 
-          ami_manager.destroy
+          ami_manager.clean_environment
         end
 
         context 'when the instance has not finished termination' do
@@ -173,6 +174,38 @@ module VmShepherd
           end
 
           it 'retries the delete' do
+            ami_manager.clean_environment
+          end
+        end
+      end
+    end
+
+    describe '#destroy' do
+      let(:elastic_ips) { instance_double(AWS::EC2::ElasticIpCollection) }
+      let(:elastic_ip) { instance_double(AWS::EC2::ElasticIp, instance: instance, allocation_id: elastic_ip_id) }
+      let(:instance) { instance_double(AWS::EC2::Instance, tags: {}) }
+
+      before do
+        allow(ec2).to receive(:elastic_ips).and_return(elastic_ips)
+        allow(elastic_ips).to receive(:each).and_yield(elastic_ip)
+      end
+
+      it 'terminates the VM that matches the IP' do
+        expect(instance).to receive(:terminate)
+
+        ami_manager.destroy
+      end
+
+      context 'when an instance has the magical tag' do
+        let(:persistent_instance) { instance_double(AWS::EC2::Instance, tags: persist_tag) }
+        let(:instances) { [instance1, instance2, persistent_instance] }
+
+        context 'when there is no instance attached' do
+          before do
+            allow(elastic_ip).to receive(:instance).and_return(nil)
+          end
+
+          it 'does not explode' do
             ami_manager.destroy
           end
         end

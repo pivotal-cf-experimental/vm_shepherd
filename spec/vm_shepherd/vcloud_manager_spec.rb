@@ -29,7 +29,6 @@ module VmShepherd
           gateway: 'FAKE_GATEWAY',
           dns: 'FAKE_DNS',
           ntp: 'FAKE_NTP',
-          ip: 'FAKE_IP',
           netmask: 'FAKE_NETMASK',
         }
       end
@@ -308,7 +307,7 @@ module VmShepherd
               logger,
             ).and_return(client)
 
-          vcloud_manager.destroy(vapp_name)
+          vcloud_manager.destroy([vapp_name])
         end
 
         context 'when an VCloudSdk::ObjectNotFoundError is thrown' do
@@ -325,13 +324,13 @@ module VmShepherd
           it 'catches the error' do
             allow(client).to receive(:find_vdc_by_name).and_raise(VCloudSdk::ObjectNotFoundError)
 
-            expect { vcloud_manager.destroy(vapp_name) }.not_to raise_error
+            expect { vcloud_manager.destroy([vapp_name]) }.not_to raise_error
           end
 
           it 'deletes to catalog' do
             expect(client).to receive(:delete_catalog_by_name).with(location.fetch(:catalog))
 
-            vcloud_manager.destroy(vapp_name)
+            vcloud_manager.destroy([vapp_name])
           end
         end
       end
@@ -356,7 +355,7 @@ module VmShepherd
               logger,
             ).and_return(client)
 
-          vcloud_manager.destroy(vapp_name)
+          vcloud_manager.destroy([vapp_name])
         end
       end
     end

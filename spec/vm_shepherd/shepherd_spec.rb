@@ -177,7 +177,8 @@ module VmShepherd
               },
               instance_of(Logger)
             ).and_return(vcloud_manager)
-          expect(vcloud_manager).to receive(:destroy).with(settings.vapp_deployer.vapp.name)
+          vapp_names = [settings.vapp_deployer.vapp.ops_manager_name] + settings.vapp_deployer.vapp.product_names
+          expect(vcloud_manager).to receive(:destroy).with(vapp_names)
 
           manager.destroy
         end

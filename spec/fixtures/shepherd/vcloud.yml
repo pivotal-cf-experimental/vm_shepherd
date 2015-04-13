@@ -10,7 +10,10 @@ vapp_deployer:
     catalog: VDC_CATALOG
     network: VDC_NETWORK
   vapp:
-    name: VAPP_NAME
+    ops_manager_name: VAPP_NAME
+    product_names:
+    - PRODUCT_1
+    - PRODUCT_2
     ip: VAPP_IP
     public_ip:
     gateway: VAPP_GATEWAY

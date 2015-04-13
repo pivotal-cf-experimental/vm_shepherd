@@ -74,7 +74,7 @@ module VmShepherd
               network: settings.vapp_deployer.vdc.network,
             },
             logger
-          ).destroy(settings.vapp_deployer.vapp.name)
+          ).destroy([settings.vapp_deployer.vapp.ops_manager_name] + settings.vapp_deployer.vapp.product_names)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
             settings.vm_deployer.vcenter_creds.ip,

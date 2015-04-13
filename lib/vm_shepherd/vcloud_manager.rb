@@ -27,8 +27,8 @@ module VmShepherd
       FileUtils.remove_entry_secure(tmpdir, force: true)
     end
 
-    def destroy(vapp_name)
-      delete_vapp(vapp_name)
+    def destroy(vapp_names)
+      delete_vapps(vapp_names)
       delete_catalog
     end
 
@@ -158,12 +158,16 @@ module VmShepherd
       @vdc ||= client.find_vdc_by_name(@location[:vdc])
     end
 
-    def delete_vapp(vapp_name)
-      vapp = vdc.find_vapp_by_name(vapp_name)
-      vapp.power_off
-      vapp.delete
-    rescue VCloudSdk::ObjectNotFoundError => e
-      @logger.debug "Could not delete vapp '#{vapp_name}': #{e.inspect}"
+    def delete_vapps(vapp_names)
+      vapp_names.each do |vapp_name|
+        begin
+          vapp = vdc.find_vapp_by_name(vapp_name)
+          vapp.power_off
+          vapp.delete
+        rescue VCloudSdk::ObjectNotFoundError => e
+          @logger.debug "Could not delete vapp '#{vapp_name}': #{e.inspect}"
+        end
+      end
     end
 
     def delete_catalog

@@ -12,14 +12,19 @@ vm_shepherd:
     resource_pool: VSPHERE_RESOURCE_POOL
     datastore: VSPHERE_DATASTORE
     folder: VSPHERE_FOLDER
-    datacenter_folders_to_clean:
-      - DC_FOLDER_ONE
-      - DC_FOLDER_TWO
-    datastore_folders_to_clean:
-      - DS_DISK_FOLDER
   vm:
     ip: OVA_IP
     gateway: OVA_GATEWAY
     netmask: OVA_NETMASK
     dns: OVA_DNS
     ntp_servers: OVA_NTP
+  cleanup:
+    datacenter: VSPHERE_OTHER_DATACENTER
+    datastores:
+      - VSPHERE_DATASTORE_ONE
+      - VSPHERE_DATASTORE_TWO
+    datacenter_folders_to_clean:
+      - DC_FOLDER_ONE
+      - DC_FOLDER_TWO
+    datastore_folders_to_clean:
+      - DS_DISK_FOLDER

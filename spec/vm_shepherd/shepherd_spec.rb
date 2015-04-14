@@ -311,9 +311,9 @@ module VmShepherd
         let(:ova_manager) { instance_double(VsphereManager) }
         let(:clean_environment_options) do
           {
-            datacenter_folders_to_clean: settings.vm_shepherd.vsphere.datacenter_folders_to_clean,
-            datastore: settings.vm_shepherd.vsphere.datastore,
-            datastore_folders_to_clean: settings.vm_shepherd.vsphere.datastore_folders_to_clean,
+            datacenter_folders_to_clean: settings.vm_shepherd.cleanup.datacenter_folders_to_clean,
+            datastores: settings.vm_shepherd.cleanup.datastores,
+            datastore_folders_to_clean: settings.vm_shepherd.cleanup.datastore_folders_to_clean,
           }
         end
 
@@ -322,7 +322,7 @@ module VmShepherd
               settings.vm_shepherd.vcenter_creds.ip,
               settings.vm_shepherd.vcenter_creds.username,
               settings.vm_shepherd.vcenter_creds.password,
-              settings.vm_shepherd.vsphere.datacenter,
+              settings.vm_shepherd.cleanup.datacenter,
             ).and_return(ova_manager)
           expect(ova_manager).to receive(:clean_environment).with(clean_environment_options)
 

@@ -29,25 +29,27 @@ module VmShepherd
       FileUtils.remove_entry_secure(ovf_file_path, force: true) unless ovf_file_path.nil?
     end
 
-    def clean_environment(datacenter_folders_to_clean:, datastore:, datastore_folders_to_clean:)
+    def clean_environment(datacenter_folders_to_clean:, datastores:, datastore_folders_to_clean:)
       datacenter_folders_to_clean.each do |folder_name|
         validate_folder_name!(folder_name)
         delete_folder_and_vms(folder_name)
       end
 
       datastore_folders_to_clean.each do |folder_name|
-        VALID_DISK_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid disk folder name")
-        begin
-          logger.info("BEGIN datastore_folder.destroy_task folder=#{folder_name}")
+        datastores.each do |datastore|
+          VALID_DISK_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid disk folder name")
+          begin
+            logger.info("BEGIN datastore_folder.destroy_task folder=#{folder_name}")
 
-          connection.serviceContent.fileManager.DeleteDatastoreFile_Task(
-            datacenter: datacenter,
-            name: "[#{datastore}] #{folder_name}"
-          ).wait_for_completion
+            connection.serviceContent.fileManager.DeleteDatastoreFile_Task(
+              datacenter: datacenter,
+              name: "[#{datastore}] #{folder_name}"
+            ).wait_for_completion
 
-          logger.info("END   datastore_folder.destroy_task folder=#{folder_name}")
-        rescue RbVmomi::Fault => e
-          logger.info("ERROR datastore_folder.destroy_task folder=#{folder_name} #{e.inspect}")
+            logger.info("END   datastore_folder.destroy_task folder=#{folder_name}")
+          rescue RbVmomi::Fault => e
+            logger.info("ERROR datastore_folder.destroy_task folder=#{folder_name} #{e.inspect}")
+          end
         end
       end
     end

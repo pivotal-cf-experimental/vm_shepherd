@@ -1,5 +1,5 @@
 iaas_type: vcloud
-vapp_deployer:
+vm_shepherd:
   creds:
     url: VAPP_URL
     organization: VAPP_ORGANIZATION

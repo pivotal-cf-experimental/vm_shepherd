@@ -16,15 +16,15 @@ module VmShepherd
           expect(VcloudManager).to receive(:new).
               with(
                 {
-                  url: settings.vapp_deployer.creds.url,
-                  organization: settings.vapp_deployer.creds.organization,
-                  user: settings.vapp_deployer.creds.user,
-                  password: settings.vapp_deployer.creds.password,
+                  url: settings.vm_shepherd.creds.url,
+                  organization: settings.vm_shepherd.creds.organization,
+                  user: settings.vm_shepherd.creds.user,
+                  password: settings.vm_shepherd.creds.password,
                 },
                 {
-                  vdc: settings.vapp_deployer.vdc.name,
-                  catalog: settings.vapp_deployer.vdc.catalog,
-                  network: settings.vapp_deployer.vdc.network,
+                  vdc: settings.vm_shepherd.vdc.name,
+                  catalog: settings.vm_shepherd.vdc.catalog,
+                  network: settings.vm_shepherd.vdc.network,
                 },
                 instance_of(Logger)
               ).and_return(vcloud_manager)
@@ -32,12 +32,12 @@ module VmShepherd
           expect(vcloud_manager).to receive(:deploy).with(
               'FAKE_PATH',
               {
-                name: settings.vapp_deployer.vapp.ops_manager_name,
-                ip: settings.vapp_deployer.vapp.ip,
-                gateway: settings.vapp_deployer.vapp.gateway,
-                netmask: settings.vapp_deployer.vapp.netmask,
-                dns: settings.vapp_deployer.vapp.dns,
-                ntp: settings.vapp_deployer.vapp.ntp,
+                name: settings.vm_shepherd.vapp.ops_manager_name,
+                ip: settings.vm_shepherd.vapp.ip,
+                gateway: settings.vm_shepherd.vapp.gateway,
+                netmask: settings.vm_shepherd.vapp.netmask,
+                dns: settings.vm_shepherd.vapp.dns,
+                ntp: settings.vm_shepherd.vapp.ntp,
               }
             )
 
@@ -53,27 +53,27 @@ module VmShepherd
 
         it 'uses VsphereManager to launch a vm' do
           expect(VsphereManager).to receive(:new).with(
-              settings.vm_deployer.vcenter_creds.ip,
-                settings.vm_deployer.vcenter_creds.username,
-                settings.vm_deployer.vcenter_creds.password,
-                settings.vm_deployer.vsphere.datacenter,
+              settings.vm_shepherd.vcenter_creds.ip,
+                settings.vm_shepherd.vcenter_creds.username,
+                settings.vm_shepherd.vcenter_creds.password,
+                settings.vm_shepherd.vsphere.datacenter,
               ).and_return(ova_manager)
 
           expect(ova_manager).to receive(:deploy).with(
               'FAKE_PATH',
               {
-                ip: settings.vm_deployer.vm.ip,
-                gateway: settings.vm_deployer.vm.gateway,
-                netmask: settings.vm_deployer.vm.netmask,
-                dns: settings.vm_deployer.vm.dns,
-                ntp_servers: settings.vm_deployer.vm.ntp_servers,
+                ip: settings.vm_shepherd.vm.ip,
+                gateway: settings.vm_shepherd.vm.gateway,
+                netmask: settings.vm_shepherd.vm.netmask,
+                dns: settings.vm_shepherd.vm.dns,
+                ntp_servers: settings.vm_shepherd.vm.ntp_servers,
               },
               {
-                cluster: settings.vm_deployer.vsphere.cluster,
-                resource_pool: settings.vm_deployer.vsphere.resource_pool,
-                datastore: settings.vm_deployer.vsphere.datastore,
-                network: settings.vm_deployer.vsphere.network,
-                folder: settings.vm_deployer.vsphere.folder,
+                cluster: settings.vm_shepherd.vsphere.cluster,
+                resource_pool: settings.vm_shepherd.vsphere.resource_pool,
+                datastore: settings.vm_shepherd.vsphere.datastore,
+                network: settings.vm_shepherd.vsphere.network,
+                folder: settings.vm_shepherd.vsphere.folder,
               },
             )
 
@@ -165,19 +165,19 @@ module VmShepherd
         it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
               {
-                url: settings.vapp_deployer.creds.url,
-                organization: settings.vapp_deployer.creds.organization,
-                user: settings.vapp_deployer.creds.user,
-                password: settings.vapp_deployer.creds.password,
+                url: settings.vm_shepherd.creds.url,
+                organization: settings.vm_shepherd.creds.organization,
+                user: settings.vm_shepherd.creds.user,
+                password: settings.vm_shepherd.creds.password,
               },
               {
-                vdc: settings.vapp_deployer.vdc.name,
-                catalog: settings.vapp_deployer.vdc.catalog,
-                network: settings.vapp_deployer.vdc.network,
+                vdc: settings.vm_shepherd.vdc.name,
+                catalog: settings.vm_shepherd.vdc.catalog,
+                network: settings.vm_shepherd.vdc.network,
               },
               instance_of(Logger)
             ).and_return(vcloud_manager)
-          vapp_names = [settings.vapp_deployer.vapp.ops_manager_name] + settings.vapp_deployer.vapp.product_names
+          vapp_names = [settings.vm_shepherd.vapp.ops_manager_name] + settings.vm_shepherd.vapp.product_names
           expect(vcloud_manager).to receive(:destroy).with(vapp_names)
 
           manager.destroy
@@ -192,12 +192,12 @@ module VmShepherd
 
         it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
-              settings.vm_deployer.vcenter_creds.ip,
-              settings.vm_deployer.vcenter_creds.username,
-              settings.vm_deployer.vcenter_creds.password,
-              settings.vm_deployer.vsphere.datacenter,
+              settings.vm_shepherd.vcenter_creds.ip,
+              settings.vm_shepherd.vcenter_creds.username,
+              settings.vm_shepherd.vcenter_creds.password,
+              settings.vm_shepherd.vsphere.datacenter,
             ).and_return(ova_manager)
-          expect(ova_manager).to receive(:destroy).with(settings.vm_deployer.vm.ip)
+          expect(ova_manager).to receive(:destroy).with(settings.vm_shepherd.vm.ip)
 
           manager.destroy
         end
@@ -286,15 +286,15 @@ module VmShepherd
         it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
               {
-                url: settings.vapp_deployer.creds.url,
-                organization: settings.vapp_deployer.creds.organization,
-                user: settings.vapp_deployer.creds.user,
-                password: settings.vapp_deployer.creds.password,
+                url: settings.vm_shepherd.creds.url,
+                organization: settings.vm_shepherd.creds.organization,
+                user: settings.vm_shepherd.creds.user,
+                password: settings.vm_shepherd.creds.password,
               },
               {
-                vdc: settings.vapp_deployer.vdc.name,
-                catalog: settings.vapp_deployer.vdc.catalog,
-                network: settings.vapp_deployer.vdc.network,
+                vdc: settings.vm_shepherd.vdc.name,
+                catalog: settings.vm_shepherd.vdc.catalog,
+                network: settings.vm_shepherd.vdc.network,
               },
               instance_of(Logger)
             ).and_return(vcloud_manager)
@@ -311,18 +311,18 @@ module VmShepherd
         let(:ova_manager) { instance_double(VsphereManager) }
         let(:clean_environment_options) do
           {
-            datacenter_folders_to_clean: settings.vm_deployer.vsphere.datacenter_folders_to_clean,
-            datastore: settings.vm_deployer.vsphere.datastore,
-            datastore_folders_to_clean: settings.vm_deployer.vsphere.datastore_folders_to_clean,
+            datacenter_folders_to_clean: settings.vm_shepherd.vsphere.datacenter_folders_to_clean,
+            datastore: settings.vm_shepherd.vsphere.datastore,
+            datastore_folders_to_clean: settings.vm_shepherd.vsphere.datastore_folders_to_clean,
           }
         end
 
         it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
-              settings.vm_deployer.vcenter_creds.ip,
-              settings.vm_deployer.vcenter_creds.username,
-              settings.vm_deployer.vcenter_creds.password,
-              settings.vm_deployer.vsphere.datacenter,
+              settings.vm_shepherd.vcenter_creds.ip,
+              settings.vm_shepherd.vcenter_creds.username,
+              settings.vm_shepherd.vcenter_creds.password,
+              settings.vm_shepherd.vsphere.datacenter,
             ).and_return(ova_manager)
           expect(ova_manager).to receive(:clean_environment).with(clean_environment_options)
 

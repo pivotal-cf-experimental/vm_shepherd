@@ -1,6 +1,6 @@
 iaas_type: aws
 
-vm_deployer:
+vm_shepherd:
   aws_access_key: aws-access-key
   aws_secret_key: aws-secret-key
   ssh_key_name: ssh-key-name

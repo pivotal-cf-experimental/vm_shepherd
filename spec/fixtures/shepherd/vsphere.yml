@@ -1,5 +1,5 @@
 iaas_type: vsphere
-vm_deployer:
+vm_shepherd:
   vcenter_creds:
     ip: OVA_URL
     username: OVA_ORGANIZATION

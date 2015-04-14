@@ -1,5 +1,5 @@
 iaas_type: openstack
-vm_deployer:
+vm_shepherd:
   creds:
     auth_url: 'http://example.com/version/tokens'
     username: 'username'

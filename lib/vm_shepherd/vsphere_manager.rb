@@ -30,6 +30,8 @@ module VmShepherd
     end
 
     def clean_environment(datacenter_folders_to_clean:, datastores:, datastore_folders_to_clean:)
+      return if datacenter_folders_to_clean.nil? || datastores.nil? || datacenter_folders_to_clean.nil?
+
       datacenter_folders_to_clean.each do |folder_name|
         validate_folder_name!(folder_name)
         delete_folder_and_vms(folder_name)

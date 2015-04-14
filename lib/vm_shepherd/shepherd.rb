@@ -147,7 +147,7 @@ module VmShepherd
     def vcloud_deploy_options
       vm = settings.vapp_deployer.vapp
       {
-        name: vm.name,
+        name: vm.ops_manager_name,
         ip: vm.ip,
         gateway: vm.gateway,
         netmask: vm.netmask,

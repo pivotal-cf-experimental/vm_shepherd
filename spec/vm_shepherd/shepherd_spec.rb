@@ -32,7 +32,7 @@ module VmShepherd
           expect(vcloud_manager).to receive(:deploy).with(
               'FAKE_PATH',
               {
-                name: settings.vapp_deployer.vapp.name,
+                name: settings.vapp_deployer.vapp.ops_manager_name,
                 ip: settings.vapp_deployer.vapp.ip,
                 gateway: settings.vapp_deployer.vapp.gateway,
                 netmask: settings.vapp_deployer.vapp.netmask,

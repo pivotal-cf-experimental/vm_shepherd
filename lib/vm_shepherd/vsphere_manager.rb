@@ -39,7 +39,7 @@ module VmShepherd
 
       datastore_folders_to_clean.each do |folder_name|
         datastores.each do |datastore|
-          VALID_DISK_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid disk folder name")
+          validate_disk_folder_name!(folder_name)
           begin
             logger.info("BEGIN datastore_folder.destroy_task folder=#{folder_name}")
 
@@ -73,6 +73,10 @@ module VmShepherd
     private
 
     attr_reader :host, :username, :password, :datacenter_name, :logger
+
+    def validate_disk_folder_name!(folder_name)
+      VALID_DISK_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid disk folder name")
+    end
 
     def validate_folder_name!(folder_name)
       VALID_FOLDER_REGEX.match(folder_name) || fail("#{folder_name.inspect} is not a valid folder name")
@@ -114,8 +118,7 @@ module VmShepherd
     end
 
     def delete_folder_and_vms(folder_name)
-      folder = datacenter.vmFolder.traverse(folder_name) ||
-        fail("ERROR no folder found with name=#{folder_name.inspect}")
+      return unless (folder = datacenter.vmFolder.traverse(folder_name))
 
       find_vms(folder).each { |vm| power_off_vm(vm) }
 

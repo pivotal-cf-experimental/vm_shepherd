@@ -21,7 +21,7 @@ module VmShepherd
               catalog: settings.vm_shepherd.vdc.catalog,
               network: settings.vm_shepherd.vdc.network,
             },
-            debug_logger
+            error_logger
           ).deploy(
             path,
             vcloud_deploy_options,
@@ -135,12 +135,6 @@ module VmShepherd
     def error_logger
       Logger.new(STDOUT).tap do |lggr|
         lggr.level = Logger::Severity::ERROR
-      end
-    end
-
-    def debug_logger
-      Logger.new(STDOUT).tap do |lggr|
-        lggr.level = Logger::Severity::DEBUG
       end
     end
 

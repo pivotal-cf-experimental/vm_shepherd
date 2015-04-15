@@ -73,7 +73,7 @@ module VmShepherd
               catalog: settings.vm_shepherd.vdc.catalog,
               network: settings.vm_shepherd.vdc.network,
             },
-            logger
+            error_logger
           ).destroy([settings.vm_shepherd.vapp.ops_manager_name] + settings.vm_shepherd.vapp.product_names)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
@@ -106,7 +106,7 @@ module VmShepherd
               catalog: settings.vm_shepherd.vdc.catalog,
               network: settings.vm_shepherd.vdc.network,
             },
-            logger
+            error_logger
           ).clean_environment
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
@@ -132,7 +132,7 @@ module VmShepherd
 
     attr_reader :settings
 
-    def logger
+    def error_logger
       Logger.new(STDOUT).tap do |lggr|
         lggr.level = Logger::Severity::ERROR
       end

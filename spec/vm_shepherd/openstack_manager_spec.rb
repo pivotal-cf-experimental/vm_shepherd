@@ -79,7 +79,7 @@ module VmShepherd
     end
 
     describe '#deploy' do
-      let(:path) { 'path/to/qcow2/file' }
+      let(:path) { 'path/to/raw/file' }
       let(:file_size) { 42 }
 
       let(:compute_service) { openstack_vm_manager.service }
@@ -111,6 +111,7 @@ module VmShepherd
         uploaded_image = image_service.images.find { |image| image.name == openstack_vm_options[:name] }
         expect(uploaded_image).to be
         expect(uploaded_image.size).to eq(file_size)
+        expect(uploaded_image.disk_format).to eq('raw')
       end
 
       context 'when launching an instance' do
@@ -177,7 +178,7 @@ module VmShepherd
     end
 
     describe '#destroy' do
-      let(:path) { 'path/to/qcow2/file' }
+      let(:path) { 'path/to/raw/file' }
       let(:file_size) { 42 }
 
       let(:compute_service) { openstack_vm_manager.service }

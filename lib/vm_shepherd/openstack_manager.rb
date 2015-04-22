@@ -9,14 +9,14 @@ module VmShepherd
       @tenant = tenant
     end
 
-    def deploy(qcow2_file_path, vm_options)
-      say "Uploading the image #{qcow2_file_path}"
+    def deploy(raw_file_path, vm_options)
+      say "Uploading the image #{raw_file_path}"
       image = image_service.images.create(
         name: vm_options[:name],
-        size: File.size(qcow2_file_path),
-        disk_format: 'qcow2',
+        size: File.size(raw_file_path),
+        disk_format: 'raw',
         container_format: 'bare',
-        location: qcow2_file_path,
+        location: raw_file_path,
       )
       say 'Finished uploading the image'
 

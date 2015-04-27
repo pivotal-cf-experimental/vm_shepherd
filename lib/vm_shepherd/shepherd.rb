@@ -68,13 +68,9 @@ module VmShepherd
               user: settings.vm_shepherd.creds.user,
               password: settings.vm_shepherd.creds.password,
             },
-            {
-              vdc: settings.vm_shepherd.vdc.name,
-              catalog: settings.vm_shepherd.vdc.catalog,
-              network: settings.vm_shepherd.vdc.network,
-            },
+            settings.vm_shepherd.vdc.name,
             error_logger
-          ).destroy([settings.vm_shepherd.vapp.ops_manager_name] + settings.vm_shepherd.vapp.product_names)
+          ).destroy([settings.vm_shepherd.vapp.ops_manager_name], settings.vm_shepherd.vdc.catalog)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
             settings.vm_shepherd.vcenter_creds.ip,
@@ -101,13 +97,9 @@ module VmShepherd
               user: settings.vm_shepherd.creds.user,
               password: settings.vm_shepherd.creds.password,
             },
-            {
-              vdc: settings.vm_shepherd.vdc.name,
-              catalog: settings.vm_shepherd.vdc.catalog,
-              network: settings.vm_shepherd.vdc.network,
-            },
-            error_logger
-          ).clean_environment
+            settings.vm_shepherd.vdc.name,
+            error_logger,
+          ).clean_environment(settings.vm_shepherd.vapp.product_names, settings.vm_shepherd.vapp.product_catalog)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
             settings.vm_shepherd.vcenter_creds.ip,

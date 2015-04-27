@@ -170,15 +170,14 @@ module VmShepherd
                 user: settings.vm_shepherd.creds.user,
                 password: settings.vm_shepherd.creds.password,
               },
-              {
-                vdc: settings.vm_shepherd.vdc.name,
-                catalog: settings.vm_shepherd.vdc.catalog,
-                network: settings.vm_shepherd.vdc.network,
-              },
+              settings.vm_shepherd.vdc.name,
               instance_of(Logger)
             ).and_return(vcloud_manager)
-          vapp_names = [settings.vm_shepherd.vapp.ops_manager_name] + settings.vm_shepherd.vapp.product_names
-          expect(vcloud_manager).to receive(:destroy).with(vapp_names)
+
+          expect(vcloud_manager).to receive(:destroy).with(
+              [settings.vm_shepherd.vapp.ops_manager_name],
+              settings.vm_shepherd.vdc.catalog,
+            )
 
           manager.destroy
         end
@@ -291,14 +290,14 @@ module VmShepherd
                 user: settings.vm_shepherd.creds.user,
                 password: settings.vm_shepherd.creds.password,
               },
-              {
-                vdc: settings.vm_shepherd.vdc.name,
-                catalog: settings.vm_shepherd.vdc.catalog,
-                network: settings.vm_shepherd.vdc.network,
-              },
+              settings.vm_shepherd.vdc.name,
               instance_of(Logger)
             ).and_return(vcloud_manager)
-          expect(vcloud_manager).to receive(:clean_environment)
+
+          expect(vcloud_manager).to receive(:clean_environment).with(
+              settings.vm_shepherd.vapp.product_names,
+              settings.vm_shepherd.vapp.product_catalog,
+            )
 
           manager.clean_environment
         end

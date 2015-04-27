@@ -4,13 +4,10 @@ require 'ruby_vcloud_sdk'
 
 module VmShepherd
   class VcloudManager
-    def initialize(login_info, location, logger)
+    def initialize(login_info, vdc_name, logger)
       @login_info = login_info
-      @location = location
+      @vdc_name = vdc_name
       @logger = logger
-      raise 'VDC must be set' unless @location[:vdc]
-      raise 'Catalog must be set' unless @location[:catalog]
-      raise 'Network must be set' unless @location[:network]
     end
 
     def deploy(vapp_template_tar_path, vapp_config)
@@ -27,12 +24,13 @@ module VmShepherd
       FileUtils.remove_entry_secure(tmpdir, force: true)
     end
 
-    def destroy(vapp_names)
+    def destroy(vapp_names, catalog)
       delete_vapps(vapp_names)
-      delete_catalog
+      delete_catalog(catalog)
     end
 
-    def clean_environment
+    def clean_environment(vapp_names, catalog)
+      destroy(vapp_names, catalog)
     end
 
     private
@@ -62,16 +60,16 @@ module VmShepherd
 
     def deploy_vapp(ovf_dir, vapp_config)
       # setup the catalog
-      client.delete_catalog_by_name(@location[:catalog]) if client.catalog_exists?(@location[:catalog])
-      catalog = client.create_catalog(@location[:catalog])
+      client.delete_catalog_by_name(vapp_config[:catalog]) if client.catalog_exists?(vapp_config[:catalog])
+      catalog = client.create_catalog(vapp_config[:catalog])
 
       # upload template and instantiate vapp
-      catalog.upload_vapp_template(@location[:vdc], vapp_config[:name], ovf_dir)
+      catalog.upload_vapp_template(@vdc_name, vapp_config[:name], ovf_dir)
 
       # instantiate template
-      network_config = VCloudSdk::NetworkConfig.new(@location[:network], 'Network 1')
+      network_config = VCloudSdk::NetworkConfig.new(vapp_config[:network], 'Network 1')
       catalog.instantiate_vapp_template(
-        vapp_config[:name], @location[:vdc], vapp_config[:name], nil, nil, network_config)
+        vapp_config[:name], @vdc_name, vapp_config[:name], nil, nil, network_config)
     rescue => e
       @logger.error(e.http_body) if e.respond_to?(:http_body)
       raise e
@@ -155,7 +153,7 @@ module VmShepherd
     end
 
     def vdc
-      @vdc ||= client.find_vdc_by_name(@location[:vdc])
+      @vdc ||= client.find_vdc_by_name(@vdc_name)
     end
 
     def delete_vapps(vapp_names)
@@ -170,8 +168,8 @@ module VmShepherd
       end
     end
 
-    def delete_catalog
-      client.delete_catalog_by_name(@location[:catalog]) if client.catalog_exists?(@location[:catalog])
+    def delete_catalog(catalog)
+      client.delete_catalog_by_name(catalog) if client.catalog_exists?(catalog)
     end
   end
 end

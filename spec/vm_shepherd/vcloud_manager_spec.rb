@@ -10,16 +10,11 @@ module VmShepherd
         password: 'FAKE_PASSWORD',
       }
     end
-    let(:location) do
-      {
-        catalog: 'FAKE_CATALOG',
-        network: 'FAKE_NETWORK',
-        vdc: 'FAKE_VDC',
-      }
-    end
+    let(:vdc_name) { 'FAKE_VDC_NAME' }
+
     let(:logger) { instance_double(Logger).as_null_object }
 
-    let(:vcloud_manager) { VcloudManager.new(login_info, location, logger) }
+    let(:vcloud_manager) { VcloudManager.new(login_info, vdc_name, logger) }
 
     describe '#deploy' do
       let(:vapp_config) do
@@ -30,8 +25,11 @@ module VmShepherd
           dns: 'FAKE_DNS',
           ntp: 'FAKE_NTP',
           netmask: 'FAKE_NETMASK',
+          catalog: 'FAKE_VAPP_CATALOG',
+          network: 'FAKE_NETWORK',
         }
       end
+
       let(:vapp_template_path) { 'FAKE_VAPP_TEMPLATE_PATH' }
       let(:tmpdir) { 'FAKE_TMP_DIR' }
 
@@ -163,7 +161,7 @@ module VmShepherd
                 let(:catalog_exists) { true }
 
                 it 'deletes the catalog' do
-                  expect(client).to receive(:delete_catalog_by_name).with(location.fetch(:catalog))
+                  expect(client).to receive(:delete_catalog_by_name).with(vapp_config.fetch(:catalog))
 
                   vcloud_manager.deploy(vapp_template_path, vapp_config)
                 end
@@ -173,7 +171,7 @@ module VmShepherd
                 let(:catalog_exists) { false }
 
                 it 'does not delete the catalog' do
-                  expect(client).not_to receive(:delete_catalog_by_name).with(location.fetch(:catalog))
+                  expect(client).not_to receive(:delete_catalog_by_name).with(vapp_config.fetch(:catalog))
 
                   vcloud_manager.deploy(vapp_template_path, vapp_config)
                 end
@@ -181,14 +179,14 @@ module VmShepherd
             end
 
             it 'creates the catalog' do
-              expect(client).to receive(:create_catalog).with(location.fetch(:catalog)).and_return(catalog)
+              expect(client).to receive(:create_catalog).with(vapp_config.fetch(:catalog)).and_return(catalog)
 
               vcloud_manager.deploy(vapp_template_path, vapp_config)
             end
 
             it 'uploads the vApp template' do
               expect(catalog).to receive(:upload_vapp_template).with(
-                  location.fetch(:vdc),
+                  vdc_name,
                   vapp_config.fetch(:name),
                   tmpdir,
                 ).and_return(catalog)
@@ -198,7 +196,7 @@ module VmShepherd
 
             it 'creates a VCloudSdk::NetworkConfig' do
               expect(VCloudSdk::NetworkConfig).to receive(:new).with(
-                  location.fetch(:network),
+                  vapp_config.fetch(:network),
                   'Network 1',
                 ).and_return(network_config)
 
@@ -208,7 +206,7 @@ module VmShepherd
             it 'instantiates the vApp template' do
               expect(catalog).to receive(:instantiate_vapp_template).with(
                   vapp_config.fetch(:name),
-                  location.fetch(:vdc),
+                  vdc_name,
                   vapp_config.fetch(:name),
                   nil,
                   nil,
@@ -280,24 +278,25 @@ module VmShepherd
         end
       end
     end
-    
+
     describe '#destroy' do
       let(:client) { instance_double(VCloudSdk::Client) }
       let(:vdc) { instance_double(VCloudSdk::VDC) }
       let(:vapp) { instance_double(VCloudSdk::VApp) }
       let(:vapp_name) { 'FAKE_VAPP_NAME' }
+      let(:vapp_catalog) { 'FAKE_VAPP_CATALOG' }
 
       context 'when the catalog exists' do
         before do
-          allow(client).to receive(:catalog_exists?).with(location.fetch(:catalog)).and_return(true)
+          allow(client).to receive(:catalog_exists?).with(vapp_catalog).and_return(true)
         end
 
         it 'uses VCloudSdk::Client to delete the vApp' do
-          expect(client).to receive(:find_vdc_by_name).with(location.fetch(:vdc)).and_return(vdc)
+          expect(client).to receive(:find_vdc_by_name).with(vdc_name).and_return(vdc)
           expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
           expect(vapp).to receive(:power_off)
           expect(vapp).to receive(:delete)
-          expect(client).to receive(:delete_catalog_by_name).with(location.fetch(:catalog))
+          expect(client).to receive(:delete_catalog_by_name).with(vapp_catalog)
 
           expect(VCloudSdk::Client).to receive(:new).with(
               login_info.fetch(:url),
@@ -307,7 +306,7 @@ module VmShepherd
               logger,
             ).and_return(client)
 
-          vcloud_manager.destroy([vapp_name])
+          vcloud_manager.destroy([vapp_name], vapp_catalog)
         end
 
         context 'when an VCloudSdk::ObjectNotFoundError is thrown' do
@@ -324,28 +323,28 @@ module VmShepherd
           it 'catches the error' do
             allow(client).to receive(:find_vdc_by_name).and_raise(VCloudSdk::ObjectNotFoundError)
 
-            expect { vcloud_manager.destroy([vapp_name]) }.not_to raise_error
+            expect { vcloud_manager.destroy([vapp_name], vapp_catalog) }.not_to raise_error
           end
 
           it 'deletes to catalog' do
-            expect(client).to receive(:delete_catalog_by_name).with(location.fetch(:catalog))
+            expect(client).to receive(:delete_catalog_by_name).with(vapp_catalog)
 
-            vcloud_manager.destroy([vapp_name])
+            vcloud_manager.destroy([vapp_name], vapp_catalog)
           end
         end
       end
 
       context 'when the catalog does not exist' do
         before do
-          allow(client).to receive(:catalog_exists?).with(location.fetch(:catalog)).and_return(false)
+          allow(client).to receive(:catalog_exists?).with(vapp_catalog).and_return(false)
         end
 
         it 'uses VCloudSdk::Client to delete the vApp' do
-          expect(client).to receive(:find_vdc_by_name).with(location.fetch(:vdc)).and_return(vdc)
+          expect(client).to receive(:find_vdc_by_name).with(vdc_name).and_return(vdc)
           expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
           expect(vapp).to receive(:power_off)
           expect(vapp).to receive(:delete)
-          expect(client).not_to receive(:delete_catalog_by_name).with(location.fetch(:catalog))
+          expect(client).not_to receive(:delete_catalog_by_name).with(vapp_catalog)
 
           expect(VCloudSdk::Client).to receive(:new).with(
               login_info.fetch(:url),
@@ -355,8 +354,19 @@ module VmShepherd
               logger,
             ).and_return(client)
 
-          vcloud_manager.destroy([vapp_name])
+          vcloud_manager.destroy([vapp_name], vapp_catalog)
         end
+      end
+    end
+
+    describe '#clean_environment' do
+      let(:vapp_names) { ['VAPP_ONE', 'VAPP_TWO'] }
+      let(:vapp_catalog) { 'VAPP_CATALOG' }
+
+      it 'calls #destroy' do
+        expect(vcloud_manager).to receive(:destroy).with(vapp_names, vapp_catalog)
+
+        vcloud_manager.clean_environment(vapp_names, vapp_catalog)
       end
     end
   end

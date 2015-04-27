@@ -11,9 +11,10 @@ vm_shepherd:
     network: VDC_NETWORK
   vapp:
     ops_manager_name: VAPP_NAME
+    product_catalog: PRODUCT_CATALOG
     product_names:
-    - PRODUCT_1
-    - PRODUCT_2
+      - PRODUCT_1
+      - PRODUCT_2
     ip: VAPP_IP
     public_ip:
     gateway: VAPP_GATEWAY

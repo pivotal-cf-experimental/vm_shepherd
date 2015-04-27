@@ -16,11 +16,7 @@ module VmShepherd
               user: settings.vm_shepherd.creds.user,
               password: settings.vm_shepherd.creds.password,
             },
-            {
-              vdc: settings.vm_shepherd.vdc.name,
-              catalog: settings.vm_shepherd.vdc.catalog,
-              network: settings.vm_shepherd.vdc.network,
-            },
+            settings.vm_shepherd.vdc.name,
             error_logger
           ).deploy(
             path,
@@ -139,6 +135,7 @@ module VmShepherd
         netmask: vm.netmask,
         dns: vm.dns,
         ntp: vm.ntp,
+        catalog: settings.vm_shepherd.vdc.catalog,
       }
     end
 

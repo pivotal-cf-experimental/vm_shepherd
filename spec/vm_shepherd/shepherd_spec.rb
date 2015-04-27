@@ -21,11 +21,7 @@ module VmShepherd
                   user: settings.vm_shepherd.creds.user,
                   password: settings.vm_shepherd.creds.password,
                 },
-                {
-                  vdc: settings.vm_shepherd.vdc.name,
-                  catalog: settings.vm_shepherd.vdc.catalog,
-                  network: settings.vm_shepherd.vdc.network,
-                },
+                settings.vm_shepherd.vdc.name,
                 instance_of(Logger)
               ).and_return(vcloud_manager)
 
@@ -38,6 +34,7 @@ module VmShepherd
                 netmask: settings.vm_shepherd.vapp.netmask,
                 dns: settings.vm_shepherd.vapp.dns,
                 ntp: settings.vm_shepherd.vapp.ntp,
+                catalog: settings.vm_shepherd.vdc.catalog,
               }
             )
 

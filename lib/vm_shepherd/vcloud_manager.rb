@@ -59,34 +59,43 @@ module VmShepherd
     end
 
     def deploy_vapp(ovf_dir, vapp_config)
+      vapp_name = vapp_config.fetch(:name)
+      catalog = vapp_config.fetch(:catalog)
+      network = vapp_config.fetch(:network)
       # setup the catalog
-      client.delete_catalog_by_name(vapp_config[:catalog]) if client.catalog_exists?(vapp_config[:catalog])
-      catalog = client.create_catalog(vapp_config[:catalog])
+      client.delete_catalog_by_name(catalog) if client.catalog_exists?(catalog)
+      catalog = client.create_catalog(catalog)
 
       # upload template and instantiate vapp
-      catalog.upload_vapp_template(@vdc_name, vapp_config[:name], ovf_dir)
+      catalog.upload_vapp_template(@vdc_name, vapp_name, ovf_dir)
 
       # instantiate template
-      network_config = VCloudSdk::NetworkConfig.new(vapp_config[:network], 'Network 1')
-      catalog.instantiate_vapp_template(
-        vapp_config[:name], @vdc_name, vapp_config[:name], nil, nil, network_config)
+      network_config = VCloudSdk::NetworkConfig.new(network, 'Network 1')
+      catalog.instantiate_vapp_template(vapp_name, @vdc_name, vapp_name, nil, nil, network_config)
     rescue => e
       @logger.error(e.http_body) if e.respond_to?(:http_body)
       raise e
     end
 
     def reconfigure_vm(vapp, vapp_config)
-      vm = vapp.find_vm_by_name(vapp_config[:name])
-      vm.product_section_properties = build_properties(vapp_config)
+      vapp_name = vapp_config.fetch(:name)
+      gateway = vapp_config.fetch(:gateway)
+      dns = vapp_config.fetch(:dns)
+      ntp = vapp_config.fetch(:ntp)
+      ip = vapp_config.fetch(:ip)
+      netmask = vapp_config.fetch(:netmask)
+
+      vm = vapp.find_vm_by_name(vapp_name)
+      vm.product_section_properties = build_properties(gateway: gateway, dns: dns, ntp: ntp, ip: ip, netmask: netmask)
       vm
     end
 
-    def build_properties(vapp_config)
+    def build_properties(gateway:, dns:, ntp:, ip:, netmask:)
       [
         {
           'type' => 'string',
           'key' => 'gateway',
-          'value' => vapp_config[:gateway],
+          'value' => gateway,
           'password' => 'false',
           'userConfigurable' => 'true',
           'Label' => 'Default Gateway',
@@ -95,7 +104,7 @@ module VmShepherd
         {
           'type' => 'string',
           'key' => 'DNS',
-          'value' => vapp_config[:dns],
+          'value' => dns,
           'password' => 'false',
           'userConfigurable' => 'true',
           'Label' => 'DNS',
@@ -104,7 +113,7 @@ module VmShepherd
         {
           'type' => 'string',
           'key' => 'ntp_servers',
-          'value' => vapp_config[:ntp],
+          'value' => ntp,
           'password' => 'false',
           'userConfigurable' => 'true',
           'Label' => 'NTP Servers',
@@ -122,7 +131,7 @@ module VmShepherd
         {
           'type' => 'string',
           'key' => 'ip0',
-          'value' => vapp_config[:ip],
+          'value' => ip,
           'password' => 'false',
           'userConfigurable' => 'true',
           'Label' => 'IP Address',
@@ -131,7 +140,7 @@ module VmShepherd
         {
           'type' => 'string',
           'key' => 'netmask0',
-          'value' => vapp_config[:netmask],
+          'value' => netmask,
           'password' => 'false',
           'userConfigurable' => 'true',
           'Label' => 'Netmask',

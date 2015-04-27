@@ -35,6 +35,7 @@ module VmShepherd
                 dns: settings.vm_shepherd.vapp.dns,
                 ntp: settings.vm_shepherd.vapp.ntp,
                 catalog: settings.vm_shepherd.vdc.catalog,
+                network: settings.vm_shepherd.vdc.network,
               }
             )
 

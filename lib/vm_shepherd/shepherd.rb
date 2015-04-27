@@ -136,6 +136,7 @@ module VmShepherd
         dns: vm.dns,
         ntp: vm.ntp,
         catalog: settings.vm_shepherd.vdc.catalog,
+        network: settings.vm_shepherd.vdc.network,
       }
     end
 

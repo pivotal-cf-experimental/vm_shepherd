@@ -1,3 +1,3 @@
 module VmShepherd
-  VERSION = '0.6.2'.freeze
+  VERSION = '0.6.3'.freeze
 end

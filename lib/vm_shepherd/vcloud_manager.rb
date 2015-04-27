@@ -60,11 +60,11 @@ module VmShepherd
 
     def deploy_vapp(ovf_dir, vapp_config)
       vapp_name = vapp_config.fetch(:name)
-      catalog = vapp_config.fetch(:catalog)
+      catalog_name = vapp_config.fetch(:catalog)
       network = vapp_config.fetch(:network)
       # setup the catalog
-      client.delete_catalog_by_name(catalog) if client.catalog_exists?(catalog)
-      catalog = client.create_catalog(catalog)
+      client.delete_catalog_by_name(catalog_name) if client.catalog_exists?(catalog_name)
+      catalog = client.create_catalog(catalog_name)
 
       # upload template and instantiate vapp
       catalog.upload_vapp_template(@vdc_name, vapp_name, ovf_dir)

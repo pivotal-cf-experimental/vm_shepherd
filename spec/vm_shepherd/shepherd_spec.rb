@@ -194,7 +194,7 @@ module VmShepherd
               settings.vm_shepherd.vcenter_creds.password,
               settings.vm_shepherd.vsphere.datacenter,
             ).and_return(ova_manager)
-          expect(ova_manager).to receive(:destroy).with(settings.vm_shepherd.vm.ip)
+          expect(ova_manager).to receive(:destroy).with(settings.vm_shepherd.vm.ip, settings.vm_shepherd.vsphere.resource_pool)
 
           manager.destroy
         end

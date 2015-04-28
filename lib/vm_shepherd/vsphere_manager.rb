@@ -56,11 +56,13 @@ module VmShepherd
       end
     end
 
-    def destroy(ip_address)
-      vm = datacenter.vmFolder.findByIp(ip_address)
-      return unless vm
-      power_off_vm(vm)
-      destroy_vm(vm)
+    def destroy(ip_address, resource_pool_name)
+      vms = connection.serviceContent.searchIndex.FindAllByIp(ip: ip_address, vmSearch: true).
+        select { |vm| vm.resourcePool.name == resource_pool_name }
+      vms.each do |vm|
+        power_off_vm(vm)
+        destroy_vm(vm)
+      end
     end
 
     def destroy_vm(vm)

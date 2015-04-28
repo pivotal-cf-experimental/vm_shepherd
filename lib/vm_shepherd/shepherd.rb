@@ -73,7 +73,7 @@ module VmShepherd
             settings.vm_shepherd.vcenter_creds.username,
             settings.vm_shepherd.vcenter_creds.password,
             settings.vm_shepherd.vsphere.datacenter,
-          ).destroy(settings.vm_shepherd.vm.ip)
+          ).destroy(settings.vm_shepherd.vm.ip, settings.vm_shepherd.vsphere.resource_pool)
         when VmShepherd::AWS_IAAS_TYPE then
           ami_manager.destroy
         when VmShepherd::OPENSTACK_IAAS_TYPE then

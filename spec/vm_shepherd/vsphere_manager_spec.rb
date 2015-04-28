@@ -42,6 +42,19 @@ module VmShepherd
         vsphere_manager.destroy(ip_address, 'second_resource_pool')
       end
 
+      it 'destroys the VM that matches the given ip address only when resource pool nil' do
+        expect(vsphere_manager).to receive(:power_off_vm).with(vm1)
+        expect(vsphere_manager).to receive(:destroy_vm).with(vm1)
+
+        expect(vsphere_manager).to receive(:power_off_vm).with(vm2)
+        expect(vsphere_manager).to receive(:destroy_vm).with(vm2)
+
+        expect(vsphere_manager).to receive(:power_off_vm).with(vm3)
+        expect(vsphere_manager).to receive(:destroy_vm).with(vm3)
+
+        vsphere_manager.destroy(ip_address, nil)
+      end
+
       context 'when there are no vms with that IP address' do
         let(:vms) { [] }
 

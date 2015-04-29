@@ -5,12 +5,13 @@ module VmShepherd
   RSpec.describe OpenstackManager do
     include PatchedFog
 
+    let(:tenant_name) { 'tenant' }
     let(:openstack_options) do
       {
         auth_url: 'http://example.com/version/tokens',
         username: 'username',
         api_key: 'api-key',
-        tenant: 'tenant',
+        tenant: tenant_name,
       }
     end
     let(:openstack_vm_options) do
@@ -311,6 +312,25 @@ module VmShepherd
         expect(a_dir_files[1]).to have_received(:destroy)
         expect(b_dir_files[0]).to have_received(:destroy)
         expect(b_dir_files[1]).to have_received(:destroy)
+      end
+
+      context 'with the admin tenant' do
+        let(:tenant_name) { 'admin' }
+
+        it 'should not clean out the environment for safety reasons' do
+          expect {
+            openstack_vm_manager.clean_environment
+          }.to_not change { [
+              openstack_vm_manager.service.servers.size,
+              openstack_vm_manager.image_service.images.size,
+              openstack_vm_manager.service.volumes.size,
+            ] }
+
+          expect(a_dir_files[0]).to_not have_received(:destroy)
+          expect(a_dir_files[1]).to_not have_received(:destroy)
+          expect(b_dir_files[0]).to_not have_received(:destroy)
+          expect(b_dir_files[1]).to_not have_received(:destroy)
+        end
       end
     end
   end

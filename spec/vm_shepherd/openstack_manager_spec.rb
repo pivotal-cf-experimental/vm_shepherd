@@ -94,6 +94,8 @@ module VmShepherd
         allow(openstack_vm_manager).to receive(:say)
 
         Fog.mock!
+        Fog::Mock.reset
+        Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(compute_service).to receive(:addresses).and_return(addresses)
@@ -191,6 +193,8 @@ module VmShepherd
         allow(openstack_vm_manager).to receive(:say)
 
         Fog.mock!
+        Fog::Mock.reset
+        Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(image_service).to receive(:images).and_return(images)
@@ -238,6 +242,9 @@ module VmShepherd
         allow(openstack_vm_manager).to receive(:say)
 
         Fog.mock!
+        Fog::Mock.reset
+        Fog::Mock.delay = 0
+
         make_server_and_image!('vm1')
         make_server_and_image!('vm2')
 

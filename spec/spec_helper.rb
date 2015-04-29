@@ -25,9 +25,4 @@ RSpec.configure do |config|
   config.order = :random
 
   Kernel.srand config.seed #this allows you to use `--seed` to deterministically reproduce failures
-
-  config.before do
-    Fog::Mock.reset
-    Fog::Mock.delay = 0
-  end
 end

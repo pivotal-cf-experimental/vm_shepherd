@@ -64,6 +64,17 @@ module VmShepherd
     end
 
     def clean_environment
+      say("Destroying #{service.servers.size} instances:")
+      service.servers.each do |server|
+        say("  Destroying instance #{server.id}")
+        server.destroy
+      end
+
+      say("Destroying #{image_service.images.size} images:")
+      image_service.images.each do |image|
+        say("  Destroying image #{image.id}")
+        image.destroy
+      end
     end
 
     def service

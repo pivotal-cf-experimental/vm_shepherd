@@ -95,8 +95,6 @@ module VmShepherd
         allow(openstack_vm_manager).to receive(:say)
 
         Fog.mock!
-        Fog::Mock.reset
-        Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(compute_service).to receive(:addresses).and_return(addresses)
@@ -155,7 +153,7 @@ module VmShepherd
           assigned_network = network_service.networks.find { |network| network.name == openstack_vm_options[:network_name] }
           expect(servers).to receive(:create).with(
               hash_including(:nics => [
-                  { net_id: assigned_network.id, v4_fixed_ip: openstack_vm_options[:private_ip]}
+                  {net_id: assigned_network.id, v4_fixed_ip: openstack_vm_options[:private_ip]}
                 ]
               )
             ).and_call_original
@@ -183,7 +181,6 @@ module VmShepherd
 
       let(:compute_service) { openstack_vm_manager.service }
       let(:image_service) { openstack_vm_manager.image_service }
-      let(:network_service) { openstack_vm_manager.network_service }
 
       let(:servers) { compute_service.servers }
       let(:images) { image_service.images }
@@ -195,8 +192,6 @@ module VmShepherd
         allow(openstack_vm_manager).to receive(:say)
 
         Fog.mock!
-        Fog::Mock.reset
-        Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(image_service).to receive(:images).and_return(images)
@@ -236,6 +231,46 @@ module VmShepherd
         it 'calls destroy on the correct image' do
           expect { openstack_vm_manager.destroy(openstack_vm_options) }.to(destroy_correct_image)
         end
+      end
+    end
+
+    describe '#clean_environment' do
+      before do
+        allow(openstack_vm_manager).to receive(:say)
+
+        Fog.mock!
+        make_server_and_image!('vm1')
+        make_server_and_image!('vm2')
+      end
+
+      def make_server_and_image!(name)
+        image = openstack_vm_manager.image_service.images.create(
+          name: name,
+          size: 13784321,
+          disk_format: 'raw',
+          container_format: 'bare',
+          location: '/tmp/notreal',
+        )
+
+        openstack_vm_manager.service.servers.create(
+          name: name,
+          flavor_ref: openstack_vm_manager.service.flavors.first.id,
+          image_ref: image.id,
+          key_name: 'some key',
+          security_groups: ['some security group'],
+        )
+      end
+
+      it 'deletes all servers' do
+        expect {
+          openstack_vm_manager.clean_environment
+        }.to change{ openstack_vm_manager.service.servers.size }.from(2).to(0)
+      end
+
+      it 'deletes all images' do
+        expect {
+          openstack_vm_manager.clean_environment
+        }.to change{ openstack_vm_manager.image_service.images.size }.from(2).to(0)
       end
     end
   end

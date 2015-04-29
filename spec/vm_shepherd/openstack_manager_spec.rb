@@ -248,6 +248,14 @@ module VmShepherd
 
         make_server_and_image!('vm1')
         make_server_and_image!('vm2')
+        openstack_vm_manager.image_service.images.create(
+          name: 'public',
+          size: 13784321,
+          disk_format: 'raw',
+          container_format: 'bare',
+          location: '/tmp/notreal',
+          is_public: true,
+        )
 
         openstack_vm_manager.storage_service.directories
         a_dir = instance_double(Fog::Storage::OpenStack::Directory, key: 'a_dir')
@@ -271,6 +279,7 @@ module VmShepherd
           disk_format: 'raw',
           container_format: 'bare',
           location: '/tmp/notreal',
+          is_public: false,
         )
 
         openstack_vm_manager.service.servers.create(
@@ -294,10 +303,10 @@ module VmShepherd
         }.to change { openstack_vm_manager.service.servers.size }.from(2).to(0)
       end
 
-      it 'deletes all images' do
+      it 'deletes all private images' do
         expect {
           openstack_vm_manager.clean_environment
-        }.to change { openstack_vm_manager.image_service.images.size }.from(2).to(0)
+        }.to change { openstack_vm_manager.image_service.images.size }.from(3).to(1)
       end
 
       it 'deletes all volumes' do
@@ -312,25 +321,6 @@ module VmShepherd
         expect(a_dir_files[1]).to have_received(:destroy)
         expect(b_dir_files[0]).to have_received(:destroy)
         expect(b_dir_files[1]).to have_received(:destroy)
-      end
-
-      context 'with the admin tenant' do
-        let(:tenant_name) { 'admin' }
-
-        it 'should not clean out the environment for safety reasons' do
-          expect {
-            openstack_vm_manager.clean_environment
-          }.to_not change { [
-              openstack_vm_manager.service.servers.size,
-              openstack_vm_manager.image_service.images.size,
-              openstack_vm_manager.service.volumes.size,
-            ] }
-
-          expect(a_dir_files[0]).to_not have_received(:destroy)
-          expect(a_dir_files[1]).to_not have_received(:destroy)
-          expect(b_dir_files[0]).to_not have_received(:destroy)
-          expect(b_dir_files[1]).to_not have_received(:destroy)
-        end
       end
     end
   end

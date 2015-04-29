@@ -64,19 +64,16 @@ module VmShepherd
     end
 
     def clean_environment
-      if tenant == 'admin'
-        say('For safety reasons, not cleaning out this admin tenant.')
-        return
-      end
-
       say("Destroying #{service.servers.size} instances:")
       service.servers.each do |server|
         say("  Destroying instance #{server.id}")
         server.destroy
       end
 
-      say("Destroying #{image_service.images.size} images:")
-      image_service.images.each do |image|
+      private_images = image_service.images.reject(&:is_public)
+
+      say("Destroying #{private_images.size} images:")
+      private_images.each do |image|
         say("  Destroying image #{image.id}")
         image.destroy
       end

@@ -186,7 +186,6 @@ module VmShepherd
       let(:network_service) { openstack_vm_manager.network_service }
 
       let(:servers) { compute_service.servers }
-      let(:addresses) { compute_service.addresses }
       let(:images) { image_service.images }
       let(:image) { images.find { |image| image.name == openstack_vm_options[:name] } }
       let(:instance) { servers.find { |server| server.name == openstack_vm_options[:name] } }
@@ -200,10 +199,16 @@ module VmShepherd
         Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
-        allow(compute_service).to receive(:addresses).and_return(addresses)
         allow(image_service).to receive(:images).and_return(images)
 
         openstack_vm_manager.deploy(path, openstack_vm_options)
+      end
+
+      def destroy_correct_image
+        change do
+          images.reload
+          images.select { |image| image.name == openstack_vm_options[:name] }.any?
+        end.from(true).to(false)
       end
 
       it 'calls destroy on the correct instance' do
@@ -216,21 +221,20 @@ module VmShepherd
       end
 
       it 'calls destroy on the correct image' do
-        destroy_correct_image = change do
-          images.reload
-          images.find { |image| image.name == openstack_vm_options[:name] }
-        end.to(nil)
-
         expect { openstack_vm_manager.destroy(openstack_vm_options) }.to(destroy_correct_image)
       end
 
       context 'when the server does not exist' do
         before do
-          allow(servers).to receive(:get).and_return(nil)
+          allow(servers).to receive(:find).and_return(nil)
         end
 
         it 'returns without error' do
           expect { openstack_vm_manager.destroy(openstack_vm_options) }.not_to raise_error
+        end
+
+        it 'calls destroy on the correct image' do
+          expect { openstack_vm_manager.destroy(openstack_vm_options) }.to(destroy_correct_image)
         end
       end
     end

@@ -46,15 +46,17 @@ module VmShepherd
 
     def destroy(vm_options)
       say('Destroying Ops Manager instances')
-      ip = service.addresses.find { |address| address.ip == vm_options[:public_ip] }
-      server = service.servers.get(ip.instance_id)
+
+      server = service.servers.find { |srv| srv.name == vm_options[:name] }
       if server
         say("Found running Ops Manager instance #{server.id}")
-        image = image_service.images.get(server.image['id'])
-        say("Found Ops Manager image #{image.id}")
-
         server.destroy
         say('Ops Manager instance destroyed')
+      end
+
+      image = image_service.images.find { |img| img.name == vm_options[:name] }
+      if image
+        say("Found Ops Manager image #{image.id}")
         image.destroy
         say('Ops Manager image destroyed')
       end

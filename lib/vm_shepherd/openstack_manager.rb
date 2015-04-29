@@ -75,6 +75,21 @@ module VmShepherd
         say("  Destroying image #{image.id}")
         image.destroy
       end
+
+      say("Destroying #{service.volumes.size} volumes:")
+      service.volumes.each do |volume|
+        say("  Destroying volume #{volume.id}")
+        volume.destroy
+      end
+
+      say("Destroying contents of #{storage_service.directories.size} containers:")
+      storage_service.directories.each do |directory|
+        say("  Destroying #{directory.files.size} files from #{directory.key}")
+        directory.files.each do |file|
+          say("    Destroying file #{file.key}")
+          file.destroy
+        end
+      end
     end
 
     def service
@@ -105,7 +120,16 @@ module VmShepherd
         openstack_username: username,
         openstack_tenant: tenant,
         openstack_api_key: api_key,
-        openstack_endpoint_type: 'publicURL',
+      )
+    end
+
+    def storage_service
+      @network_service ||= Fog::Storage.new(
+        provider: 'openstack',
+        openstack_auth_url: auth_url,
+        openstack_username: username,
+        openstack_tenant: tenant,
+        openstack_api_key: api_key,
       )
     end
 

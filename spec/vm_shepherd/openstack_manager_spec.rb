@@ -71,7 +71,6 @@ module VmShepherd
               openstack_username: openstack_options[:username],
               openstack_tenant: openstack_options[:tenant],
               openstack_api_key: openstack_options[:api_key],
-              openstack_endpoint_type: 'publicURL',
             }
           )
         openstack_vm_manager.network_service
@@ -241,6 +240,20 @@ module VmShepherd
         Fog.mock!
         make_server_and_image!('vm1')
         make_server_and_image!('vm2')
+
+        openstack_vm_manager.storage_service.directories
+        a_dir = instance_double(Fog::Storage::OpenStack::Directory, key: 'a_dir')
+        allow(a_dir).to receive(:files).and_return(a_dir_files)
+        b_dir = instance_double(Fog::Storage::OpenStack::Directory, key: 'b_dir')
+        allow(b_dir).to receive(:files).and_return(b_dir_files)
+        allow(openstack_vm_manager.storage_service).to receive(:directories).and_return([a_dir, b_dir])
+      end
+
+      let(:a_dir_files) { [create_file_double('a_file'), create_file_double('b_file')] }
+      let(:b_dir_files) { [create_file_double('c_file'), create_file_double('d_file')] }
+
+      def create_file_double(key)
+        instance_double(Fog::Storage::OpenStack::File, destroy: nil, key: key)
       end
 
       def make_server_and_image!(name)
@@ -259,18 +272,38 @@ module VmShepherd
           key_name: 'some key',
           security_groups: ['some security group'],
         )
+
+        openstack_vm_manager.service.volumes.create(
+          name: name,
+          description: "description #{name}",
+          size: name.to_i,
+        )
       end
 
       it 'deletes all servers' do
         expect {
           openstack_vm_manager.clean_environment
-        }.to change{ openstack_vm_manager.service.servers.size }.from(2).to(0)
+        }.to change { openstack_vm_manager.service.servers.size }.from(2).to(0)
       end
 
       it 'deletes all images' do
         expect {
           openstack_vm_manager.clean_environment
-        }.to change{ openstack_vm_manager.image_service.images.size }.from(2).to(0)
+        }.to change { openstack_vm_manager.image_service.images.size }.from(2).to(0)
+      end
+
+      it 'deletes all volumes' do
+        expect {
+          openstack_vm_manager.clean_environment
+        }.to change { openstack_vm_manager.service.volumes.size }.from(2).to(0)
+      end
+
+      it 'deletes everything in the correct container' do
+        openstack_vm_manager.clean_environment
+        expect(a_dir_files[0]).to have_received(:destroy)
+        expect(a_dir_files[1]).to have_received(:destroy)
+        expect(b_dir_files[0]).to have_received(:destroy)
+        expect(b_dir_files[1]).to have_received(:destroy)
       end
     end
   end

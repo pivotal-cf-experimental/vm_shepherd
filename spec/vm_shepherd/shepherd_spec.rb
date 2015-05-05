@@ -4,38 +4,40 @@ require 'recursive_open_struct'
 module VmShepherd
   RSpec.describe Shepherd do
     subject(:manager) { Shepherd.new(settings: settings) }
+    let(:config) { settings.vm_shepherd_configs.first }
+    let(:settings) do
+      RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', settings_fixture_name)), recurse_over_arrays: true)
+    end
 
     describe '#deploy' do
       context 'with vcloud settings' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vcloud.yml')))
-        end
+        let(:settings_fixture_name) { 'vcloud.yml' }
         let(:vcloud_manager) { instance_double(VcloudManager) }
 
         it 'uses VcloudManager to launch a vm' do
           expect(VcloudManager).to receive(:new).
               with(
                 {
-                  url: settings.vm_shepherd.creds.url,
-                  organization: settings.vm_shepherd.creds.organization,
-                  user: settings.vm_shepherd.creds.user,
-                  password: settings.vm_shepherd.creds.password,
+                  url: config.creds.url,
+                  organization: config.creds.organization,
+                  user: config.creds.user,
+                  password: config.creds.password,
                 },
-                settings.vm_shepherd.vdc.name,
+                config.vdc.name,
                 instance_of(Logger)
               ).and_return(vcloud_manager)
 
           expect(vcloud_manager).to receive(:deploy).with(
               'FAKE_PATH',
               {
-                name: settings.vm_shepherd.vapp.ops_manager_name,
-                ip: settings.vm_shepherd.vapp.ip,
-                gateway: settings.vm_shepherd.vapp.gateway,
-                netmask: settings.vm_shepherd.vapp.netmask,
-                dns: settings.vm_shepherd.vapp.dns,
-                ntp: settings.vm_shepherd.vapp.ntp,
-                catalog: settings.vm_shepherd.vdc.catalog,
-                network: settings.vm_shepherd.vdc.network,
+                name: config.vapp.ops_manager_name,
+                ip: config.vapp.ip,
+                gateway: config.vapp.gateway,
+                netmask: config.vapp.netmask,
+                dns: config.vapp.dns,
+                ntp: config.vapp.ntp,
+                catalog: config.vdc.catalog,
+                network: config.vdc.network,
               }
             )
 
@@ -44,34 +46,32 @@ module VmShepherd
       end
 
       context 'with vsphere settings' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vsphere.yml')))
-        end
+        let(:settings_fixture_name) { 'vsphere.yml' }
         let(:ova_manager) { instance_double(VsphereManager) }
 
         it 'uses VsphereManager to launch a vm' do
           expect(VsphereManager).to receive(:new).with(
-              settings.vm_shepherd.vcenter_creds.ip,
-                settings.vm_shepherd.vcenter_creds.username,
-                settings.vm_shepherd.vcenter_creds.password,
-                settings.vm_shepherd.vsphere.datacenter,
+              config.vcenter_creds.ip,
+                config.vcenter_creds.username,
+                config.vcenter_creds.password,
+                config.vsphere.datacenter,
               ).and_return(ova_manager)
 
           expect(ova_manager).to receive(:deploy).with(
               'FAKE_PATH',
               {
-                ip: settings.vm_shepherd.vm.ip,
-                gateway: settings.vm_shepherd.vm.gateway,
-                netmask: settings.vm_shepherd.vm.netmask,
-                dns: settings.vm_shepherd.vm.dns,
-                ntp_servers: settings.vm_shepherd.vm.ntp_servers,
+                ip: config.vm.ip,
+                gateway: config.vm.gateway,
+                netmask: config.vm.netmask,
+                dns: config.vm.dns,
+                ntp_servers: config.vm.ntp_servers,
               },
               {
-                cluster: settings.vm_shepherd.vsphere.cluster,
-                resource_pool: settings.vm_shepherd.vsphere.resource_pool,
-                datastore: settings.vm_shepherd.vsphere.datastore,
-                network: settings.vm_shepherd.vsphere.network,
-                folder: settings.vm_shepherd.vsphere.folder,
+                cluster: config.vsphere.cluster,
+                resource_pool: config.vsphere.resource_pool,
+                datastore: config.vsphere.datastore,
+                network: config.vsphere.network,
+                folder: config.vsphere.folder,
               },
             )
 
@@ -80,9 +80,7 @@ module VmShepherd
       end
 
       context 'with AWS settings' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'aws.yml')))
-        end
+        let(:settings_fixture_name) { 'aws.yml' }
         let(:ams_manager) { instance_double(AwsManager) }
         let(:ami_file_path) { 'PATH_TO_AMI_FILE' }
         let(:aws_options) do
@@ -106,9 +104,7 @@ module VmShepherd
       end
 
       context 'with OpenStack settings' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'openstack.yml')))
-        end
+        let(:settings_fixture_name) { 'openstack.yml' }
         let(:qcow2_manager) { instance_double(OpenstackManager) }
         let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
         let(:openstack_options) do
@@ -143,9 +139,7 @@ module VmShepherd
       end
 
       context 'when IAAS is unknown' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'unknown.yml')))
-        end
+        let(:settings_fixture_name) { 'unknown.yml' }
 
         it 'raises an exception' do
           expect { manager.deploy(path: 'FAKE_PATH') }.to raise_error(Shepherd::InvalidIaas)
@@ -155,26 +149,24 @@ module VmShepherd
 
     describe '#destroy' do
       context 'when IAAS is vcloud' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vcloud.yml')))
-        end
+        let(:settings_fixture_name) { 'vcloud.yml' }
         let(:vcloud_manager) { instance_double(VcloudManager) }
 
         it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
               {
-                url: settings.vm_shepherd.creds.url,
-                organization: settings.vm_shepherd.creds.organization,
-                user: settings.vm_shepherd.creds.user,
-                password: settings.vm_shepherd.creds.password,
+                url: config.creds.url,
+                organization: config.creds.organization,
+                user: config.creds.user,
+                password: config.creds.password,
               },
-              settings.vm_shepherd.vdc.name,
+              config.vdc.name,
               instance_of(Logger)
             ).and_return(vcloud_manager)
 
           expect(vcloud_manager).to receive(:destroy).with(
-              [settings.vm_shepherd.vapp.ops_manager_name],
-              settings.vm_shepherd.vdc.catalog,
+              [config.vapp.ops_manager_name],
+              config.vdc.catalog,
             )
 
           manager.destroy
@@ -182,28 +174,24 @@ module VmShepherd
       end
 
       context 'when IAAS is vsphere' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vsphere.yml')))
-        end
+        let(:settings_fixture_name) { 'vsphere.yml' }
         let(:ova_manager) { instance_double(VsphereManager) }
 
         it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
-              settings.vm_shepherd.vcenter_creds.ip,
-              settings.vm_shepherd.vcenter_creds.username,
-              settings.vm_shepherd.vcenter_creds.password,
-              settings.vm_shepherd.vsphere.datacenter,
+              config.vcenter_creds.ip,
+              config.vcenter_creds.username,
+              config.vcenter_creds.password,
+              config.vsphere.datacenter,
             ).and_return(ova_manager)
-          expect(ova_manager).to receive(:destroy).with(settings.vm_shepherd.vm.ip, settings.vm_shepherd.vsphere.resource_pool)
+          expect(ova_manager).to receive(:destroy).with(config.vm.ip, config.vsphere.resource_pool)
 
           manager.destroy
         end
       end
 
       context 'when IAAS is AWS' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'aws.yml')))
-        end
+        let(:settings_fixture_name) { 'aws.yml' }
         let(:ams_manager) { instance_double(AwsManager) }
         let(:ami_options) do
           {
@@ -226,9 +214,7 @@ module VmShepherd
       end
 
       context 'when IAAS is Openstack' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'openstack.yml')))
-        end
+        let(:settings_fixture_name) { 'openstack.yml' }
         let(:qcow2_manager) { instance_double(OpenstackManager) }
         let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
         let(:openstack_options) do
@@ -263,9 +249,7 @@ module VmShepherd
       end
 
       context 'when IAAS is unknown' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'unknown.yml')))
-        end
+        let(:settings_fixture_name) { 'unknown.yml' }
 
         it 'raises an exception' do
           expect { manager.destroy }.to raise_error(Shepherd::InvalidIaas)
@@ -275,26 +259,24 @@ module VmShepherd
 
     describe '#clean_environment' do
       context 'when IAAS is vcloud' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vcloud.yml')))
-        end
+        let(:settings_fixture_name) { 'vcloud.yml' }
         let(:vcloud_manager) { instance_double(VcloudManager) }
 
         it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
               {
-                url: settings.vm_shepherd.creds.url,
-                organization: settings.vm_shepherd.creds.organization,
-                user: settings.vm_shepherd.creds.user,
-                password: settings.vm_shepherd.creds.password,
+                url: config.creds.url,
+                organization: config.creds.organization,
+                user: config.creds.user,
+                password: config.creds.password,
               },
-              settings.vm_shepherd.vdc.name,
+              config.vdc.name,
               instance_of(Logger)
             ).and_return(vcloud_manager)
 
           expect(vcloud_manager).to receive(:clean_environment).with(
-              settings.vm_shepherd.vapp.product_names,
-              settings.vm_shepherd.vapp.product_catalog,
+              config.vapp.product_names,
+              config.vapp.product_catalog,
             )
 
           manager.clean_environment
@@ -302,24 +284,22 @@ module VmShepherd
       end
 
       context 'when IAAS is vsphere' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'vsphere.yml')))
-        end
+        let(:settings_fixture_name) { 'vsphere.yml' }
         let(:ova_manager) { instance_double(VsphereManager) }
         let(:clean_environment_options) do
           {
-            datacenter_folders_to_clean: settings.vm_shepherd.cleanup.datacenter_folders_to_clean,
-            datastores: settings.vm_shepherd.cleanup.datastores,
-            datastore_folders_to_clean: settings.vm_shepherd.cleanup.datastore_folders_to_clean,
+            datacenter_folders_to_clean: config.cleanup.datacenter_folders_to_clean,
+            datastores: config.cleanup.datastores,
+            datastore_folders_to_clean: config.cleanup.datastore_folders_to_clean,
           }
         end
 
         it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
-              settings.vm_shepherd.vcenter_creds.ip,
-              settings.vm_shepherd.vcenter_creds.username,
-              settings.vm_shepherd.vcenter_creds.password,
-              settings.vm_shepherd.cleanup.datacenter,
+              config.vcenter_creds.ip,
+              config.vcenter_creds.username,
+              config.vcenter_creds.password,
+              config.cleanup.datacenter,
             ).and_return(ova_manager)
           expect(ova_manager).to receive(:clean_environment).with(clean_environment_options)
 
@@ -328,9 +308,7 @@ module VmShepherd
       end
 
       context 'when IAAS is AWS' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'aws.yml')))
-        end
+        let(:settings_fixture_name) { 'aws.yml' }
         let(:ams_manager) { instance_double(AwsManager) }
         let(:ami_options) do
           {
@@ -353,9 +331,7 @@ module VmShepherd
       end
 
       context 'when IAAS is Openstack' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'openstack.yml')))
-        end
+        let(:settings_fixture_name) { 'openstack.yml' }
         let(:qcow2_manager) { instance_double(OpenstackManager) }
         let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
         let(:openstack_options) do
@@ -375,9 +351,7 @@ module VmShepherd
       end
 
       context 'when IAAS is unknown' do
-        let(:settings) do
-          RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', 'unknown.yml')))
-        end
+        let(:settings_fixture_name) { 'unknown.yml' }
 
         it 'raises an exception' do
           expect { manager.clean_environment }.to raise_error(Shepherd::InvalidIaas)

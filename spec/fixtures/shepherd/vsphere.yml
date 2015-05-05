@@ -1,6 +1,6 @@
 iaas_type: vsphere
-vm_shepherd:
-  vcenter_creds:
+vm_shepherd_configs:
+- vcenter_creds:
     ip: OVA_URL
     username: OVA_ORGANIZATION
     password: OVA_PASSWORD

@@ -1,6 +1,6 @@
 iaas_type: vcloud
-vm_shepherd:
-  creds:
+vm_shepherd_configs:
+- creds:
     url: VAPP_URL
     organization: VAPP_ORGANIZATION
     user: VAPP_USERNAME

@@ -7,110 +7,113 @@ module VmShepherd
     end
 
     def deploy(path:)
+      vm_shepherd_config = vm_shepherd_configs(settings).first
       case settings.iaas_type
         when VmShepherd::VCLOUD_IAAS_TYPE then
           VmShepherd::VcloudManager.new(
             {
-              url: settings.vm_shepherd.creds.url,
-              organization: settings.vm_shepherd.creds.organization,
-              user: settings.vm_shepherd.creds.user,
-              password: settings.vm_shepherd.creds.password,
+              url: vm_shepherd_config.creds.url,
+              organization: vm_shepherd_config.creds.organization,
+              user: vm_shepherd_config.creds.user,
+              password: vm_shepherd_config.creds.password,
             },
-            settings.vm_shepherd.vdc.name,
+            vm_shepherd_config.vdc.name,
             error_logger
           ).deploy(
             path,
-            vcloud_deploy_options,
+            vcloud_deploy_options(vm_shepherd_config),
           )
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
-            settings.vm_shepherd.vcenter_creds.ip,
-            settings.vm_shepherd.vcenter_creds.username,
-            settings.vm_shepherd.vcenter_creds.password,
-            settings.vm_shepherd.vsphere.datacenter,
+            vm_shepherd_config.vcenter_creds.ip,
+            vm_shepherd_config.vcenter_creds.username,
+            vm_shepherd_config.vcenter_creds.password,
+            vm_shepherd_config.vsphere.datacenter,
           ).deploy(
             path,
             {
-              ip: settings.vm_shepherd.vm.ip,
-              gateway: settings.vm_shepherd.vm.gateway,
-              netmask: settings.vm_shepherd.vm.netmask,
-              dns: settings.vm_shepherd.vm.dns,
-              ntp_servers: settings.vm_shepherd.vm.ntp_servers,
+              ip: vm_shepherd_config.vm.ip,
+              gateway: vm_shepherd_config.vm.gateway,
+              netmask: vm_shepherd_config.vm.netmask,
+              dns: vm_shepherd_config.vm.dns,
+              ntp_servers: vm_shepherd_config.vm.ntp_servers,
             },
             {
-              cluster: settings.vm_shepherd.vsphere.cluster,
-              resource_pool: settings.vm_shepherd.vsphere.resource_pool,
-              datastore: settings.vm_shepherd.vsphere.datastore,
-              network: settings.vm_shepherd.vsphere.network,
-              folder: settings.vm_shepherd.vsphere.folder,
+              cluster: vm_shepherd_config.vsphere.cluster,
+              resource_pool: vm_shepherd_config.vsphere.resource_pool,
+              datastore: vm_shepherd_config.vsphere.datastore,
+              network: vm_shepherd_config.vsphere.network,
+              folder: vm_shepherd_config.vsphere.folder,
             }
           )
         when VmShepherd::AWS_IAAS_TYPE then
-          ami_manager.deploy(path)
+          ami_manager(vm_shepherd_config).deploy(path)
         when VmShepherd::OPENSTACK_IAAS_TYPE then
-          openstack_vm_manager.deploy(path, openstack_vm_options)
+          openstack_vm_manager(vm_shepherd_config).deploy(path, openstack_vm_options(vm_shepherd_config))
         else
           fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
       end
     end
 
     def destroy
+      vm_shepherd_config = vm_shepherd_configs(settings).first
       case settings.iaas_type
         when VmShepherd::VCLOUD_IAAS_TYPE then
           VmShepherd::VcloudManager.new(
             {
-              url: settings.vm_shepherd.creds.url,
-              organization: settings.vm_shepherd.creds.organization,
-              user: settings.vm_shepherd.creds.user,
-              password: settings.vm_shepherd.creds.password,
+              url: vm_shepherd_config.creds.url,
+              organization: vm_shepherd_config.creds.organization,
+              user: vm_shepherd_config.creds.user,
+              password: vm_shepherd_config.creds.password,
             },
-            settings.vm_shepherd.vdc.name,
+            vm_shepherd_config.vdc.name,
             error_logger
-          ).destroy([settings.vm_shepherd.vapp.ops_manager_name], settings.vm_shepherd.vdc.catalog)
+          ).destroy([vm_shepherd_config.vapp.ops_manager_name], vm_shepherd_config.vdc.catalog)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
-            settings.vm_shepherd.vcenter_creds.ip,
-            settings.vm_shepherd.vcenter_creds.username,
-            settings.vm_shepherd.vcenter_creds.password,
-            settings.vm_shepherd.vsphere.datacenter,
-          ).destroy(settings.vm_shepherd.vm.ip, settings.vm_shepherd.vsphere.resource_pool)
+            vm_shepherd_config.vcenter_creds.ip,
+            vm_shepherd_config.vcenter_creds.username,
+            vm_shepherd_config.vcenter_creds.password,
+            vm_shepherd_config.vsphere.datacenter,
+          ).destroy(vm_shepherd_config.vm.ip, vm_shepherd_config.vsphere.resource_pool)
         when VmShepherd::AWS_IAAS_TYPE then
-          ami_manager.destroy
+          ami_manager(vm_shepherd_config).destroy
         when VmShepherd::OPENSTACK_IAAS_TYPE then
-          openstack_vm_manager.destroy(openstack_vm_options)
+          openstack_vm_manager(vm_shepherd_config).destroy(openstack_vm_options(vm_shepherd_config))
         else
           fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
       end
     end
 
     def clean_environment
+      vm_shepherd_config = vm_shepherd_configs(settings).first
       case settings.iaas_type
         when VmShepherd::VCLOUD_IAAS_TYPE then
           VmShepherd::VcloudManager.new(
             {
-              url: settings.vm_shepherd.creds.url,
-              organization: settings.vm_shepherd.creds.organization,
-              user: settings.vm_shepherd.creds.user,
-              password: settings.vm_shepherd.creds.password,
+              url: vm_shepherd_config.creds.url,
+              organization: vm_shepherd_config.creds.organization,
+              user: vm_shepherd_config.creds.user,
+              password: vm_shepherd_config.creds.password,
             },
-            settings.vm_shepherd.vdc.name,
+            vm_shepherd_config.vdc.name,
             error_logger,
-          ).clean_environment(settings.vm_shepherd.vapp.product_names, settings.vm_shepherd.vapp.product_catalog)
+          ).clean_environment(vm_shepherd_config.vapp.product_names, vm_shepherd_config.vapp.product_catalog)
         when VmShepherd::VSPHERE_IAAS_TYPE then
           VmShepherd::VsphereManager.new(
-            settings.vm_shepherd.vcenter_creds.ip,
-            settings.vm_shepherd.vcenter_creds.username,
-            settings.vm_shepherd.vcenter_creds.password,
-            settings.vm_shepherd.cleanup.datacenter,
+            vm_shepherd_config.vcenter_creds.ip,
+            vm_shepherd_config.vcenter_creds.username,
+            vm_shepherd_config.vcenter_creds.password,
+            vm_shepherd_config.cleanup.datacenter,
           ).clean_environment(
-            datacenter_folders_to_clean: settings.vm_shepherd.cleanup.datacenter_folders_to_clean,
-            datastores: settings.vm_shepherd.cleanup.datastores,
-            datastore_folders_to_clean: settings.vm_shepherd.cleanup.datastore_folders_to_clean,
+            datacenter_folders_to_clean: vm_shepherd_config.cleanup.datacenter_folders_to_clean,
+            datastores: vm_shepherd_config.cleanup.datastores,
+            datastore_folders_to_clean: vm_shepherd_config.cleanup.datastore_folders_to_clean,
           )
         when VmShepherd::AWS_IAAS_TYPE then
-          ami_manager.clean_environment
+          ami_manager(vm_shepherd_config).clean_environment
         when VmShepherd::OPENSTACK_IAAS_TYPE then
-          openstack_vm_manager.clean_environment
+          openstack_vm_manager(vm_shepherd_config).clean_environment
         else
           fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
       end
@@ -126,8 +129,8 @@ module VmShepherd
       end
     end
 
-    def vcloud_deploy_options
-      vm = settings.vm_shepherd.vapp
+    def vcloud_deploy_options(vm_shepherd_config)
+      vm = vm_shepherd_config.vapp
       {
         name: vm.ops_manager_name,
         ip: vm.ip,
@@ -135,44 +138,47 @@ module VmShepherd
         netmask: vm.netmask,
         dns: vm.dns,
         ntp: vm.ntp,
-        catalog: settings.vm_shepherd.vdc.catalog,
-        network: settings.vm_shepherd.vdc.network,
+        catalog: vm_shepherd_config.vdc.catalog,
+        network: vm_shepherd_config.vdc.network,
       }
     end
 
-    def ami_manager
-      vm_shepherd = settings.vm_shepherd
+    def ami_manager(vm_shepherd_config)
       VmShepherd::AwsManager.new(
-        aws_access_key: vm_shepherd.aws_access_key,
-        aws_secret_key: vm_shepherd.aws_secret_key,
-        ssh_key_name: vm_shepherd.ssh_key_name,
-        security_group_id: vm_shepherd.security_group,
-        public_subnet_id: vm_shepherd.public_subnet_id,
-        private_subnet_id: vm_shepherd.private_subnet_id,
-        elastic_ip_id: vm_shepherd.elastic_ip_id,
-        vm_name: vm_shepherd.vm_name,
+        aws_access_key: vm_shepherd_config.aws_access_key,
+        aws_secret_key: vm_shepherd_config.aws_secret_key,
+        ssh_key_name: vm_shepherd_config.ssh_key_name,
+        security_group_id: vm_shepherd_config.security_group,
+        public_subnet_id: vm_shepherd_config.public_subnet_id,
+        private_subnet_id: vm_shepherd_config.private_subnet_id,
+        elastic_ip_id: vm_shepherd_config.elastic_ip_id,
+        vm_name: vm_shepherd_config.vm_name,
       )
     end
 
-    def openstack_vm_manager
+    def openstack_vm_manager(vm_shepherd_config)
       OpenstackManager.new(
-        auth_url: settings.vm_shepherd.creds.auth_url,
-        username: settings.vm_shepherd.creds.username,
-        api_key: settings.vm_shepherd.creds.api_key,
-        tenant: settings.vm_shepherd.creds.tenant,
+        auth_url: vm_shepherd_config.creds.auth_url,
+        username: vm_shepherd_config.creds.username,
+        api_key: vm_shepherd_config.creds.api_key,
+        tenant: vm_shepherd_config.creds.tenant,
       )
     end
 
-    def openstack_vm_options
+    def openstack_vm_options(vm_shepherd_config)
       {
-        name: settings.vm_shepherd.vm.name,
-        min_disk_size: settings.vm_shepherd.vm.flavor_parameters.min_disk_size,
-        network_name: settings.vm_shepherd.vm.network_name,
-        key_name: settings.vm_shepherd.vm.key_name,
-        security_group_names: settings.vm_shepherd.vm.security_group_names,
-        public_ip: settings.vm_shepherd.vm.public_ip,
-        private_ip: settings.vm_shepherd.vm.private_ip,
+        name: vm_shepherd_config.vm.name,
+        min_disk_size: vm_shepherd_config.vm.flavor_parameters.min_disk_size,
+        network_name: vm_shepherd_config.vm.network_name,
+        key_name: vm_shepherd_config.vm.key_name,
+        security_group_names: vm_shepherd_config.vm.security_group_names,
+        public_ip: vm_shepherd_config.vm.public_ip,
+        private_ip: vm_shepherd_config.vm.private_ip,
       }
+    end
+
+    def vm_shepherd_configs(settings)
+      settings.vm_shepherd_configs || []
     end
   end
 end

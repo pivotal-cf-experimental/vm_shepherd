@@ -1,6 +1,6 @@
 iaas_type: openstack
-vm_shepherd:
-  creds:
+vm_shepherd_configs:
+- creds:
     auth_url: 'http://example.com/version/tokens'
     username: 'username'
     api_key: 'api-key'

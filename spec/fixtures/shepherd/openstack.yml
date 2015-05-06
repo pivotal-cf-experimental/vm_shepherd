@@ -17,3 +17,20 @@ vm_shepherd_configs:
       - 'security-group-C'
     public_ip: 198.11.195.5
     private_ip: 192.168.100.100
+- creds:
+    auth_url: 'http://example.com/version/tokens-2'
+    username: 'username-2'
+    api_key: 'api-key-2'
+    tenant: 'tenant-2'
+  vm:
+    name: 'some-vm-name-2'
+    flavor_parameters:
+      min_disk_size: 152
+    network_name: 'some-network-2'
+    key_name: 'some-key-2'
+    security_group_names:
+      - 'security-group-A-2'
+      - 'security-group-B-2'
+      - 'security-group-C-2'
+    public_ip: 198.11.195.5-2
+    private_ip: 192.168.100.100-2

@@ -5,7 +5,6 @@ vm_shepherd_configs:
     username: OVA_ORGANIZATION
     password: OVA_PASSWORD
   vsphere:
-    host:
     datacenter: VSPHERE_DATACENTER
     cluster: VSPHERE_CLUSTER
     network: VSPHERE_NETWORK
@@ -28,3 +27,30 @@ vm_shepherd_configs:
       - DC_FOLDER_TWO
     datastore_folders_to_clean:
       - DS_DISK_FOLDER
+- vcenter_creds:
+    ip: OVA_URL-2
+    username: OVA_ORGANIZATION-2
+    password: OVA_PASSWORD-2
+  vsphere:
+    datacenter: VSPHERE_DATACENTER-2
+    cluster: VSPHERE_CLUSTER-2
+    network: VSPHERE_NETWORK-2
+    resource_pool: VSPHERE_RESOURCE_POOL-2
+    datastore: VSPHERE_DATASTORE-2
+    folder: VSPHERE_FOLDER-2
+  vm:
+    ip: OVA_IP-2
+    gateway: OVA_GATEWAY-2
+    netmask: OVA_NETMASK-2
+    dns: OVA_DNS-2
+    ntp_servers: OVA_NTP-2
+  cleanup:
+    datacenter: VSPHERE_OTHER_DATACENTER-2
+    datastores:
+      - VSPHERE_DATASTORE_ONE-2
+      - VSPHERE_DATASTORE_TWO-2
+    datacenter_folders_to_clean:
+      - DC_FOLDER_ONE-2
+      - DC_FOLDER_TWO-2
+    datastore_folders_to_clean:
+      - DS_DISK_FOLDER-2

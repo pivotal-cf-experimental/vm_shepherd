@@ -42,7 +42,7 @@ module VmShepherd
               ).and_return(last_vcloud_manager)
 
           expect(first_vcloud_manager).to receive(:deploy).with(
-              'FAKE_PATH',
+              'FIRST_FAKE_PATH',
               {
                 name: first_config.vapp.ops_manager_name,
                 ip: first_config.vapp.ip,
@@ -56,7 +56,7 @@ module VmShepherd
             )
 
           expect(last_vcloud_manager).to receive(:deploy).with(
-              'FAKE_PATH',
+              'LAST_FAKE_PATH',
               {
                 name: last_config.vapp.ops_manager_name,
                 ip: last_config.vapp.ip,
@@ -69,7 +69,11 @@ module VmShepherd
               }
             )
 
-          manager.deploy(path: 'FAKE_PATH')
+          manager.deploy(paths: ['FIRST_FAKE_PATH', 'LAST_FAKE_PATH'])
+        end
+
+        it 'fails if improper paths are given' do
+          expect { manager.deploy(paths: ['FIRST_FAKE_PATH']) }.to raise_error(ArgumentError)
         end
       end
 
@@ -95,7 +99,7 @@ module VmShepherd
             ).and_return(last_ova_manager)
 
           expect(first_ova_manager).to receive(:deploy).with(
-              'FAKE_PATH',
+              'FIRST_FAKE_PATH',
               {
                 ip: first_config.vm.ip,
                 gateway: first_config.vm.gateway,
@@ -113,7 +117,7 @@ module VmShepherd
             )
 
           expect(last_ova_manager).to receive(:deploy).with(
-              'FAKE_PATH',
+              'LAST_FAKE_PATH',
               {
                 ip: last_config.vm.ip,
                 gateway: last_config.vm.gateway,
@@ -130,7 +134,11 @@ module VmShepherd
               },
             )
 
-          manager.deploy(path: 'FAKE_PATH')
+          manager.deploy(paths: ['FIRST_FAKE_PATH', 'LAST_FAKE_PATH'])
+        end
+
+        it 'fails if improper paths are given' do
+          expect { manager.deploy(paths: ['FIRST_FAKE_PATH']) }.to raise_error(ArgumentError)
         end
       end
 
@@ -138,7 +146,8 @@ module VmShepherd
         let(:settings_fixture_name) { 'aws.yml' }
         let(:first_ams_manager) { instance_double(AwsManager) }
         let(:last_ams_manager) { instance_double(AwsManager) }
-        let(:ami_file_path) { 'PATH_TO_AMI_FILE' }
+        let(:first_ami_file_path) { 'PATH_TO_AMI_FILE' }
+        let(:last_ami_file_path) { 'PATH_TO_AMI_FILE-2' }
         let(:first_aws_options) do
           {
             aws_access_key: 'aws-access-key',
@@ -166,18 +175,23 @@ module VmShepherd
 
         it 'uses AwsManager to launch a VM' do
           expect(AwsManager).to receive(:new).with(first_aws_options).and_return(first_ams_manager)
-          expect(first_ams_manager).to receive(:deploy).with(ami_file_path)
+          expect(first_ams_manager).to receive(:deploy).with(first_ami_file_path)
 
           expect(AwsManager).to receive(:new).with(last_aws_options).and_return(last_ams_manager)
-          expect(last_ams_manager).to receive(:deploy).with(ami_file_path)
+          expect(last_ams_manager).to receive(:deploy).with(last_ami_file_path)
 
-          manager.deploy(path: ami_file_path)
+          manager.deploy(paths: [first_ami_file_path, last_ami_file_path])
+        end
+
+        it 'fails if improper paths are given' do
+          expect { manager.deploy(paths: ['FIRST_FAKE_PATH']) }.to raise_error(ArgumentError)
         end
       end
 
       context 'with OpenStack settings' do
         let(:settings_fixture_name) { 'openstack.yml' }
-        let(:qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
+        let(:first_qcow2_file_path) { 'PATH_TO_QCOW2_FILE' }
+        let(:last_qcow2_file_path) { 'PATH_TO_QCOW2_FILE-2' }
         let(:first_qcow2_manager) { instance_double(OpenstackManager) }
         let(:last_qcow2_manager) { instance_double(OpenstackManager) }
         let(:first_openstack_options) do
@@ -229,12 +243,16 @@ module VmShepherd
 
         it 'uses OpenstackManager to launch a VM' do
           expect(OpenstackManager).to receive(:new).with(first_openstack_options).and_return(first_qcow2_manager)
-          expect(first_qcow2_manager).to receive(:deploy).with(qcow2_file_path, first_openstack_vm_options)
+          expect(first_qcow2_manager).to receive(:deploy).with(first_qcow2_file_path, first_openstack_vm_options)
 
           expect(OpenstackManager).to receive(:new).with(last_openstack_options).and_return(last_qcow2_manager)
-          expect(last_qcow2_manager).to receive(:deploy).with(qcow2_file_path, last_openstack_vm_options)
+          expect(last_qcow2_manager).to receive(:deploy).with(last_qcow2_file_path, last_openstack_vm_options)
 
-          manager.deploy(path: qcow2_file_path)
+          manager.deploy(paths: [first_qcow2_file_path, last_qcow2_file_path])
+        end
+
+        it 'fails if improper paths are given' do
+          expect { manager.deploy(paths: ['FIRST_FAKE_PATH']) }.to raise_error(ArgumentError)
         end
       end
 
@@ -242,7 +260,7 @@ module VmShepherd
         let(:settings_fixture_name) { 'unknown.yml' }
 
         it 'raises an exception' do
-          expect { manager.deploy(path: 'FAKE_PATH') }.to raise_error(Shepherd::InvalidIaas)
+          expect { manager.deploy(paths: ['FAKE_PATH']) }.to raise_error(Shepherd::InvalidIaas)
         end
       end
     end

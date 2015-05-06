@@ -6,11 +6,15 @@ module VmShepherd
       @settings = settings
     end
 
-    def deploy(path:)
+    def deploy(paths:)
       unless valid_iaas_types.include?(settings.iaas_type)
         fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
       end
-      vm_shepherd_configs(settings).each do |vm_shepherd_config|
+      configs = vm_shepherd_configs(settings)
+      unless configs.size == paths.size
+        fail(ArgumentError, "mismatch in available images to deploy (needed #{configs.size}, got #{paths.size})")
+      end
+      configs.zip(paths).each do |vm_shepherd_config, path|
         case settings.iaas_type
           when VmShepherd::VCLOUD_IAAS_TYPE then
             VmShepherd::VcloudManager.new(

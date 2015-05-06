@@ -1,4 +1,4 @@
-# VmShepherd
+# VmShepherd [![Build Status](https://travis-ci.org/pivotal-cf-experimental/vm_shepherd.svg)](https://travis-ci.org/pivotal-cf-experimental/vm_shepherd)
 
 Gem for deploying and destroying a VM on different IAASs such as AWS, vSphere, vCloud, and Openstack
 

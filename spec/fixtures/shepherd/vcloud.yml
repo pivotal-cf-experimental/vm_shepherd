@@ -32,10 +32,6 @@ vm_shepherd_configs:
     network: VDC_NETWORK-2
   vapp:
     ops_manager_name: VAPP_NAME-2
-    product_catalog: PRODUCT_CATALOG-2
-    product_names:
-      - PRODUCT_1-2
-      - PRODUCT_2-2
     ip: VAPP_IP-2
     public_ip:
     gateway: VAPP_GATEWAY-2

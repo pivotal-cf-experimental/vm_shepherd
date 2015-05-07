@@ -109,7 +109,7 @@ module VmShepherd
               },
               vm_shepherd_config.vdc.name,
               error_logger,
-            ).clean_environment(vm_shepherd_config.vapp.product_names, vm_shepherd_config.vapp.product_catalog)
+            ).clean_environment(vm_shepherd_config.vapp.product_names || [], vm_shepherd_config.vapp.product_catalog)
           when VmShepherd::VSPHERE_IAAS_TYPE then
             VmShepherd::VsphereManager.new(
               vm_shepherd_config.vcenter_creds.ip,

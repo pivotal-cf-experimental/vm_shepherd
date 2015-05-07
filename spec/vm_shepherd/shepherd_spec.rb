@@ -481,7 +481,7 @@ module VmShepherd
             ).and_return(last_vcloud_manager)
 
           expect(last_vcloud_manager).to receive(:clean_environment).with(
-              last_config.vapp.product_names,
+              [],
               last_config.vapp.product_catalog,
             )
 

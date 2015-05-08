@@ -66,6 +66,11 @@ module VmShepherd
     def clean_environment
       say("Destroying #{service.servers.size} instances:")
       service.servers.each do |server|
+        server.volumes.each do |volume|
+          say("  Detaching volume #{volume.id} from server #{server.id}")
+          server.detach_volume(volume.id)
+        end
+
         say("  Destroying instance #{server.id}")
         server.destroy
       end

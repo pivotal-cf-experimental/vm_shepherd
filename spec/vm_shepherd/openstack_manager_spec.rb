@@ -282,7 +282,7 @@ module VmShepherd
           is_public: false,
         )
 
-        openstack_vm_manager.service.servers.create(
+        server = openstack_vm_manager.service.servers.create(
           name: name,
           flavor_ref: openstack_vm_manager.service.flavors.first.id,
           image_ref: image.id,
@@ -290,14 +290,22 @@ module VmShepherd
           security_groups: ['some security group'],
         )
 
-        openstack_vm_manager.service.volumes.create(
+        volume = openstack_vm_manager.service.volumes.create(
           name: name,
           description: "description #{name}",
           size: name.to_i,
         )
+        server.attach_volume(volume.id, 'xd1')
       end
 
-      it 'deletes all servers' do
+      it 'deletes all servers and server-volume attachments' do
+        openstack_vm_manager.service.servers.each do |server|
+          server.volumes.each do |volume|
+            expect(openstack_vm_manager.service).to receive(:detach_volume).with(server.id, volume.id).ordered
+          end
+          expect(openstack_vm_manager.service).to receive(:delete_server).with(server.id).ordered.and_call_original
+        end
+
         expect {
           openstack_vm_manager.clean_environment
         }.to change { openstack_vm_manager.service.servers.size }.from(2).to(0)

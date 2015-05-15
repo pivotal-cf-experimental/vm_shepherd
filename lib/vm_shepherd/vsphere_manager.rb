@@ -120,19 +120,25 @@ module VmShepherd
     end
 
     def delete_folder_and_vms(folder_name)
-      return unless (folder = datacenter.vmFolder.traverse(folder_name))
+      3.times do |attempt|
+        break unless (folder = datacenter.vmFolder.traverse(folder_name))
 
-      find_vms(folder).each { |vm| power_off_vm(vm) }
+        find_vms(folder).each { |vm| power_off_vm(vm) }
 
-      logger.info("BEGIN folder.destroy_task folder=#{folder_name}")
-      folder.Destroy_Task.wait_for_completion
-      logger.info("END   folder.destroy_task folder=#{folder_name}")
-
-      fail("#{folder_name.inspect} already exists") unless datacenter.vmFolder.traverse(folder_name).nil?
-    rescue RbVmomi::Fault => e
-      logger.info("ERROR folder.destroy_task folder=#{folder_name} #{e.inspect}")
-      raise
+        begin
+          logger.info("BEGIN folder.destroy_task folder=#{folder_name} attempt ##{attempt}")
+          folder.Destroy_Task.wait_for_completion
+          logger.info("END   folder.destroy_task folder=#{folder_name}")
+          fail("#{folder_name.inspect} already exists") unless datacenter.vmFolder.traverse(folder_name).nil?
+        rescue RbVmomi::Fault => e
+          logger.info("ERROR folder.destroy_task folder=#{folder_name} #{e.inspect}")
+          sleep 10
+          # give up if it's the 3rd attempt
+          raise if attempt == 2
+        end
+      end
     end
+
 
     def find_vms(folder)
       vms = folder.childEntity.grep(RbVmomi::VIM::VirtualMachine)

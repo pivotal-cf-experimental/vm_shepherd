@@ -21,6 +21,37 @@ module VmShepherd
       expect { vsphere_manager }.not_to raise_error
     end
 
+    describe 'clean_environment' do
+      let(:connection) { instance_double(RbVmomi::VIM, serviceContent: service_content, searchIndex: search_index)}
+      let(:service_content) { instance_double(RbVmomi::VIM::ServiceContent, searchIndex: search_index)}
+      let(:search_index) { instance_double(RbVmomi::VIM::SearchIndex) }
+      let(:folder) {instance_double(RbVmomi::VIM::Folder) }
+      let(:datacenter) { instance_double(RbVmomi::VIM::Datacenter, name: datacenter_name) }
+      let(:filemanager) { instance_double(RbVmomi::VIM::FileManager) }
+      let(:delete_datastore_file_task) { instance_double(RbVmomi::VIM::Task) }
+
+      before do
+        allow(vsphere_manager).to receive(:connection).and_return(connection)
+        allow(folder).to receive(:traverse).and_return(folder)
+        allow(connection).to receive(:searchIndex).and_return(search_index)
+        allow(search_index).to receive(:FindByInventoryPath).with({inventoryPath: datacenter_name}).and_return(datacenter)
+        allow(datacenter).to receive(:tap).and_return(datacenter)
+        allow(datacenter).to receive(:vmFolder).and_return(folder)
+        allow(folder).to receive(:traverse).with('FAKE_DATACENTER_FOLDERS').and_return(folder)
+        allow(service_content).to receive(:fileManager).and_return(filemanager)
+        # stubbed private methods:
+        allow(subject).to receive(:find_vms).and_return(vms)
+        allow(subject).to receive(:power_off_vm)
+        allow(subject).to receive(:delete_folder_and_vms)
+      end
+
+      it 'should delete folders and vms' do
+        expect(filemanager).to receive(:DeleteDatastoreFile_Task).and_return(delete_datastore_file_task)
+        expect(delete_datastore_file_task).to receive(:wait_for_completion)
+        vsphere_manager.clean_environment(datacenter_folders_to_clean: ['FAKE_DATACENTER_FOLDERS'], datastores: ['FAKE_DATASTORES'], datastore_folders_to_clean: ['FAKE_DATASTORE_FOLDERS'])
+      end
+    end
+
     describe 'destroy' do
       let(:search_index) { instance_double(RbVmomi::VIM::SearchIndex) }
       let(:service_content) { instance_double(RbVmomi::VIM::ServiceContent, searchIndex: search_index)}

@@ -188,7 +188,7 @@ module VmShepherd
     end
 
     def vm_shepherd_configs(settings)
-      settings.vm_shepherd_configs || []
+      settings.vm_shepherd.vm_configs || []
     end
 
     def valid_iaas_types

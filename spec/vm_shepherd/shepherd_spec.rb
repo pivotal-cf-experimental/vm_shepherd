@@ -4,8 +4,8 @@ require 'recursive_open_struct'
 module VmShepherd
   RSpec.describe Shepherd do
     subject(:manager) { Shepherd.new(settings: settings) }
-    let(:first_config) { settings.vm_shepherd_configs.first }
-    let(:last_config) { settings.vm_shepherd_configs.last }
+    let(:first_config) { settings.vm_shepherd.vm_configs.first }
+    let(:last_config) { settings.vm_shepherd.vm_configs.last }
     let(:settings) do
       RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', settings_fixture_name)), recurse_over_arrays: true)
     end

@@ -278,7 +278,7 @@ module VmShepherd
     end
 
     describe '#destroy' do
-      let(:elastic_ip) { instance_double(AWS::EC2::ElasticIp) }
+      let(:elastic_ip) { nil }
       let(:instance) { instance_double(AWS::EC2::Instance, tags: {'Name' => 'some-vm-name'}, elastic_ip: elastic_ip) }
       let(:non_terminated_instance) { instance_double(AWS::EC2::Instance, tags: {}) }
       let(:instances) { [non_terminated_instance, instance] }
@@ -286,7 +286,6 @@ module VmShepherd
       before do
         allow(ec2).to receive(:instances).and_return(instances)
         allow(instance).to receive(:terminate)
-        allow(elastic_ip).to receive(:delete)
       end
 
       it 'terminates the VM with the specified name' do
@@ -296,10 +295,27 @@ module VmShepherd
         ami_manager.destroy(vm_config)
       end
 
-      it 'deletes the ip associated with the terminated vm' do
-        expect(elastic_ip).to receive(:delete)
+      context 'when there is an elastic ip' do
+        let(:elastic_ip) { instance_double(AWS::EC2::ElasticIp) }
 
-        ami_manager.destroy(vm_config)
+        before do
+          allow(elastic_ip).to receive(:delete)
+          allow(elastic_ip).to receive(:disassociate)
+        end
+
+        it 'terminates the VM with the specified name' do
+          expect(non_terminated_instance).not_to receive(:terminate)
+          expect(instance).to receive(:terminate)
+
+          ami_manager.destroy(vm_config)
+        end
+
+        it 'disassociates and deletes the ip associated with the terminated vm' do
+          expect(elastic_ip).to receive(:disassociate).ordered
+          expect(elastic_ip).to receive(:delete).ordered
+
+          ami_manager.destroy(vm_config)
+        end
       end
     end
   end

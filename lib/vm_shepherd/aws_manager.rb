@@ -113,7 +113,11 @@ module VmShepherd
     def destroy(vm_config)
       AWS.ec2.instances.each do |instance|
         if instance.tags.to_h['Name'] == vm_config.fetch(:vm_name)
-          instance.elastic_ip.delete
+          elastic_ip = instance.elastic_ip
+          if elastic_ip
+            elastic_ip.disassociate
+            elastic_ip.delete
+          end
           instance.terminate
         end
       end

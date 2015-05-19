@@ -24,6 +24,9 @@ module VmShepherd
       FileUtils.remove_entry_secure(tmpdir, force: true)
     end
 
+    def prepare_environment
+    end
+
     def destroy(vapp_names, catalog)
       delete_vapps(vapp_names)
       delete_catalog(catalog)

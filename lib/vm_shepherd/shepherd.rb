@@ -1,6 +1,7 @@
 module VmShepherd
   class Shepherd
-    class InvalidIaas < StandardError; end
+    class InvalidIaas < StandardError;
+    end
 
     def initialize(settings:)
       @settings = settings
@@ -54,10 +55,46 @@ module VmShepherd
               }
             )
           when VmShepherd::AWS_IAAS_TYPE then
-            ami_manager(vm_shepherd_config).deploy(path)
+            ami_manager.deploy(ami_file_path: path, vm_config: vm_shepherd_config.to_h)
           when VmShepherd::OPENSTACK_IAAS_TYPE then
             openstack_vm_manager(vm_shepherd_config).deploy(path, openstack_vm_options(vm_shepherd_config))
         end
+      end
+    end
+
+    def prepare_environment
+      unless valid_iaas_types.include?(settings.iaas_type)
+        fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
+      end
+      case settings.iaas_type
+        when VmShepherd::VCLOUD_IAAS_TYPE then
+          vm_shepherd_configs(settings).each do |vm_shepherd_config|
+            VmShepherd::VcloudManager.new(
+              {
+                url: vm_shepherd_config.creds.url,
+                organization: vm_shepherd_config.creds.organization,
+                user: vm_shepherd_config.creds.user,
+                password: vm_shepherd_config.creds.password,
+              },
+              vm_shepherd_config.vdc.name,
+              error_logger
+            ).prepare_environment
+          end
+        when VmShepherd::VSPHERE_IAAS_TYPE then
+          vm_shepherd_configs(settings).each do |vm_shepherd_config|
+            VmShepherd::VsphereManager.new(
+              vm_shepherd_config.vcenter_creds.ip,
+              vm_shepherd_config.vcenter_creds.username,
+              vm_shepherd_config.vcenter_creds.password,
+              vm_shepherd_config.vsphere.datacenter,
+            ).prepare_environment
+          end
+        when VmShepherd::AWS_IAAS_TYPE then
+          ami_manager.prepare_environment(settings.vm_shepherd.env_config.json_file)
+        when VmShepherd::OPENSTACK_IAAS_TYPE then
+          vm_shepherd_configs(settings).each do |vm_shepherd_config|
+            openstack_vm_manager(vm_shepherd_config).prepare_environment
+          end
       end
     end
 
@@ -86,7 +123,7 @@ module VmShepherd
               vm_shepherd_config.vsphere.datacenter,
             ).destroy(vm_shepherd_config.vm.ip, vm_shepherd_config.vsphere.resource_pool)
           when VmShepherd::AWS_IAAS_TYPE then
-            ami_manager(vm_shepherd_config).destroy
+            ami_manager.destroy(vm_shepherd_config.to_h)
           when VmShepherd::OPENSTACK_IAAS_TYPE then
             openstack_vm_manager(vm_shepherd_config).destroy(openstack_vm_options(vm_shepherd_config))
         end
@@ -97,9 +134,9 @@ module VmShepherd
       unless valid_iaas_types.include?(settings.iaas_type)
         fail(InvalidIaas, "Unknown IaaS type: #{settings.iaas_type.inspect}")
       end
-      vm_shepherd_configs(settings).each do |vm_shepherd_config|
-        case settings.iaas_type
-          when VmShepherd::VCLOUD_IAAS_TYPE then
+      case settings.iaas_type
+        when VmShepherd::VCLOUD_IAAS_TYPE then
+          vm_shepherd_configs(settings).each do |vm_shepherd_config|
             VmShepherd::VcloudManager.new(
               {
                 url: vm_shepherd_config.creds.url,
@@ -110,7 +147,9 @@ module VmShepherd
               vm_shepherd_config.vdc.name,
               error_logger,
             ).clean_environment(vm_shepherd_config.vapp.product_names || [], vm_shepherd_config.vapp.product_catalog)
-          when VmShepherd::VSPHERE_IAAS_TYPE then
+          end
+        when VmShepherd::VSPHERE_IAAS_TYPE then
+          vm_shepherd_configs(settings).each do |vm_shepherd_config|
             VmShepherd::VsphereManager.new(
               vm_shepherd_config.vcenter_creds.ip,
               vm_shepherd_config.vcenter_creds.username,
@@ -121,11 +160,13 @@ module VmShepherd
               datastores: vm_shepherd_config.cleanup.datastores,
               datastore_folders_to_clean: vm_shepherd_config.cleanup.datastore_folders_to_clean,
             )
-          when VmShepherd::AWS_IAAS_TYPE then
-            ami_manager(vm_shepherd_config).clean_environment
-          when VmShepherd::OPENSTACK_IAAS_TYPE then
+          end
+        when VmShepherd::AWS_IAAS_TYPE then
+          ami_manager.clean_environment
+        when VmShepherd::OPENSTACK_IAAS_TYPE then
+          vm_shepherd_configs(settings).each do |vm_shepherd_config|
             openstack_vm_manager(vm_shepherd_config).clean_environment
-        end
+          end
       end
     end
 
@@ -153,16 +194,16 @@ module VmShepherd
       }
     end
 
-    def ami_manager(vm_shepherd_config)
-      VmShepherd::AwsManager.new(
-        aws_access_key: vm_shepherd_config.aws_access_key,
-        aws_secret_key: vm_shepherd_config.aws_secret_key,
-        ssh_key_name: vm_shepherd_config.ssh_key_name,
-        security_group_id: vm_shepherd_config.security_group,
-        public_subnet_id: vm_shepherd_config.public_subnet_id,
-        private_subnet_id: vm_shepherd_config.private_subnet_id,
-        elastic_ip_id: vm_shepherd_config.elastic_ip_id,
-        vm_name: vm_shepherd_config.vm_name,
+    def ami_manager
+      @ami_manager ||= VmShepherd::AwsManager.new(
+        {
+          stack_name: settings.vm_shepherd.env_config.stack_name,
+          aws_access_key: settings.vm_shepherd.env_config.aws_access_key,
+          aws_secret_key: settings.vm_shepherd.env_config.aws_secret_key,
+          json_file: settings.vm_shepherd.env_config.json_file,
+          parameters: settings.vm_shepherd.env_config.parameters_as_a_hash,
+          outputs: settings.vm_shepherd.env_config.outputs.to_h
+        }
       )
     end
 

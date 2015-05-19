@@ -56,6 +56,9 @@ module VmShepherd
       end
     end
 
+    def prepare_environment
+    end
+
     def destroy(ip_address, resource_pool_name)
       vms = connection.serviceContent.searchIndex.FindAllByIp(ip: ip_address, vmSearch: true)
       vms = vms.select { |vm| resource_pool_name == vm.resourcePool.name } if resource_pool_name

@@ -9,6 +9,23 @@ module VmShepherd
     let(:settings) do
       RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', settings_fixture_name)), recurse_over_arrays: true)
     end
+    let(:env_config) do
+      {
+        stack_name: 'aws-stack-name',
+        aws_access_key: 'aws-access-key',
+        aws_secret_key: 'aws-secret-key',
+        json_file: 'cloudformation.json',
+        parameters: {
+          'key_pair_name' => 'key_pair_name'
+        },
+        outputs: {
+          ssh_key_name: 'ssh-key-name',
+          security_group: 'security-group-id',
+          public_subnet_id: 'public-subnet-id',
+          private_subnet_id: 'private-subnet-id'
+        }
+      }
+    end
 
     describe '#deploy' do
       context 'with vcloud settings' do
@@ -85,10 +102,10 @@ module VmShepherd
         it 'uses VsphereManager to launch a vm' do
           expect(VsphereManager).to receive(:new).with(
               first_config.vcenter_creds.ip,
-                first_config.vcenter_creds.username,
-                first_config.vcenter_creds.password,
-                first_config.vsphere.datacenter,
-              ).and_return(first_ova_manager)
+              first_config.vcenter_creds.username,
+              first_config.vcenter_creds.password,
+              first_config.vsphere.datacenter,
+            ).and_return(first_ova_manager)
 
 
           expect(VsphereManager).to receive(:new).with(
@@ -144,41 +161,16 @@ module VmShepherd
 
       context 'with AWS settings' do
         let(:settings_fixture_name) { 'aws.yml' }
-        let(:first_ams_manager) { instance_double(AwsManager) }
-        let(:last_ams_manager) { instance_double(AwsManager) }
+        let(:aws_manager) { instance_double(AwsManager) }
         let(:first_ami_file_path) { 'PATH_TO_AMI_FILE' }
         let(:last_ami_file_path) { 'PATH_TO_AMI_FILE-2' }
-        let(:first_aws_options) do
-          {
-            aws_access_key: 'aws-access-key',
-            aws_secret_key: 'aws-secret-key',
-            ssh_key_name: 'ssh-key-name',
-            security_group_id: 'security-group-id',
-            public_subnet_id: 'public-subnet-id',
-            private_subnet_id: 'private-subnet-id',
-            elastic_ip_id: 'elastic-ip-id',
-            vm_name: 'vm-name'
-          }
-        end
-        let(:last_aws_options) do
-          {
-            aws_access_key: 'aws-access-key-2',
-            aws_secret_key: 'aws-secret-key-2',
-            ssh_key_name: 'ssh-key-name-2',
-            security_group_id: 'security-group-id-2',
-            public_subnet_id: 'public-subnet-id-2',
-            private_subnet_id: 'private-subnet-id-2',
-            elastic_ip_id: 'elastic-ip-id-2',
-            vm_name: 'vm-name-2'
-          }
-        end
+        let(:first_aws_options) { {vm_name: 'vm-name'} }
+        let(:last_aws_options) { {vm_name: 'vm-name-2'} }
 
         it 'uses AwsManager to launch a VM' do
-          expect(AwsManager).to receive(:new).with(first_aws_options).and_return(first_ams_manager)
-          expect(first_ams_manager).to receive(:deploy).with(first_ami_file_path)
-
-          expect(AwsManager).to receive(:new).with(last_aws_options).and_return(last_ams_manager)
-          expect(last_ams_manager).to receive(:deploy).with(last_ami_file_path)
+          expect(AwsManager).to receive(:new).with(env_config).and_return(aws_manager)
+          expect(aws_manager).to receive(:deploy).with(ami_file_path: first_ami_file_path, vm_config: first_aws_options)
+          expect(aws_manager).to receive(:deploy).with(ami_file_path: last_ami_file_path, vm_config: last_aws_options)
 
           manager.deploy(paths: [first_ami_file_path, last_ami_file_path])
         end
@@ -336,39 +328,14 @@ module VmShepherd
 
       context 'when IAAS is AWS' do
         let(:settings_fixture_name) { 'aws.yml' }
-        let(:first_ams_manager) { instance_double(AwsManager) }
-        let(:first_ami_options) do
-          {
-            aws_access_key: 'aws-access-key',
-            aws_secret_key: 'aws-secret-key',
-            ssh_key_name: 'ssh-key-name',
-            security_group_id: 'security-group-id',
-            public_subnet_id: 'public-subnet-id',
-            private_subnet_id: 'private-subnet-id',
-            elastic_ip_id: 'elastic-ip-id',
-            vm_name: 'vm-name'
-          }
-        end
-        let(:last_ams_manager) { instance_double(AwsManager) }
-        let(:last_ami_options) do
-          {
-            aws_access_key: 'aws-access-key-2',
-            aws_secret_key: 'aws-secret-key-2',
-            ssh_key_name: 'ssh-key-name-2',
-            security_group_id: 'security-group-id-2',
-            public_subnet_id: 'public-subnet-id-2',
-            private_subnet_id: 'private-subnet-id-2',
-            elastic_ip_id: 'elastic-ip-id-2',
-            vm_name: 'vm-name-2'
-          }
-        end
+        let(:aws_manager) { instance_double(AwsManager) }
+        let(:first_ami_options) { {vm_name: 'vm-name'} }
+        let(:last_ami_options) { {vm_name: 'vm-name-2'} }
 
         it 'uses AwsManager to destroy a VM' do
-          expect(AwsManager).to receive(:new).with(first_ami_options).and_return(first_ams_manager)
-          expect(first_ams_manager).to receive(:destroy)
-
-          expect(AwsManager).to receive(:new).with(last_ami_options).and_return(last_ams_manager)
-          expect(last_ams_manager).to receive(:destroy)
+          expect(AwsManager).to receive(:new).with(env_config).and_return(aws_manager)
+          expect(aws_manager).to receive(:destroy).with(first_ami_options)
+          expect(aws_manager).to receive(:destroy).with(last_ami_options)
 
           manager.destroy
         end
@@ -530,38 +497,11 @@ module VmShepherd
 
       context 'when IAAS is AWS' do
         let(:settings_fixture_name) { 'aws.yml' }
-        let(:first_ams_manager) { instance_double(AwsManager) }
-        let(:first_ami_options) do
-          {
-            aws_access_key: 'aws-access-key',
-            aws_secret_key: 'aws-secret-key',
-            ssh_key_name: 'ssh-key-name',
-            security_group_id: 'security-group-id',
-            public_subnet_id: 'public-subnet-id',
-            private_subnet_id: 'private-subnet-id',
-            elastic_ip_id: 'elastic-ip-id',
-            vm_name: 'vm-name'
-          }
-        end
-        let(:last_ams_manager) { instance_double(AwsManager) }
-        let(:last_ami_options) do
-          {
-            aws_access_key: 'aws-access-key-2',
-            aws_secret_key: 'aws-secret-key-2',
-            ssh_key_name: 'ssh-key-name-2',
-            security_group_id: 'security-group-id-2',
-            public_subnet_id: 'public-subnet-id-2',
-            private_subnet_id: 'private-subnet-id-2',
-            elastic_ip_id: 'elastic-ip-id-2',
-            vm_name: 'vm-name-2'
-          }
-        end
+        let(:aws_manager) { instance_double(AwsManager) }
 
         it 'uses AwsManager to destroy a VM' do
-          expect(AwsManager).to receive(:new).with(first_ami_options).and_return(first_ams_manager)
-          expect(first_ams_manager).to receive(:clean_environment)
-          expect(AwsManager).to receive(:new).with(last_ami_options).and_return(last_ams_manager)
-          expect(last_ams_manager).to receive(:clean_environment)
+          expect(AwsManager).to receive(:new).with(env_config).and_return(aws_manager)
+          expect(aws_manager).to receive(:clean_environment)
           manager.clean_environment
         end
       end
@@ -602,6 +542,117 @@ module VmShepherd
 
         it 'raises an exception' do
           expect { manager.clean_environment }.to raise_error(Shepherd::InvalidIaas)
+        end
+      end
+    end
+
+    describe '#prepare_environment' do
+      context 'when IAAS is AWS' do
+        let(:settings_fixture_name) { 'aws.yml' }
+        let(:ams_manager) { instance_double(AwsManager) }
+
+        it 'uses AwsManager to create an environment' do
+          expect(AwsManager).to receive(:new).with(env_config).and_return(ams_manager)
+          expect(ams_manager).to receive(:prepare_environment).with('cloudformation.json')
+          manager.prepare_environment
+        end
+      end
+
+      context 'when IAAS is vcloud' do
+        let(:settings_fixture_name) { 'vcloud.yml' }
+        let(:first_vcloud_manager) { instance_double(VcloudManager) }
+        let(:last_vcloud_manager) { instance_double(VcloudManager) }
+
+        it 'uses VcloudManager to destroy a vm' do
+          expect(VcloudManager).to receive(:new).with(
+              {
+                url: first_config.creds.url,
+                organization: first_config.creds.organization,
+                user: first_config.creds.user,
+                password: first_config.creds.password,
+              },
+              first_config.vdc.name,
+              instance_of(Logger)
+            ).and_return(first_vcloud_manager)
+
+          expect(first_vcloud_manager).to receive(:prepare_environment)
+
+          expect(VcloudManager).to receive(:new).with(
+              {
+                url: last_config.creds.url,
+                organization: last_config.creds.organization,
+                user: last_config.creds.user,
+                password: last_config.creds.password,
+              },
+              last_config.vdc.name,
+              instance_of(Logger)
+            ).and_return(last_vcloud_manager)
+
+          expect(last_vcloud_manager).to receive(:prepare_environment)
+          manager.prepare_environment
+        end
+      end
+
+      context 'when IAAS is vsphere' do
+        let(:settings_fixture_name) { 'vsphere.yml' }
+        let(:first_ova_manager) { instance_double(VsphereManager) }
+        let(:last_ova_manager) { instance_double(VsphereManager) }
+
+        it 'uses VsphereManager to destroy a vm' do
+          expect(VsphereManager).to receive(:new).with(
+              first_config.vcenter_creds.ip,
+              first_config.vcenter_creds.username,
+              first_config.vcenter_creds.password,
+              first_config.vsphere.datacenter,
+            ).and_return(first_ova_manager)
+          expect(first_ova_manager).to receive(:prepare_environment)
+          expect(VsphereManager).to receive(:new).with(
+              last_config.vcenter_creds.ip,
+              last_config.vcenter_creds.username,
+              last_config.vcenter_creds.password,
+              last_config.vsphere.datacenter,
+            ).and_return(last_ova_manager)
+          expect(last_ova_manager).to receive(:prepare_environment)
+
+          manager.prepare_environment
+        end
+      end
+
+      context 'when IAAS is Openstack' do
+        let(:settings_fixture_name) { 'openstack.yml' }
+        let(:first_openstack_manager) { instance_double(OpenstackManager) }
+        let(:first_openstack_options) do
+          {
+            auth_url: 'http://example.com/version/tokens',
+            username: 'username',
+            api_key: 'api-key',
+            tenant: 'tenant',
+          }
+        end
+        let(:last_openstack_manager) { instance_double(OpenstackManager) }
+        let(:last_openstack_options) do
+          {
+            auth_url: 'http://example.com/version/tokens-2',
+            username: 'username-2',
+            api_key: 'api-key-2',
+            tenant: 'tenant-2',
+          }
+        end
+
+        it 'uses OpenstackManager to destroy a VM' do
+          expect(OpenstackManager).to receive(:new).with(first_openstack_options).and_return(first_openstack_manager)
+          expect(first_openstack_manager).to receive(:prepare_environment)
+          expect(OpenstackManager).to receive(:new).with(last_openstack_options).and_return(last_openstack_manager)
+          expect(last_openstack_manager).to receive(:prepare_environment)
+          manager.prepare_environment
+        end
+      end
+
+      context 'when IAAS is unknown' do
+        let(:settings_fixture_name) { 'unknown.yml' }
+
+        it 'raises an exception' do
+          expect { manager.prepare_environment }.to raise_error(Shepherd::InvalidIaas)
         end
       end
     end

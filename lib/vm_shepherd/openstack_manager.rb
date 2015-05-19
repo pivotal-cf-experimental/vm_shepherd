@@ -99,6 +99,9 @@ module VmShepherd
       end
     end
 
+    def prepare_environment
+    end
+
     def service
       @service ||= Fog::Compute.new(
         provider: 'openstack',

@@ -38,7 +38,6 @@ module VmShepherd
         allow(service_content).to receive(:fileManager).and_return(filemanager)
         # stubbed private methods:
         allow(subject).to receive(:find_vms).and_return(vms)
-        allow(subject).to receive(:power_off_vm)
         allow(subject).to receive(:delete_folder_and_vms)
       end
 

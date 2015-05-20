@@ -124,7 +124,10 @@ module VmShepherd
       3.times do |attempt|
         break unless (folder = datacenter.vmFolder.traverse(folder_name))
 
-        find_vms(folder).each { |vm| power_off_vm(vm) }
+        find_vms(folder).each do |vm|
+          power_off_vm(vm)
+          destroy_vm_datastore_folder(vm)
+        end
 
         begin
           logger.info("BEGIN folder.destroy_task folder=#{folder_name} attempt ##{attempt}")
@@ -159,6 +162,18 @@ module VmShepherd
           logger.info("ERROR vm.power_off_task vm=#{vm.name}")
           raise unless e.message.start_with?('InvalidPowerState')
         end
+      end
+    end
+
+
+    def destroy_vm_datastore_folder(vm)
+      begin
+        vm_datastore_folder = vm.config.files.snapshotDirectory
+        logger.info("BEGIN vm_datastore_folder.delete_datastore_file_task folder=#{vm_datastore_folder}")
+        file_manager.DeleteDatastoreFile_Task(name: vm_datastore_folder, datacenter: datacenter).wait_for_completion
+        logger.info("END vm_datastore_folder.delete_datastore_file_task folder=#{vm_datastore_folder}")
+      rescue RbVmomi::Fault => e
+        logger.info("ERROR vm_datastore_folder.delete_datastore_file_task. Skipping ... folder=#{vm_datastore_folder} #{e.inspect}")
       end
     end
 
@@ -309,6 +324,12 @@ module VmShepherd
     def datacenter
       connection.searchIndex.FindByInventoryPath(inventoryPath: datacenter_name).tap do |dc|
         fail("ERROR finding datacenter #{datacenter_name.inspect}") unless dc.is_a?(RbVmomi::VIM::Datacenter)
+      end
+    end
+
+    def file_manager
+      connection.serviceContent.fileManager.tap do |fm|
+        fail("ERROR finding filemanager") unless fm.is_a?(RbVmomi::VIM::FileManager)
       end
     end
 

@@ -245,6 +245,7 @@ module VmShepherd
         Fog.mock!
         Fog::Mock.reset
         Fog::Mock.delay = 0
+        Fog.interval = 0
 
         make_server_and_image!('vm1')
         make_server_and_image!('vm2')
@@ -263,6 +264,8 @@ module VmShepherd
         b_dir = instance_double(Fog::Storage::OpenStack::Directory, key: 'b_dir')
         allow(b_dir).to receive(:files).and_return(b_dir_files)
         allow(openstack_vm_manager.storage_service).to receive(:directories).and_return([a_dir, b_dir])
+        allow_any_instance_of(Fog::Compute::OpenStack::Volume).to receive(:status).and_return('available')
+        allow(Fog).to receive(:sleep)
       end
 
       let(:a_dir_files) { [create_file_double('a_file'), create_file_double('b_file')] }
@@ -321,6 +324,26 @@ module VmShepherd
         expect {
           openstack_vm_manager.clean_environment
         }.to change { openstack_vm_manager.service.volumes.size }.from(2).to(0)
+      end
+
+      context 'with stubbed volumes' do
+        let(:volumes) { [volume] }
+        let(:volume) do
+          openstack_vm_manager.service.volumes.create(
+            name: 'volume',
+            description: 'description',
+            size: 1,
+          )
+        end
+
+        before do
+          allow(openstack_vm_manager.service).to receive(:volumes).and_return(volumes)
+        end
+
+        it 'waits for volumes to be available before deleting' do
+          expect(volume).to receive(:status).and_return('detaching', 'detaching', 'available')
+          openstack_vm_manager.clean_environment
+        end
       end
 
       it 'deletes everything in the correct container' do

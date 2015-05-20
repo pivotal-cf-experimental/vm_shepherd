@@ -32,7 +32,7 @@ module VmShepherd
         key_name: vm_options[:key_name],
         security_groups: security_groups,
         nics: [
-          { net_id: network.id, v4_fixed_ip: vm_options[:private_ip] }
+          {net_id: network.id, v4_fixed_ip: vm_options[:private_ip]}
         ],
       )
       server.wait_for { ready? }
@@ -86,6 +86,7 @@ module VmShepherd
       say("Destroying #{service.volumes.size} volumes:")
       service.volumes.each do |volume|
         say("  Destroying volume #{volume.id}")
+        volume.wait_for { volume.ready? }
         volume.destroy
       end
 

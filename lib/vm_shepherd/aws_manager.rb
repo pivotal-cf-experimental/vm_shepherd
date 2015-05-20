@@ -1,14 +1,12 @@
 require 'aws-sdk-v1'
+require 'vm_shepherd/retry_helper'
 
 module VmShepherd
   class AwsManager
-    class RetryLimitExceeded < StandardError
-    end
+    include VmShepherd::RetryHelper
 
     AWS_REGION = 'us-east-1'
     OPS_MANAGER_INSTANCE_TYPE = 'm3.medium'
-    RETRY_LIMIT = 60
-    RETRY_INTERVAL = 5
     DO_NOT_TERMINATE_TAG_KEY = 'do_not_terminate'
 
     def initialize(env_config)
@@ -135,19 +133,6 @@ module VmShepherd
           retry
         end
       end
-    end
-
-    def retry_until(retry_limit: RETRY_LIMIT, &block)
-      tries = 0
-      condition_reached = false
-      loop do
-        tries += 1
-        raise(RetryLimitExceeded) if tries > retry_limit
-        condition_reached = block.call
-        break if condition_reached
-        sleep RETRY_INTERVAL
-      end
-      condition_reached
     end
   end
 end

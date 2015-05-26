@@ -22,7 +22,7 @@ module VmShepherd
       template = File.read(cloudformation_template_file)
 
       cfm = AWS::CloudFormation.new
-      stack = cfm.stacks.create(env_config.fetch(:stack_name), template, :parameters => env_config.fetch(:parameters), capabilities: ['CAPABILITY_IAM'])
+      stack = cfm.stacks.create(env_config.fetch(:stack_name), template, parameters: env_config.fetch(:parameters), capabilities: ['CAPABILITY_IAM'])
 
       retry_until(retry_limit: 360) do
         status = stack.status
@@ -37,6 +37,10 @@ module VmShepherd
             stack.delete if status == 'ROLLBACK_COMPLETE'
             raise "Unexpected status for stack #{env_config.fetch(:stack_name)} : #{status}"
         end
+      end
+
+      if (elb_config = env_config[:elb])
+        create_elb(elb_config, subnet_id(stack, elb_config))
       end
     end
 
@@ -87,6 +91,10 @@ module VmShepherd
       end
       destroy_volumes(volumes)
 
+      if (elb_config = env_config[:elb])
+        delete_elb(elb_config[:name])
+      end
+
       cfm = AWS::CloudFormation.new
       stack = cfm.stacks[env_config.fetch(:stack_name)]
       stack.delete
@@ -123,6 +131,34 @@ module VmShepherd
 
     private
     attr_reader :env_config
+
+    def subnet_id(stack, elb_config)
+      stack.outputs.detect { |o| o.key == elb_config[:stack_output_keys][:subnet_id] }.value
+    end
+
+    def delete_elb(elb_name)
+      if (elb = AWS::ELB.new.load_balancers.find { |lb| lb.name == elb_name })
+        elb.delete
+      end
+    end
+
+    def create_elb(elb_config, subnet_id)
+      elb = AWS::ELB.new
+      elb_params = {
+        load_balancer_name: elb_config[:name],
+        listeners: [],
+        subnets: [subnet_id],
+      }
+
+      elb_config[:port_mappings].each do |port_mapping|
+        elb_params[:listeners] << {
+          protocol: 'TCP', load_balancer_port: port_mapping[0],
+          instance_protocol: 'TCP', instance_port: port_mapping[1]
+        }
+      end
+
+      elb.client.create_load_balancer(elb_params)
+    end
 
     def destroy_volumes(volumes)
       volumes.each do |volume|

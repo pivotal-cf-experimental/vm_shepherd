@@ -51,43 +51,95 @@ module VmShepherd
       let(:cfm) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
       let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'CREATE_COMPLETE') }
       let(:stack_collection) { instance_double(AWS::CloudFormation::StackCollection) }
+      let(:elb) { instance_double(AWS::ELB, client: elb_client) }
+      let(:elb_client) { double(AWS::ELB::Client) }
 
       before do
         allow(AWS::CloudFormation).to receive(:new).and_return(cfm)
+        allow(AWS::ELB).to receive(:new).and_return(elb)
         allow(stack_collection).to receive(:create).and_return(stack)
       end
 
-      it 'creates the stack with the correct parameters' do
-        expect(stack_collection).to receive(:create).with(
-            'aws-stack-name',
-            '{}',
+      describe 'cloudformation' do
+        it 'creates the stack with the correct parameters' do
+          expect(stack_collection).to receive(:create).with(
+              'aws-stack-name',
+              '{}',
+              parameters: {
+                'some_parameter' => 'some-answer',
+              },
+              capabilities: ['CAPABILITY_IAM']
+            )
+          ami_manager.prepare_environment(cloudformation_template_file.path)
+        end
+
+        it 'waits for the stack to finish creating' do
+          expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_COMPLETE')
+
+          ami_manager.prepare_environment(cloudformation_template_file.path)
+        end
+
+        it 'stops retrying after 360 times' do
+          expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
+              exactly(360).times
+
+          expect { ami_manager.prepare_environment(cloudformation_template_file.path) }.to raise_error(AwsManager::RetryLimitExceeded)
+        end
+
+        it 'aborts if stack fails to create' do
+          expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_COMPLETE').ordered
+          expect(stack).to receive(:delete)
+          expect {
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+          }.to raise_error('Unexpected status for stack aws-stack-name : ROLLBACK_COMPLETE')
+        end
+      end
+
+      context 'when the elb setting is present' do
+        let(:env_config) do
+          {
+            stack_name: 'aws-stack-name',
+            aws_access_key: 'aws-access-key',
+            aws_secret_key: 'aws-secret-key',
+            json_file: 'cloudformation.json',
             parameters: {
               'some_parameter' => 'some-answer',
             },
-            capabilities: ['CAPABILITY_IAM']
-          )
-        ami_manager.prepare_environment(cloudformation_template_file.path)
-      end
+            outputs: {
+              ssh_key_name: 'ssh-key-name',
+              security_group: 'security-group-id',
+              public_subnet_id: 'public-subnet-id',
+              private_subnet_id: 'private-subnet-id',
+            },
+            elb: {
+              name: 'elb-name',
+              port_mappings: [[1111, 11]],
+              stack_output_keys: {
+                subnet_id: 'private_subnet',
+              },
+            },
+          }
+        end
+        let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'CREATE_COMPLETE', outputs: stack_outputs) }
+        let(:stack_outputs) do
+          [
+            instance_double(AWS::CloudFormation::StackOutput, key: 'private_subnet', value: 'private_subnet_id')
+          ]
+        end
 
-      it 'waits for the stack to finish creating' do
-        expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_COMPLETE')
+        it 'attaches an elb with the name of the stack' do
+          elb_params = {
+            load_balancer_name: 'elb-name',
+            listeners: [
+              {protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11},
+            ],
+            subnets: ['private_subnet_id'],
 
-        ami_manager.prepare_environment(cloudformation_template_file.path)
-      end
+          }
+          expect(elb_client).to receive(:create_load_balancer).with(elb_params)
 
-      it 'stops retrying after 360 times' do
-        expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
-            exactly(360).times
-
-        expect { ami_manager.prepare_environment(cloudformation_template_file.path) }.to raise_error(AwsManager::RetryLimitExceeded)
-      end
-
-      it 'aborts if stack fails to create' do
-        expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_COMPLETE').ordered
-        expect(stack).to receive(:delete)
-        expect {
           ami_manager.prepare_environment(cloudformation_template_file.path)
-        }.to raise_error('Unexpected status for stack aws-stack-name : ROLLBACK_COMPLETE')
+        end
       end
     end
 
@@ -245,6 +297,59 @@ module VmShepherd
         expect {
           ami_manager.clean_environment
         }.not_to raise_error
+      end
+
+      it 'when an elb is not configured' do
+        expect(AWS::ELB).not_to receive(:new)
+      end
+
+      context 'when an elb is configured' do
+        let(:env_config) do
+          {
+            stack_name: 'aws-stack-name',
+            aws_access_key: 'aws-access-key',
+            aws_secret_key: 'aws-secret-key',
+            json_file: 'cloudformation.json',
+            parameters: {
+              'some_parameter' => 'some-answer',
+            },
+            outputs: {
+              ssh_key_name: 'ssh-key-name',
+              security_group: 'security-group-id',
+              public_subnet_id: 'public-subnet-id',
+              private_subnet_id: 'private-subnet-id',
+            },
+            elb: {
+              name: 'elb-name',
+              stack_output_keys: {
+                subnet_id: 'private_subnet',
+              },
+            },
+          }
+        end
+
+        let(:elb) { instance_double(AWS::ELB, load_balancers: [load_balancer_to_delete, other_load_balancer]) }
+        let(:load_balancer_to_delete) { instance_double(AWS::ELB::LoadBalancer, name: 'elb-name') }
+        let(:other_load_balancer) { instance_double(AWS::ELB::LoadBalancer, name: 'other-elb-name') }
+
+        before do
+          allow(AWS::ELB).to receive(:new).and_return(elb)
+        end
+
+        it 'terminates the ELB' do
+          expect(load_balancer_to_delete).to receive(:delete)
+          expect(other_load_balancer).not_to receive(:delete)
+
+          ami_manager.clean_environment
+        end
+
+        context 'when the ELB does not exist' do
+          let(:elb) { instance_double(AWS::ELB, load_balancers: []) }
+
+          it 'does not throw an error' do
+            expect { ami_manager.clean_environment }.not_to raise_error
+          end
+        end
       end
 
       context 'when the instance has volumes that are NOT delete_on_termination' do

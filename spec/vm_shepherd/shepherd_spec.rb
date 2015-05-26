@@ -9,7 +9,7 @@ module VmShepherd
     let(:settings) do
       RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', settings_fixture_name)), recurse_over_arrays: true)
     end
-    let(:env_config) do
+    let(:aws_env_config) do
       {
         stack_name: 'aws-stack-name',
         aws_access_key: 'aws-access-key',
@@ -23,7 +23,14 @@ module VmShepherd
           security_group: 'security-group-id',
           public_subnet_id: 'public-subnet-id',
           private_subnet_id: 'private-subnet-id'
-        }
+        },
+        elb: {
+          name: 'some-elb-name',
+          port_mappings: [[1111, 11]],
+          stack_output_keys: {
+            subnet_id: 'CloudFormationSubnetIdOutputKey',
+          },
+        },
       }
     end
 
@@ -168,7 +175,7 @@ module VmShepherd
         let(:last_aws_options) { {vm_name: 'vm-name-2'} }
 
         it 'uses AwsManager to launch a VM' do
-          expect(AwsManager).to receive(:new).with(env_config).and_return(aws_manager)
+          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
           expect(aws_manager).to receive(:deploy).with(ami_file_path: first_ami_file_path, vm_config: first_aws_options)
           expect(aws_manager).to receive(:deploy).with(ami_file_path: last_ami_file_path, vm_config: last_aws_options)
 
@@ -333,7 +340,7 @@ module VmShepherd
         let(:last_ami_options) { {vm_name: 'vm-name-2'} }
 
         it 'uses AwsManager to destroy a VM' do
-          expect(AwsManager).to receive(:new).with(env_config).and_return(aws_manager)
+          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
           expect(aws_manager).to receive(:destroy).with(first_ami_options)
           expect(aws_manager).to receive(:destroy).with(last_ami_options)
 
@@ -500,7 +507,7 @@ module VmShepherd
         let(:aws_manager) { instance_double(AwsManager) }
 
         it 'uses AwsManager to destroy a VM' do
-          expect(AwsManager).to receive(:new).with(env_config).and_return(aws_manager)
+          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
           expect(aws_manager).to receive(:clean_environment)
           manager.clean_environment
         end
@@ -552,7 +559,7 @@ module VmShepherd
         let(:ams_manager) { instance_double(AwsManager) }
 
         it 'uses AwsManager to create an environment' do
-          expect(AwsManager).to receive(:new).with(env_config).and_return(ams_manager)
+          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(ams_manager)
           expect(ams_manager).to receive(:prepare_environment).with('cloudformation.json')
           manager.prepare_environment
         end

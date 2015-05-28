@@ -8,8 +8,7 @@ vm_shepherd:
       tenant: 'tenant'
     vm:
       name: 'some-vm-name'
-      flavor_parameters:
-        min_disk_size: 150
+      flavor_name: 'some-flavor'
       network_name: 'some-network'
       key_name: 'some-key'
       security_group_names:
@@ -25,8 +24,7 @@ vm_shepherd:
       tenant: 'tenant-2'
     vm:
       name: 'some-vm-name-2'
-      flavor_parameters:
-        min_disk_size: 152
+      flavor_name: 'some-flavor-2'
       network_name: 'some-network-2'
       key_name: 'some-key-2'
       security_group_names:

@@ -20,7 +20,7 @@ module VmShepherd
       )
       say 'Finished uploading the image'
 
-      flavor = find_flavor(vm_options[:min_disk_size])
+      flavor = find_flavor(vm_options[:flavor_name])
       network = network_service.networks.find { |net| net.name == vm_options[:network_name] }
       security_groups = vm_options[:security_group_names]
 
@@ -152,8 +152,8 @@ module VmShepherd
       puts message
     end
 
-    def find_flavor(min_disk)
-      service.flavors.find { |flavor| flavor.disk >= min_disk }
+    def find_flavor(flavor_name)
+      service.flavors.find { |flavor| flavor.name == flavor_name }
     end
   end
 end

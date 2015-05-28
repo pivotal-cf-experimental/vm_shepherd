@@ -219,7 +219,7 @@ module VmShepherd
     def openstack_vm_options(vm_shepherd_config)
       {
         name: vm_shepherd_config.vm.name,
-        min_disk_size: vm_shepherd_config.vm.flavor_parameters.min_disk_size,
+        flavor_name: vm_shepherd_config.vm.flavor_name,
         network_name: vm_shepherd_config.vm.network_name,
         key_name: vm_shepherd_config.vm.key_name,
         security_group_names: vm_shepherd_config.vm.security_group_names,

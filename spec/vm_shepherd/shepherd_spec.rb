@@ -205,7 +205,7 @@ module VmShepherd
         let(:first_openstack_vm_options) do
           {
             name: 'some-vm-name',
-            min_disk_size: 150,
+            flavor_name: 'some-flavor',
             network_name: 'some-network',
             key_name: 'some-key',
             security_group_names: [
@@ -220,7 +220,7 @@ module VmShepherd
         let(:last_openstack_vm_options) do
           {
             name: 'some-vm-name-2',
-            min_disk_size: 152,
+            flavor_name: 'some-flavor-2',
             network_name: 'some-network-2',
             key_name: 'some-key-2',
             security_group_names: [
@@ -357,7 +357,7 @@ module VmShepherd
         let(:first_openstack_vm_options) do
           {
             name: 'some-vm-name',
-            min_disk_size: 150,
+            flavor_name: 'some-flavor',
             network_name: 'some-network',
             key_name: 'some-key',
             security_group_names: [
@@ -380,7 +380,7 @@ module VmShepherd
         let(:last_openstack_vm_options) do
           {
             name: 'some-vm-name-2',
-            min_disk_size: 152,
+            flavor_name: 'some-flavor-2',
             network_name: 'some-network-2',
             key_name: 'some-key-2',
             security_group_names: [

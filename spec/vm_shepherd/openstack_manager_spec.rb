@@ -17,7 +17,7 @@ module VmShepherd
     let(:openstack_vm_options) do
       {
         name: 'some-vm-name',
-        min_disk_size: 150,
+        flavor_name: 'some-flavor',
         network_name: 'Public',
         key_name: 'some-key',
         security_group_names: [
@@ -86,6 +86,7 @@ module VmShepherd
       let(:image_service) { openstack_vm_manager.image_service }
       let(:network_service) { openstack_vm_manager.network_service }
 
+      let(:flavors) { compute_service.flavors }
       let(:servers) { compute_service.servers }
       let(:addresses) { compute_service.addresses }
       let(:instance) { servers.find { |server| server.name == openstack_vm_options[:name] } }
@@ -99,7 +100,10 @@ module VmShepherd
         Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:servers).and_return(servers)
+        allow(compute_service).to receive(:flavors).and_return(flavors)
         allow(compute_service).to receive(:addresses).and_return(addresses)
+
+        flavors << flavors.create(name: 'some-flavor', ram: 1, vcpus: 1, disk: 1)
       end
 
       it 'uploads the image' do
@@ -122,10 +126,11 @@ module VmShepherd
         end
 
         it 'uses the correct flavor for the instance' do
+
           openstack_vm_manager.deploy(path, openstack_vm_options)
 
           instance_flavor = compute_service.flavors.find { |flavor| flavor.id == instance.flavor['id'] }
-          expect(instance_flavor.disk).to be >= 150
+          expect(instance_flavor.name).to eq('some-flavor')
         end
 
         it 'uses the previously uploaded image' do
@@ -185,6 +190,7 @@ module VmShepherd
       let(:image_service) { openstack_vm_manager.image_service }
 
       let(:servers) { compute_service.servers }
+      let(:flavors) { compute_service.flavors }
       let(:images) { image_service.images }
       let(:image) { images.find { |image| image.name == openstack_vm_options[:name] } }
       let(:instance) { servers.find { |server| server.name == openstack_vm_options[:name] } }
@@ -197,9 +203,11 @@ module VmShepherd
         Fog::Mock.reset
         Fog::Mock.delay = 0
 
+        allow(compute_service).to receive(:flavors).and_return(flavors)
         allow(compute_service).to receive(:servers).and_return(servers)
         allow(image_service).to receive(:images).and_return(images)
 
+        flavors << flavors.create(name: 'some-flavor', ram: 1, vcpus: 1, disk: 1)
         openstack_vm_manager.deploy(path, openstack_vm_options)
       end
 

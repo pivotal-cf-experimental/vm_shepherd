@@ -349,6 +349,18 @@ module VmShepherd
         ami_manager.clean_environment
       end
 
+      context 'when a subnet is not provided' do
+        #the sdk never returns nil when looking up a subnet and its instances
+        let(:subnet2) { instance_double(AWS::EC2::Subnet, instances: []) }
+
+        it 'only deletes instance 1' do
+          expect(instance1).to receive(:terminate)
+          expect(instance2).not_to receive(:terminate)
+
+          ami_manager.clean_environment
+        end
+      end
+
       context 'when an elb is configured' do
         let(:extra_configs) do
           {
@@ -376,7 +388,7 @@ module VmShepherd
             security_groups: [elb_security_group],
             exists?: false,
           )
-          end
+        end
         let(:network_interface_2) do
           instance_double(AWS::EC2::NetworkInterface,
             security_groups: [elb_security_group],

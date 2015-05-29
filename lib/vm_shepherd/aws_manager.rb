@@ -77,20 +77,10 @@ module VmShepherd
     end
 
     def clean_environment
-      subnets = []
-      subnets << AWS.ec2.subnets[env_config.fetch(:outputs).fetch(:public_subnet_id)] if env_config.fetch(:outputs).fetch(:public_subnet_id)
-      subnets << AWS.ec2.subnets[env_config.fetch(:outputs).fetch(:private_subnet_id)] if env_config.fetch(:outputs).fetch(:private_subnet_id)
-
-      volumes = []
-      subnets.each do |subnet|
-        subnet.instances.each do |instance|
-          instance.attachments.each do |_, attachment|
-            volumes.push(attachment.volume) unless attachment.delete_on_termination
-          end
-          instance.terminate
-        end
+      [:public_subnet_id, :private_subnet_id].each do |subnet_id|
+        subnet_id = env_config.fetch(:outputs).fetch(subnet_id)
+        clear_subnet(subnet_id)
       end
-      destroy_volumes(volumes)
 
       if (elb_config = env_config[:elb])
         delete_elb(elb_config[:name])
@@ -101,25 +91,7 @@ module VmShepherd
         bucket.clear! if bucket && bucket.exists?
       end
 
-      cfm = AWS::CloudFormation.new
-      stack = cfm.stacks[env_config.fetch(:stack_name)]
-      stack.delete
-      retry_until(retry_limit: 360) do
-        begin
-          status = stack.status
-          case status
-            when 'DELETE_COMPLETE'
-              true
-            when 'DELETE_IN_PROGRESS'
-              false
-            else
-              raise "Unexpected status for stack #{env_config.fetch(:stack_name)} : #{status}"
-          end
-        rescue AWS::CloudFormation::Errors::ValidationError
-          raise if stack.exists?
-          true
-        end
-      end if stack
+      delete_stack(env_config.fetch(:stack_name))
     end
 
     def destroy(vm_config)
@@ -144,6 +116,29 @@ module VmShepherd
 
     def vpc_id(stack, elb_config)
       stack.outputs.detect { |o| o.key == elb_config[:stack_output_keys][:vpc_id] }.value
+    end
+
+    def clear_subnet(subnet_id)
+      subnet = AWS.ec2.subnets[subnet_id]
+      volumes = []
+      subnet.instances.each do |instance|
+        instance.attachments.each do |_, attachment|
+          volumes.push(attachment.volume) unless attachment.delete_on_termination
+        end
+        instance.terminate
+      end
+      destroy_volumes(volumes)
+    end
+
+    def destroy_volumes(volumes)
+      volumes.each do |volume|
+        begin
+          volume.delete
+        rescue AWS::EC2::Errors::VolumeInUse
+          sleep 5
+          retry
+        end
+      end
     end
 
     def delete_elb(elb_name)
@@ -194,15 +189,26 @@ module VmShepherd
       end
     end
 
-    def destroy_volumes(volumes)
-      volumes.each do |volume|
+    def delete_stack(stack_name)
+      cfm = AWS::CloudFormation.new
+      stack = cfm.stacks[stack_name]
+      stack.delete
+      retry_until(retry_limit: 360) do
         begin
-          volume.delete
-        rescue AWS::EC2::Errors::VolumeInUse
-          sleep 5
-          retry
+          status = stack.status
+          case status
+            when 'DELETE_COMPLETE'
+              true
+            when 'DELETE_IN_PROGRESS'
+              false
+            else
+              raise "Unexpected status for stack #{stack_name} : #{status}"
+          end
+        rescue AWS::CloudFormation::Errors::ValidationError
+          raise if stack.exists?
+          true
         end
-      end
+      end if stack
     end
   end
 end

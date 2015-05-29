@@ -149,10 +149,10 @@ module VmShepherd
     def delete_elb(elb_name)
       if (elb = AWS::ELB.new.load_balancers.find { |lb| lb.name == elb_name })
         sg = elb.security_groups.first
-        net_interface = AWS.ec2.network_interfaces.find { |ni| ni.security_groups.map(&:id).include? sg.id }
+        net_interfaces = AWS.ec2.network_interfaces.select { |ni| ni.security_groups.map(&:id).include? sg.id }
         elb.delete
         retry_until do
-          !elb.exists? && !net_interface.exists?
+          !elb.exists? && !net_interfaces.map(&:exists?).any?
         end
         sg.delete
       end

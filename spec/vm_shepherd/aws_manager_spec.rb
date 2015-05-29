@@ -371,7 +371,13 @@ module VmShepherd
         end
         let(:other_load_balancer) { instance_double(AWS::ELB::LoadBalancer, name: 'other-elb-name') }
         let(:elb_security_group) { instance_double(AWS::EC2::SecurityGroup, name: 'elb-security-group', id: 'sg-id') }
-        let(:network_interface) do
+        let(:network_interface_1) do
+          instance_double(AWS::EC2::NetworkInterface,
+            security_groups: [elb_security_group],
+            exists?: false,
+          )
+          end
+        let(:network_interface_2) do
           instance_double(AWS::EC2::NetworkInterface,
             security_groups: [elb_security_group],
             exists?: false,
@@ -380,7 +386,7 @@ module VmShepherd
 
         before do
           allow(AWS::ELB).to receive(:new).and_return(elb)
-          allow(ec2).to receive(:network_interfaces).and_return([network_interface])
+          allow(ec2).to receive(:network_interfaces).and_return([network_interface_1, network_interface_2])
           allow(load_balancer_to_delete).to receive(:delete)
           allow(elb_security_group).to receive(:delete)
         end
@@ -393,10 +399,13 @@ module VmShepherd
           expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
         end
 
-        it 'waits for the network interface to be deleted' do
+        it 'waits for the network interfaces to be deleted' do
           allow(load_balancer_to_delete).to receive(:exists?).and_return(false)
 
-          expect(network_interface).to receive(:exists?).and_return(true).
+          expect(network_interface_1).to receive(:exists?).and_return(false).
+              exactly(60).times
+
+          expect(network_interface_2).to receive(:exists?).and_return(true).
               exactly(60).times
 
           expect(elb_security_group).not_to receive(:delete).ordered

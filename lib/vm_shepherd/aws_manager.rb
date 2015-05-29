@@ -79,7 +79,7 @@ module VmShepherd
     def clean_environment
       [:public_subnet_id, :private_subnet_id].each do |subnet_id|
         subnet_id = env_config.fetch(:outputs).fetch(subnet_id)
-        clear_subnet(subnet_id)
+        clear_subnet(subnet_id) if subnet_id
       end
 
       if (elb_config = env_config[:elb])

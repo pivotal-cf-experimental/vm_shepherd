@@ -350,8 +350,9 @@ module VmShepherd
       end
 
       context 'when a subnet is not provided' do
-        #the sdk never returns nil when looking up a subnet and its instances
-        let(:subnet2) { instance_double(AWS::EC2::Subnet, instances: []) }
+        before do
+          env_config[:outputs][:private_subnet_id] = nil
+        end
 
         it 'only deletes instance 1' do
           expect(instance1).to receive(:terminate)

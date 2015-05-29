@@ -13,10 +13,12 @@ vm_shepherd:
       security_group: security-group-id
       public_subnet_id: public-subnet-id
       private_subnet_id: private-subnet-id
+      s3_bucket_name: bucket-name
     elb:
       name: some-elb-name
       port_mappings: [[1111,11]]
       stack_output_keys:
+        vpc_id: CloudFormationVpcIdOutputKey
         subnet_id: CloudFormationSubnetIdOutputKey
   vm_configs:
   - vm_name: vm-name

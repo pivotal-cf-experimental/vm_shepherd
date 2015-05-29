@@ -8,6 +8,7 @@ module VmShepherd
     AWS_REGION = 'us-east-1'
     OPS_MANAGER_INSTANCE_TYPE = 'm3.medium'
     DO_NOT_TERMINATE_TAG_KEY = 'do_not_terminate'
+    ELB_SECURITY_GROUP_NAME = 'ELB Security Group'
 
     def initialize(env_config)
       AWS.config(
@@ -40,7 +41,7 @@ module VmShepherd
       end
 
       if (elb_config = env_config[:elb])
-        create_elb(elb_config, subnet_id(stack, elb_config))
+        create_elb(stack, elb_config)
       end
     end
 
@@ -95,6 +96,11 @@ module VmShepherd
         delete_elb(elb_config[:name])
       end
 
+      if (bucket_name = env_config.fetch(:outputs, {}).fetch(:s3_bucket_name, nil))
+        bucket = AWS::S3.new.buckets[bucket_name]
+        bucket.clear! if bucket && bucket.exists?
+      end
+
       cfm = AWS::CloudFormation.new
       stack = cfm.stacks[env_config.fetch(:stack_name)]
       stack.delete
@@ -136,18 +142,29 @@ module VmShepherd
       stack.outputs.detect { |o| o.key == elb_config[:stack_output_keys][:subnet_id] }.value
     end
 
+    def vpc_id(stack, elb_config)
+      stack.outputs.detect { |o| o.key == elb_config[:stack_output_keys][:vpc_id] }.value
+    end
+
     def delete_elb(elb_name)
       if (elb = AWS::ELB.new.load_balancers.find { |lb| lb.name == elb_name })
+        sg = elb.security_groups.first
+        net_interface = AWS.ec2.network_interfaces.find { |ni| ni.security_groups.map(&:id).include? sg.id }
         elb.delete
+        retry_until do
+          !elb.exists? && !net_interface.exists?
+        end
+        sg.delete
       end
     end
 
-    def create_elb(elb_config, subnet_id)
+    def create_elb(stack, elb_config)
       elb = AWS::ELB.new
       elb_params = {
         load_balancer_name: elb_config[:name],
         listeners: [],
-        subnets: [subnet_id],
+        subnets: [subnet_id(stack, elb_config)],
+        security_groups: [create_security_group(stack, elb_config).security_group_id]
       }
 
       elb_config[:port_mappings].each do |port_mapping|
@@ -158,6 +175,23 @@ module VmShepherd
       end
 
       elb.client.create_load_balancer(elb_params)
+    end
+
+    def create_security_group(stack, elb_config)
+      vpc_id = vpc_id(stack, elb_config)
+      sg_params = {
+        group_name: stack.name,
+        description: 'ELB Security Group',
+        vpc_id: vpc_id,
+      }
+
+      security_group_response = AWS.ec2.client.create_security_group(sg_params)
+
+      AWS.ec2.security_groups[security_group_response[:group_id]].tap do |security_group|
+        elb_config[:port_mappings].each do |port_mapping|
+          security_group.authorize_ingress(:tcp, port_mapping[0], '0.0.0.0/0')
+        end
+      end
     end
 
     def destroy_volumes(volumes)

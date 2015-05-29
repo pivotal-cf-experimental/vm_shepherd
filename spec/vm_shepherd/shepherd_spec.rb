@@ -22,12 +22,14 @@ module VmShepherd
           ssh_key_name: 'ssh-key-name',
           security_group: 'security-group-id',
           public_subnet_id: 'public-subnet-id',
-          private_subnet_id: 'private-subnet-id'
+          private_subnet_id: 'private-subnet-id',
+          s3_bucket_name: 'bucket-name',
         },
         elb: {
           name: 'some-elb-name',
           port_mappings: [[1111, 11]],
           stack_output_keys: {
+            vpc_id: 'CloudFormationVpcIdOutputKey',
             subnet_id: 'CloudFormationSubnetIdOutputKey',
           },
         },

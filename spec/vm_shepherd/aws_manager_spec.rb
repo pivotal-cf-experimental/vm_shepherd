@@ -23,9 +23,12 @@ module VmShepherd
           security_group: 'security-group-id',
           public_subnet_id: 'public-subnet-id',
           private_subnet_id: 'private-subnet-id',
-        },
-      }
+        }.merge(extra_outputs),
+      }.merge(extra_configs)
     end
+
+    let(:extra_outputs) { {} }
+    let(:extra_configs) { {} }
 
     let(:vm_config) do
       {
@@ -96,35 +99,61 @@ module VmShepherd
       end
 
       context 'when the elb setting is present' do
-        let(:env_config) do
+        let(:extra_configs) do
           {
-            stack_name: 'aws-stack-name',
-            aws_access_key: 'aws-access-key',
-            aws_secret_key: 'aws-secret-key',
-            json_file: 'cloudformation.json',
-            parameters: {
-              'some_parameter' => 'some-answer',
-            },
-            outputs: {
-              ssh_key_name: 'ssh-key-name',
-              security_group: 'security-group-id',
-              public_subnet_id: 'public-subnet-id',
-              private_subnet_id: 'private-subnet-id',
-            },
             elb: {
               name: 'elb-name',
               port_mappings: [[1111, 11]],
               stack_output_keys: {
+                vpc_id: 'vpc_id',
                 subnet_id: 'private_subnet',
               },
             },
           }
         end
-        let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'CREATE_COMPLETE', outputs: stack_outputs) }
+        let(:stack) do
+          instance_double(AWS::CloudFormation::Stack,
+            name: 'fake-stack-name',
+            creation_time: Time.utc(2015, 5, 29),
+            status: 'CREATE_COMPLETE',
+            outputs: stack_outputs
+          )
+        end
         let(:stack_outputs) do
           [
-            instance_double(AWS::CloudFormation::StackOutput, key: 'private_subnet', value: 'private_subnet_id')
+            instance_double(AWS::CloudFormation::StackOutput, key: 'private_subnet', value: 'fake-subnet-id'),
+            instance_double(AWS::CloudFormation::StackOutput, key: 'vpc_id', value: 'fake-vpc-id'),
           ]
+        end
+        let(:ec2_client) { double(AWS::EC2::Client) }
+        let(:create_security_group_response) do
+          {:group_id => 'elb-security-group'}
+        end
+        let(:security_groups) do
+          {
+            'elb-security-group' => elb_security_group,
+          }
+        end
+        let(:elb_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-security-group-id') }
+
+        before do
+          allow(ec2).to receive(:client).and_return(ec2_client)
+          allow(ec2_client).to receive(:create_security_group).and_return(create_security_group_response)
+          allow(ec2).to receive(:security_groups).and_return(security_groups)
+          allow(elb_security_group).to receive(:authorize_ingress)
+          allow(elb_client).to receive(:create_load_balancer)
+        end
+
+        it 'creates and attaches a security group' do
+          security_group_args = {
+            group_name: 'fake-stack-name',
+            description: 'ELB Security Group',
+            vpc_id: 'fake-vpc-id',
+          }
+          expect(ec2_client).to receive(:create_security_group).with(security_group_args).and_return(create_security_group_response)
+          expect(elb_security_group).to receive(:authorize_ingress).with(:tcp, 1111, '0.0.0.0/0')
+
+          ami_manager.prepare_environment(cloudformation_template_file.path)
         end
 
         it 'attaches an elb with the name of the stack' do
@@ -133,8 +162,8 @@ module VmShepherd
             listeners: [
               {protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11},
             ],
-            subnets: ['private_subnet_id'],
-
+            subnets: ['fake-subnet-id'],
+            security_groups: ['elb-security-group-id']
           }
           expect(elb_client).to receive(:create_load_balancer).with(elb_params)
 
@@ -235,6 +264,9 @@ module VmShepherd
         instance_double(AWS::EC2::Attachment, volume: instance1_volume, delete_on_termination: true)
       end
 
+      let(:buckets) { instance_double(AWS::S3::BucketCollection) }
+      let(:s3_client) { instance_double(AWS::S3, buckets: buckets) }
+
       before do
         allow(AWS::CloudFormation).to receive(:new).and_return(cfm)
         allow(stack_collection).to receive(:[]).and_return(stack)
@@ -248,6 +280,9 @@ module VmShepherd
 
         allow(instance1).to receive(:terminate)
         allow(instance2).to receive(:terminate)
+
+        allow(AWS::S3).to receive(:new).and_return(s3_client)
+        allow(buckets).to receive(:[]).and_return(instance_double(AWS::S3::Bucket, exists?: false))
       end
 
       it 'terminates all VMs in the subnet' do
@@ -301,24 +336,22 @@ module VmShepherd
 
       it 'when an elb is not configured' do
         expect(AWS::ELB).not_to receive(:new)
+        ami_manager.clean_environment
+      end
+
+      it 'when there is no s3 bucket configuration' do
+        expect_any_instance_of(AWS::S3::Bucket).not_to receive(:clear!)
+        ami_manager.clean_environment
+      end
+
+      it 'does not look up buckets when there is no name' do
+        expect(buckets).to_not receive(:[])
+        ami_manager.clean_environment
       end
 
       context 'when an elb is configured' do
-        let(:env_config) do
+        let(:extra_configs) do
           {
-            stack_name: 'aws-stack-name',
-            aws_access_key: 'aws-access-key',
-            aws_secret_key: 'aws-secret-key',
-            json_file: 'cloudformation.json',
-            parameters: {
-              'some_parameter' => 'some-answer',
-            },
-            outputs: {
-              ssh_key_name: 'ssh-key-name',
-              security_group: 'security-group-id',
-              public_subnet_id: 'public-subnet-id',
-              private_subnet_id: 'private-subnet-id',
-            },
             elb: {
               name: 'elb-name',
               stack_output_keys: {
@@ -329,15 +362,55 @@ module VmShepherd
         end
 
         let(:elb) { instance_double(AWS::ELB, load_balancers: [load_balancer_to_delete, other_load_balancer]) }
-        let(:load_balancer_to_delete) { instance_double(AWS::ELB::LoadBalancer, name: 'elb-name') }
+        let(:load_balancer_to_delete) do
+          instance_double(AWS::ELB::LoadBalancer,
+            name: 'elb-name',
+            security_groups: [elb_security_group],
+            exists?: false,
+          )
+        end
         let(:other_load_balancer) { instance_double(AWS::ELB::LoadBalancer, name: 'other-elb-name') }
+        let(:elb_security_group) { instance_double(AWS::EC2::SecurityGroup, name: 'elb-security-group', id: 'sg-id') }
+        let(:network_interface) do
+          instance_double(AWS::EC2::NetworkInterface,
+            security_groups: [elb_security_group],
+            exists?: false,
+          )
+        end
 
         before do
           allow(AWS::ELB).to receive(:new).and_return(elb)
+          allow(ec2).to receive(:network_interfaces).and_return([network_interface])
+          allow(load_balancer_to_delete).to receive(:delete)
+          allow(elb_security_group).to receive(:delete)
         end
 
-        it 'terminates the ELB' do
-          expect(load_balancer_to_delete).to receive(:delete)
+        it 'waits for the elb to be deleted' do
+          expect(load_balancer_to_delete).to receive(:exists?).and_return(true).
+              exactly(60).times
+
+          expect(elb_security_group).not_to receive(:delete).ordered
+          expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
+        end
+
+        it 'waits for the network interface to be deleted' do
+          allow(load_balancer_to_delete).to receive(:exists?).and_return(false)
+
+          expect(network_interface).to receive(:exists?).and_return(true).
+              exactly(60).times
+
+          expect(elb_security_group).not_to receive(:delete).ordered
+          expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
+        end
+
+        it 'terminates the ELB then removes the security group' do
+          expect(load_balancer_to_delete).to receive(:delete).ordered
+          expect(elb_security_group).to receive(:delete).ordered
+
+          ami_manager.clean_environment
+        end
+
+        it 'leaves unknown ELBs alone' do
           expect(other_load_balancer).not_to receive(:delete)
 
           ami_manager.clean_environment
@@ -372,10 +445,35 @@ module VmShepherd
           before do
             expect(instance1_volume).to receive(:delete).and_raise(AWS::EC2::Errors::VolumeInUse)
             expect(instance1_volume).to receive(:delete).and_return(nil)
-            allow(ami_manager).to receive(:sleep)
           end
 
           it 'retries the delete' do
+            ami_manager.clean_environment
+          end
+        end
+      end
+
+      context 'when there is an s3 bucket configuration' do
+        let(:bucket) { instance_double(AWS::S3::Bucket) }
+        let(:extra_outputs) { {s3_bucket_name: bucket_name} }
+        let(:bucket_name) { 'bucket-name' }
+
+        before { allow(buckets).to receive(:[]).with(bucket_name).and_return(bucket) }
+
+        context 'and the bucket does exist' do
+          before { allow(bucket).to receive(:exists?).and_return(true) }
+
+          it 'clears the bucket' do
+            expect(bucket).to receive(:clear!)
+            ami_manager.clean_environment
+          end
+        end
+
+        context 'and the bucket does not exist' do
+          before { allow(bucket).to receive(:exists?).and_return(false) }
+
+          it 'fails silently' do
+            expect(bucket).not_to receive(:clear!)
             ami_manager.clean_environment
           end
         end

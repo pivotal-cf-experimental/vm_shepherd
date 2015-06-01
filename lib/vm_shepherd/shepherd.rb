@@ -203,13 +203,22 @@ module VmShepherd
           json_file: settings.vm_shepherd.env_config.json_file,
           parameters: settings.vm_shepherd.env_config.parameters_as_a_hash,
           outputs: settings.vm_shepherd.env_config.outputs.to_h,
+        }.merge(ami_elb_config)
+      )
+    end
+
+    def ami_elb_config
+      if settings.vm_shepherd.env_config.elb
+        {
           elb: {
             name: settings.vm_shepherd.env_config.elb.name,
             port_mappings: settings.vm_shepherd.env_config.elb.port_mappings,
             stack_output_keys: settings.vm_shepherd.env_config.elb.stack_output_keys.to_h,
-          },
+          }
         }
-      )
+      else
+        {}
+      end
     end
 
     def openstack_vm_manager(vm_shepherd_config)

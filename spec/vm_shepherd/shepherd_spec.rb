@@ -187,6 +187,37 @@ module VmShepherd
         it 'fails if improper paths are given' do
           expect { manager.deploy(paths: ['FIRST_FAKE_PATH']) }.to raise_error(ArgumentError)
         end
+
+        context 'when there is no ELB configuration' do
+          let(:settings_fixture_name) { 'aws-no-elb.yml' }
+
+          let(:aws_env_config) do
+            {
+              stack_name: 'aws-stack-name',
+              aws_access_key: 'aws-access-key',
+              aws_secret_key: 'aws-secret-key',
+              json_file: 'cloudformation.json',
+              parameters: {
+                'key_pair_name' => 'key_pair_name'
+              },
+              outputs: {
+                ssh_key_name: 'ssh-key-name',
+                security_group: 'security-group-id',
+                public_subnet_id: 'public-subnet-id',
+                private_subnet_id: 'private-subnet-id',
+                s3_bucket_name: 'bucket-name',
+              },
+            }
+          end
+
+          it 'uses AwsManager to launch a VM' do
+            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+            expect(aws_manager).to receive(:deploy).with(ami_file_path: first_ami_file_path, vm_config: first_aws_options)
+            expect(aws_manager).to receive(:deploy).with(ami_file_path: last_ami_file_path, vm_config: last_aws_options)
+
+            manager.deploy(paths: [first_ami_file_path, last_ami_file_path])
+          end
+        end
       end
 
       context 'with OpenStack settings' do
@@ -347,6 +378,37 @@ module VmShepherd
           expect(aws_manager).to receive(:destroy).with(last_ami_options)
 
           manager.destroy
+        end
+
+        context 'when there is no ELB configuration' do
+          let(:settings_fixture_name) { 'aws-no-elb.yml' }
+
+          let(:aws_env_config) do
+            {
+              stack_name: 'aws-stack-name',
+              aws_access_key: 'aws-access-key',
+              aws_secret_key: 'aws-secret-key',
+              json_file: 'cloudformation.json',
+              parameters: {
+                'key_pair_name' => 'key_pair_name'
+              },
+              outputs: {
+                ssh_key_name: 'ssh-key-name',
+                security_group: 'security-group-id',
+                public_subnet_id: 'public-subnet-id',
+                private_subnet_id: 'private-subnet-id',
+                s3_bucket_name: 'bucket-name',
+              },
+            }
+          end
+
+          it 'uses AwsManager to destroy a VM' do
+            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+            expect(aws_manager).to receive(:destroy).with(first_ami_options)
+            expect(aws_manager).to receive(:destroy).with(last_ami_options)
+
+            manager.destroy
+          end
         end
       end
 
@@ -513,6 +575,35 @@ module VmShepherd
           expect(aws_manager).to receive(:clean_environment)
           manager.clean_environment
         end
+
+        context 'when there is no ELB configuration' do
+          let(:settings_fixture_name) { 'aws-no-elb.yml' }
+
+          let(:aws_env_config) do
+            {
+              stack_name: 'aws-stack-name',
+              aws_access_key: 'aws-access-key',
+              aws_secret_key: 'aws-secret-key',
+              json_file: 'cloudformation.json',
+              parameters: {
+                'key_pair_name' => 'key_pair_name'
+              },
+              outputs: {
+                ssh_key_name: 'ssh-key-name',
+                security_group: 'security-group-id',
+                public_subnet_id: 'public-subnet-id',
+                private_subnet_id: 'private-subnet-id',
+                s3_bucket_name: 'bucket-name',
+              },
+            }
+          end
+
+          it 'uses AwsManager to destroy a VM' do
+            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+            expect(aws_manager).to receive(:clean_environment)
+            manager.clean_environment
+          end
+        end
       end
 
       context 'when IAAS is Openstack' do
@@ -564,6 +655,35 @@ module VmShepherd
           expect(AwsManager).to receive(:new).with(aws_env_config).and_return(ams_manager)
           expect(ams_manager).to receive(:prepare_environment).with('cloudformation.json')
           manager.prepare_environment
+        end
+
+        context 'when there is no ELB configuration' do
+          let(:settings_fixture_name) { 'aws-no-elb.yml' }
+
+          let(:aws_env_config) do
+            {
+              stack_name: 'aws-stack-name',
+              aws_access_key: 'aws-access-key',
+              aws_secret_key: 'aws-secret-key',
+              json_file: 'cloudformation.json',
+              parameters: {
+                'key_pair_name' => 'key_pair_name'
+              },
+              outputs: {
+                ssh_key_name: 'ssh-key-name',
+                security_group: 'security-group-id',
+                public_subnet_id: 'public-subnet-id',
+                private_subnet_id: 'private-subnet-id',
+                s3_bucket_name: 'bucket-name',
+              },
+            }
+          end
+
+          it 'uses AwsManager to create an environment' do
+            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(ams_manager)
+            expect(ams_manager).to receive(:prepare_environment).with('cloudformation.json')
+            manager.prepare_environment
+          end
         end
       end
 

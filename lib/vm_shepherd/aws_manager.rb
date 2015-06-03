@@ -5,7 +5,6 @@ module VmShepherd
   class AwsManager
     include VmShepherd::RetryHelper
 
-    AWS_REGION = 'us-east-1'
     OPS_MANAGER_INSTANCE_TYPE = 'm3.medium'
     DO_NOT_TERMINATE_TAG_KEY = 'do_not_terminate'
     ELB_SECURITY_GROUP_NAME = 'ELB Security Group'
@@ -14,7 +13,7 @@ module VmShepherd
       AWS.config(
         access_key_id: env_config.fetch(:aws_access_key),
         secret_access_key: env_config.fetch(:aws_secret_key),
-        region: AWS_REGION
+        region: env_config.fetch(:region),
       )
       @env_config = env_config
     end

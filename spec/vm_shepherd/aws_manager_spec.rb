@@ -14,6 +14,7 @@ module VmShepherd
         stack_name: 'aws-stack-name',
         aws_access_key: 'aws-access-key',
         aws_secret_key: 'aws-secret-key',
+        region: 'us-east-1',
         json_file: 'cloudformation.json',
         parameters: {
           'some_parameter' => 'some-answer',
@@ -42,7 +43,7 @@ module VmShepherd
       expect(AWS).to receive(:config).with(
           access_key_id: env_config.fetch(:aws_access_key),
           secret_access_key: env_config.fetch(:aws_secret_key),
-          region: 'us-east-1',
+          region: env_config.fetch(:region),
         )
 
       allow(AWS).to receive(:ec2).and_return(ec2)

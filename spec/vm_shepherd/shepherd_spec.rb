@@ -14,6 +14,7 @@ module VmShepherd
         stack_name: 'aws-stack-name',
         aws_access_key: 'aws-access-key',
         aws_secret_key: 'aws-secret-key',
+        region: 'aws-region',
         json_file: 'cloudformation.json',
         parameters: {
           'key_pair_name' => 'key_pair_name'
@@ -25,6 +26,10 @@ module VmShepherd
           private_subnet_id: 'private-subnet-id',
           s3_bucket_name: 'bucket-name',
         },
+      }.merge(aws_elb_config)
+    end
+    let(:aws_elb_config) do
+      {
         elb: {
           name: 'some-elb-name',
           port_mappings: [[1111, 11]],
@@ -190,25 +195,7 @@ module VmShepherd
 
         context 'when there is no ELB configuration' do
           let(:settings_fixture_name) { 'aws-no-elb.yml' }
-
-          let(:aws_env_config) do
-            {
-              stack_name: 'aws-stack-name',
-              aws_access_key: 'aws-access-key',
-              aws_secret_key: 'aws-secret-key',
-              json_file: 'cloudformation.json',
-              parameters: {
-                'key_pair_name' => 'key_pair_name'
-              },
-              outputs: {
-                ssh_key_name: 'ssh-key-name',
-                security_group: 'security-group-id',
-                public_subnet_id: 'public-subnet-id',
-                private_subnet_id: 'private-subnet-id',
-                s3_bucket_name: 'bucket-name',
-              },
-            }
-          end
+          let(:aws_elb_config) { {} }
 
           it 'uses AwsManager to launch a VM' do
             expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
@@ -382,25 +369,7 @@ module VmShepherd
 
         context 'when there is no ELB configuration' do
           let(:settings_fixture_name) { 'aws-no-elb.yml' }
-
-          let(:aws_env_config) do
-            {
-              stack_name: 'aws-stack-name',
-              aws_access_key: 'aws-access-key',
-              aws_secret_key: 'aws-secret-key',
-              json_file: 'cloudformation.json',
-              parameters: {
-                'key_pair_name' => 'key_pair_name'
-              },
-              outputs: {
-                ssh_key_name: 'ssh-key-name',
-                security_group: 'security-group-id',
-                public_subnet_id: 'public-subnet-id',
-                private_subnet_id: 'private-subnet-id',
-                s3_bucket_name: 'bucket-name',
-              },
-            }
-          end
+          let(:aws_elb_config) {{}}
 
           it 'uses AwsManager to destroy a VM' do
             expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
@@ -578,25 +547,7 @@ module VmShepherd
 
         context 'when there is no ELB configuration' do
           let(:settings_fixture_name) { 'aws-no-elb.yml' }
-
-          let(:aws_env_config) do
-            {
-              stack_name: 'aws-stack-name',
-              aws_access_key: 'aws-access-key',
-              aws_secret_key: 'aws-secret-key',
-              json_file: 'cloudformation.json',
-              parameters: {
-                'key_pair_name' => 'key_pair_name'
-              },
-              outputs: {
-                ssh_key_name: 'ssh-key-name',
-                security_group: 'security-group-id',
-                public_subnet_id: 'public-subnet-id',
-                private_subnet_id: 'private-subnet-id',
-                s3_bucket_name: 'bucket-name',
-              },
-            }
-          end
+          let(:aws_elb_config) {{}}
 
           it 'uses AwsManager to destroy a VM' do
             expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
@@ -659,25 +610,7 @@ module VmShepherd
 
         context 'when there is no ELB configuration' do
           let(:settings_fixture_name) { 'aws-no-elb.yml' }
-
-          let(:aws_env_config) do
-            {
-              stack_name: 'aws-stack-name',
-              aws_access_key: 'aws-access-key',
-              aws_secret_key: 'aws-secret-key',
-              json_file: 'cloudformation.json',
-              parameters: {
-                'key_pair_name' => 'key_pair_name'
-              },
-              outputs: {
-                ssh_key_name: 'ssh-key-name',
-                security_group: 'security-group-id',
-                public_subnet_id: 'public-subnet-id',
-                private_subnet_id: 'private-subnet-id',
-                s3_bucket_name: 'bucket-name',
-              },
-            }
-          end
+          let(:aws_elb_config) {{}}
 
           it 'uses AwsManager to create an environment' do
             expect(AwsManager).to receive(:new).with(aws_env_config).and_return(ams_manager)

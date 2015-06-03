@@ -200,6 +200,7 @@ module VmShepherd
           stack_name: settings.vm_shepherd.env_config.stack_name,
           aws_access_key: settings.vm_shepherd.env_config.aws_access_key,
           aws_secret_key: settings.vm_shepherd.env_config.aws_secret_key,
+          region: settings.vm_shepherd.env_config.region,
           json_file: settings.vm_shepherd.env_config.json_file,
           parameters: settings.vm_shepherd.env_config.parameters_as_a_hash,
           outputs: settings.vm_shepherd.env_config.outputs.to_h,

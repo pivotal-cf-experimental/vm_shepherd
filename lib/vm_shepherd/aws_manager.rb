@@ -45,7 +45,7 @@ module VmShepherd
     end
 
     def deploy(ami_file_path:, vm_config:)
-      image_id = File.read(ami_file_path).strip
+      image_id = read_ami_id(ami_file_path)
 
       instance =
         retry_until do
@@ -73,6 +73,10 @@ module VmShepherd
       elastic_ip = AWS.ec2.elastic_ips.create(vpc: true)
       instance.associate_elastic_ip(elastic_ip.allocation_id)
       instance.add_tag('Name', value: vm_config.fetch(:vm_name))
+    end
+
+    def read_ami_id(ami_file_path)
+      YAML.load_file(ami_file_path)[env_config.fetch(:region)]
     end
 
     def clean_environment

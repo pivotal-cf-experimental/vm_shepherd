@@ -5,7 +5,12 @@ module VmShepherd
     let(:access_key) { 'access-key' }
     let(:secret_key) { 'secret-key' }
     let(:ami_id) { 'ami-deadbeef' }
-    let(:ami_file_path) { Tempfile.new('ami-id-file').tap { |f| f.write("#{ami_id}\n"); f.close }.path }
+    let(:ami_file_path) do
+      Tempfile.new('ami-id-file').tap do |f|
+        f.write("#{{'us-east-1' => ami_id, 'not-the-right-region' => 'bad-id'}.to_yaml}")
+        f.close
+      end.path
+    end
     let(:elastic_ip_id) { 'elastic-ip-id' }
     let(:ec2) { double('AWS.ec2') }
 

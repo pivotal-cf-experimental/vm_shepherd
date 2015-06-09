@@ -42,7 +42,7 @@ module VmShepherd
       }
     end
 
-    subject(:ami_manager) { AwsManager.new(env_config) }
+    subject(:ami_manager) { AwsManager.new(env_config). tap { |manager| manager.logger = Logger.new(StringIO.new) } }
 
     before do
       expect(AWS).to receive(:config).with(
@@ -257,15 +257,15 @@ module VmShepherd
       let(:subnets) { instance_double(AWS::EC2::SubnetCollection) }
       let(:subnet1) { instance_double(AWS::EC2::Subnet, instances: subnet1_instances) }
       let(:subnet2) { instance_double(AWS::EC2::Subnet, instances: subnet2_instances) }
-      let(:instance1) { instance_double(AWS::EC2::Instance, tags: {}) }
-      let(:instance2) { instance_double(AWS::EC2::Instance, tags: {}) }
+      let(:instance1) { instance_double(AWS::EC2::Instance, tags: {}, id: 'instance1') }
+      let(:instance2) { instance_double(AWS::EC2::Instance, tags: {}, id: 'instance2') }
       let(:subnet1_instances) { [instance1] }
       let(:subnet2_instances) { [instance2] }
       let(:cfm) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
       let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'DELETE_COMPLETE', delete: nil) }
       let(:stack_collection) { instance_double(AWS::CloudFormation::StackCollection) }
 
-      let(:instance1_volume) { instance_double(AWS::EC2::Volume) }
+      let(:instance1_volume) { instance_double(AWS::EC2::Volume, id: 'volume-id') }
       let(:instance1_attachment) do
         instance_double(AWS::EC2::Attachment, volume: instance1_volume, delete_on_termination: true)
       end

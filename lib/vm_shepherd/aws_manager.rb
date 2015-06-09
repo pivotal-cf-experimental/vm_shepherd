@@ -9,6 +9,15 @@ module VmShepherd
     DO_NOT_TERMINATE_TAG_KEY = 'do_not_terminate'
     ELB_SECURITY_GROUP_NAME = 'ELB Security Group'
 
+    CREATE_IN_PROGRESS = 'CREATE_IN_PROGRESS'
+    CREATE_COMPLETE = 'CREATE_COMPLETE'
+    ROLLBACK_IN_PROGRESS = 'ROLLBACK_IN_PROGRESS'
+    ROLLBACK_COMPLETE = 'ROLLBACK_COMPLETE'
+    DELETE_IN_PROGRESS = 'DELETE_IN_PROGRESS'
+    DELETE_COMPLETE = 'DELETE_COMPLETE'
+
+    attr_writer :logger
+
     def initialize(env_config)
       AWS.config(
         access_key_id: env_config.fetch(:aws_access_key),
@@ -16,25 +25,29 @@ module VmShepherd
         region: env_config.fetch(:region),
       )
       @env_config = env_config
+      @logger = logger
     end
 
     def prepare_environment(cloudformation_template_file)
       template = File.read(cloudformation_template_file)
 
       cfm = AWS::CloudFormation.new
+      logger.info('Starting CloudFormation Stack Creation')
       stack = cfm.stacks.create(env_config.fetch(:stack_name), template, parameters: env_config.fetch(:parameters), capabilities: ['CAPABILITY_IAM'])
 
+      logger.info("Waiting for status: #{CREATE_COMPLETE}")
       retry_until(retry_limit: 360) do
         status = stack.status
+        logger.info("current stack status: #{status}")
         case status
-          when 'CREATE_COMPLETE'
+          when CREATE_COMPLETE
             true
-          when 'CREATE_IN_PROGRESS'
+          when CREATE_IN_PROGRESS
             false
-          when 'ROLLBACK_IN_PROGRESS'
+          when ROLLBACK_IN_PROGRESS
             false
           else
-            stack.delete if status == 'ROLLBACK_COMPLETE'
+            stack.delete if status == ROLLBACK_COMPLETE
             raise "Unexpected status for stack #{env_config.fetch(:stack_name)} : #{status}"
         end
       end
@@ -47,6 +60,7 @@ module VmShepherd
     def deploy(ami_file_path:, vm_config:)
       image_id = read_ami_id(ami_file_path)
 
+      logger.info('Starting AMI Instance creation')
       instance =
         retry_until do
           begin
@@ -62,27 +76,27 @@ module VmShepherd
           end
         end
 
+      logger.info('waiting until the instance status is running')
       retry_until do
         begin
-          instance.status == :running
+          status = instance.status
+          logger.info("current status: #{status}")
+          status == :running
         rescue AWS::EC2::Errors::InvalidInstanceID::NotFound
           false
         end
       end
 
+      logger.info('Creating an Elastic IP and assigning it to the instance')
       elastic_ip = AWS.ec2.elastic_ips.create(vpc: true)
       instance.associate_elastic_ip(elastic_ip.allocation_id)
       instance.add_tag('Name', value: vm_config.fetch(:vm_name))
     end
 
-    def read_ami_id(ami_file_path)
-      YAML.load_file(ami_file_path)[env_config.fetch(:region)]
-    end
-
     def clean_environment
       [:public_subnet_id, :private_subnet_id].each do |subnet_id|
-        subnet_id = env_config.fetch(:outputs).fetch(subnet_id)
-        clear_subnet(subnet_id) if subnet_id
+        aws_subnet_id = env_config.fetch(:outputs).fetch(subnet_id)
+        clear_subnet(aws_subnet_id) if aws_subnet_id
       end
 
       if (elb_config = env_config[:elb])
@@ -91,7 +105,10 @@ module VmShepherd
 
       if (bucket_name = env_config.fetch(:outputs, {}).fetch(:s3_bucket_name, nil))
         bucket = AWS::S3.new.buckets[bucket_name]
-        bucket.clear! if bucket && bucket.exists?
+        if bucket && bucket.exists?
+          logger.info("clearing bucket: #{bucket_name}")
+          bucket.clear!
+        end
       end
 
       delete_stack(env_config.fetch(:stack_name))
@@ -111,7 +128,7 @@ module VmShepherd
     end
 
     private
-    attr_reader :env_config
+    attr_reader :env_config, :logger
 
     def subnet_id(stack, elb_config)
       stack.outputs.detect { |o| o.key == elb_config[:stack_output_keys][:subnet_id] }.value
@@ -122,12 +139,14 @@ module VmShepherd
     end
 
     def clear_subnet(subnet_id)
+      logger.info("Clearing contents of subnet: #{subnet_id}")
       subnet = AWS.ec2.subnets[subnet_id]
       volumes = []
       subnet.instances.each do |instance|
         instance.attachments.each do |_, attachment|
           volumes.push(attachment.volume) unless attachment.delete_on_termination
         end
+        logger.info("terminating instance #{instance.id}")
         instance.terminate
       end
       destroy_volumes(volumes)
@@ -136,6 +155,7 @@ module VmShepherd
     def destroy_volumes(volumes)
       volumes.each do |volume|
         begin
+          logger.info("trying to delete volume: #{volume.id}")
           volume.delete
         rescue AWS::EC2::Errors::VolumeInUse
           sleep 5
@@ -148,10 +168,13 @@ module VmShepherd
       if (elb = AWS::ELB.new.load_balancers.find { |lb| lb.name == elb_name })
         sg = elb.security_groups.first
         net_interfaces = AWS.ec2.network_interfaces.select { |ni| ni.security_groups.map(&:id).include? sg.id }
+        logger.info("deleting elb: #{elb.name}")
         elb.delete
+        logger.info('waiting until elb is deleted')
         retry_until do
           !elb.exists? && !net_interfaces.map(&:exists?).any?
         end
+        logger.info("deleting elb security group: #{sg.id}")
         sg.delete
       end
     end
@@ -172,6 +195,7 @@ module VmShepherd
         }
       end
 
+      logger.info('Creating an ELB')
       elb.client.create_load_balancer(elb_params)
     end
 
@@ -183,6 +207,7 @@ module VmShepherd
         vpc_id: vpc_id,
       }
 
+      logger.info('Creating a Security Group for the ELB')
       security_group_response = AWS.ec2.client.create_security_group(sg_params)
 
       AWS.ec2.security_groups[security_group_response[:group_id]].tap do |security_group|
@@ -195,23 +220,31 @@ module VmShepherd
     def delete_stack(stack_name)
       cfm = AWS::CloudFormation.new
       stack = cfm.stacks[stack_name]
+      logger.info('deleting CloudFormation stack')
       stack.delete
+      logger.info("waiting until status: #{DELETE_COMPLETE}")
       retry_until(retry_limit: 360) do
         begin
           status = stack.status
+          logger.info("current stack status: #{status}")
           case status
-            when 'DELETE_COMPLETE'
+            when DELETE_COMPLETE
               true
-            when 'DELETE_IN_PROGRESS'
+            when DELETE_IN_PROGRESS
               false
             else
               raise "Unexpected status for stack #{stack_name} : #{status}"
           end
         rescue AWS::CloudFormation::Errors::ValidationError
           raise if stack.exists?
+          logger.info('stack deleted successfully')
           true
         end
       end if stack
+    end
+
+    def read_ami_id(ami_file_path)
+      YAML.load_file(ami_file_path)[env_config.fetch(:region)]
     end
   end
 end

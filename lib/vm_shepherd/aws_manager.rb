@@ -25,7 +25,7 @@ module VmShepherd
         region: env_config.fetch(:region),
       )
       @env_config = env_config
-      @logger = logger
+      @logger = Logger.new(STDERR)
     end
 
     def prepare_environment(cloudformation_template_file)

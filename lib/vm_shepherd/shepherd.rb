@@ -37,6 +37,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.vsphere.datacenter,
+              error_logger,
             ).deploy(
               path,
               {
@@ -87,6 +88,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.vsphere.datacenter,
+              error_logger,
             ).prepare_environment
           end
         when VmShepherd::AWS_IAAS_TYPE then
@@ -121,6 +123,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.vsphere.datacenter,
+              error_logger,
             ).destroy(vm_shepherd_config.vm.ip, vm_shepherd_config.vsphere.resource_pool)
           when VmShepherd::AWS_IAAS_TYPE then
             ami_manager.destroy(vm_shepherd_config.to_h)
@@ -155,6 +158,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.cleanup.datacenter,
+              error_logger,
             ).clean_environment(
               datacenter_folders_to_clean: vm_shepherd_config.cleanup.datacenter_folders_to_clean,
               datastores: vm_shepherd_config.cleanup.datastores,
@@ -195,17 +199,19 @@ module VmShepherd
     end
 
     def ami_manager
-      @ami_manager ||= VmShepherd::AwsManager.new(
-        {
-          stack_name: settings.vm_shepherd.env_config.stack_name,
-          aws_access_key: settings.vm_shepherd.env_config.aws_access_key,
-          aws_secret_key: settings.vm_shepherd.env_config.aws_secret_key,
-          region: settings.vm_shepherd.env_config.region,
-          json_file: settings.vm_shepherd.env_config.json_file,
-          parameters: settings.vm_shepherd.env_config.parameters_as_a_hash,
-          outputs: settings.vm_shepherd.env_config.outputs.to_h,
-        }.merge(ami_elb_config)
-      )
+      @ami_manager ||=
+        VmShepherd::AwsManager.new(
+          env_config: {
+            stack_name: settings.vm_shepherd.env_config.stack_name,
+            aws_access_key: settings.vm_shepherd.env_config.aws_access_key,
+            aws_secret_key: settings.vm_shepherd.env_config.aws_secret_key,
+            region: settings.vm_shepherd.env_config.region,
+            json_file: settings.vm_shepherd.env_config.json_file,
+            parameters: settings.vm_shepherd.env_config.parameters_as_a_hash,
+            outputs: settings.vm_shepherd.env_config.outputs.to_h,
+          }.merge(ami_elb_config),
+          logger: error_logger,
+        )
     end
 
     def ami_elb_config

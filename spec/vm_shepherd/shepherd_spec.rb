@@ -119,14 +119,15 @@ module VmShepherd
               first_config.vcenter_creds.username,
               first_config.vcenter_creds.password,
               first_config.vsphere.datacenter,
+              instance_of(Logger),
             ).and_return(first_ova_manager)
-
 
           expect(VsphereManager).to receive(:new).with(
               last_config.vcenter_creds.ip,
               last_config.vcenter_creds.username,
               last_config.vcenter_creds.password,
               last_config.vsphere.datacenter,
+              instance_of(Logger),
             ).and_return(last_ova_manager)
 
           expect(first_ova_manager).to receive(:deploy).with(
@@ -182,7 +183,7 @@ module VmShepherd
         let(:last_aws_options) { {vm_name: 'vm-name-2'} }
 
         it 'uses AwsManager to launch a VM' do
-          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+          expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
           expect(aws_manager).to receive(:deploy).with(ami_file_path: first_ami_file_path, vm_config: first_aws_options)
           expect(aws_manager).to receive(:deploy).with(ami_file_path: last_ami_file_path, vm_config: last_aws_options)
 
@@ -198,7 +199,7 @@ module VmShepherd
           let(:aws_elb_config) { {} }
 
           it 'uses AwsManager to launch a VM' do
-            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+            expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
             expect(aws_manager).to receive(:deploy).with(ami_file_path: first_ami_file_path, vm_config: first_aws_options)
             expect(aws_manager).to receive(:deploy).with(ami_file_path: last_ami_file_path, vm_config: last_aws_options)
 
@@ -338,6 +339,7 @@ module VmShepherd
               first_config.vcenter_creds.username,
               first_config.vcenter_creds.password,
               first_config.vsphere.datacenter,
+              instance_of(Logger),
             ).and_return(first_ova_manager)
           expect(first_ova_manager).to receive(:destroy).with(first_config.vm.ip, first_config.vsphere.resource_pool)
 
@@ -346,6 +348,7 @@ module VmShepherd
               last_config.vcenter_creds.username,
               last_config.vcenter_creds.password,
               last_config.vsphere.datacenter,
+              instance_of(Logger),
             ).and_return(last_ova_manager)
           expect(last_ova_manager).to receive(:destroy).with(last_config.vm.ip, last_config.vsphere.resource_pool)
 
@@ -360,7 +363,7 @@ module VmShepherd
         let(:last_ami_options) { {vm_name: 'vm-name-2'} }
 
         it 'uses AwsManager to destroy a VM' do
-          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+          expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
           expect(aws_manager).to receive(:destroy).with(first_ami_options)
           expect(aws_manager).to receive(:destroy).with(last_ami_options)
 
@@ -372,7 +375,7 @@ module VmShepherd
           let(:aws_elb_config) {{}}
 
           it 'uses AwsManager to destroy a VM' do
-            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+            expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
             expect(aws_manager).to receive(:destroy).with(first_ami_options)
             expect(aws_manager).to receive(:destroy).with(last_ami_options)
 
@@ -521,6 +524,7 @@ module VmShepherd
               first_config.vcenter_creds.username,
               first_config.vcenter_creds.password,
               first_config.cleanup.datacenter,
+              instance_of(Logger),
             ).and_return(first_ova_manager)
           expect(first_ova_manager).to receive(:clean_environment).with(first_clean_environment_options)
           expect(VsphereManager).to receive(:new).with(
@@ -528,6 +532,7 @@ module VmShepherd
               last_config.vcenter_creds.username,
               last_config.vcenter_creds.password,
               last_config.cleanup.datacenter,
+              instance_of(Logger),
             ).and_return(last_ova_manager)
           expect(last_ova_manager).to receive(:clean_environment).with(last_clean_environment_options)
 
@@ -540,7 +545,7 @@ module VmShepherd
         let(:aws_manager) { instance_double(AwsManager) }
 
         it 'uses AwsManager to destroy a VM' do
-          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+          expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
           expect(aws_manager).to receive(:clean_environment)
           manager.clean_environment
         end
@@ -550,7 +555,7 @@ module VmShepherd
           let(:aws_elb_config) {{}}
 
           it 'uses AwsManager to destroy a VM' do
-            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(aws_manager)
+            expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
             expect(aws_manager).to receive(:clean_environment)
             manager.clean_environment
           end
@@ -603,7 +608,7 @@ module VmShepherd
         let(:ams_manager) { instance_double(AwsManager) }
 
         it 'uses AwsManager to create an environment' do
-          expect(AwsManager).to receive(:new).with(aws_env_config).and_return(ams_manager)
+          expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(ams_manager)
           expect(ams_manager).to receive(:prepare_environment).with('cloudformation.json')
           manager.prepare_environment
         end
@@ -613,7 +618,7 @@ module VmShepherd
           let(:aws_elb_config) {{}}
 
           it 'uses AwsManager to create an environment' do
-            expect(AwsManager).to receive(:new).with(aws_env_config).and_return(ams_manager)
+            expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(ams_manager)
             expect(ams_manager).to receive(:prepare_environment).with('cloudformation.json')
             manager.prepare_environment
           end
@@ -666,6 +671,7 @@ module VmShepherd
               first_config.vcenter_creds.username,
               first_config.vcenter_creds.password,
               first_config.vsphere.datacenter,
+              instance_of(Logger),
             ).and_return(first_ova_manager)
           expect(first_ova_manager).to receive(:prepare_environment)
           expect(VsphereManager).to receive(:new).with(
@@ -673,6 +679,7 @@ module VmShepherd
               last_config.vcenter_creds.username,
               last_config.vcenter_creds.password,
               last_config.vsphere.datacenter,
+              instance_of(Logger),
             ).and_return(last_ova_manager)
           expect(last_ova_manager).to receive(:prepare_environment)
 

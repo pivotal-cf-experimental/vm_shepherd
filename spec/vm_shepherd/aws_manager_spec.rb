@@ -41,8 +41,9 @@ module VmShepherd
         vm_name: 'some-vm-name',
       }
     end
+    let(:fake_logger) { instance_double(Logger).as_null_object }
 
-    subject(:ami_manager) { AwsManager.new(env_config). tap { |manager| manager.logger = Logger.new(StringIO.new) } }
+    subject(:ami_manager) { AwsManager.new(env_config: env_config, logger: fake_logger) }
 
     before do
       expect(AWS).to receive(:config).with(

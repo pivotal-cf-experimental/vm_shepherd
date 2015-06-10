@@ -10,12 +10,9 @@ module VmShepherd
     let(:vm2) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name2', resourcePool: instance_double(RbVmomi::VIM::ResourcePool, name: 'second_resource_pool')) }
     let(:vm3) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name3', resourcePool: instance_double(RbVmomi::VIM::ResourcePool, name: 'second_resource_pool')) }
     let(:vms) { [vm1, vm2, vm3] }
+    let(:fake_logger) { instance_double(Logger).as_null_object }
 
-    subject(:vsphere_manager) do
-      manager = VsphereManager.new(host, username, password, datacenter_name)
-      manager.logger = Logger.new(StringIO.new)
-      manager
-    end
+    subject(:vsphere_manager) { VsphereManager.new(host, username, password, datacenter_name, fake_logger) }
 
     it 'loads' do
       expect { vsphere_manager }.not_to raise_error

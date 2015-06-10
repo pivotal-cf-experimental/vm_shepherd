@@ -7,14 +7,12 @@ module VmShepherd
     VALID_FOLDER_REGEX = /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/
     VALID_DISK_FOLDER_REGEX = /\A[\w-]{1,80}\z/
 
-    attr_writer :logger
-
-    def initialize(host, username, password, datacenter_name)
+    def initialize(host, username, password, datacenter_name, logger)
       @host = host
       @username = username
       @password = password
       @datacenter_name = datacenter_name
-      @logger = Logger.new(STDERR)
+      @logger = logger
     end
 
     def deploy(ova_path, vm_config, vsphere_config)

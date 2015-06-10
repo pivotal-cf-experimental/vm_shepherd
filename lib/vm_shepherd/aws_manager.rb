@@ -16,16 +16,14 @@ module VmShepherd
     DELETE_IN_PROGRESS = 'DELETE_IN_PROGRESS'
     DELETE_COMPLETE = 'DELETE_COMPLETE'
 
-    attr_writer :logger
-
-    def initialize(env_config)
+    def initialize(env_config:, logger:)
       AWS.config(
         access_key_id: env_config.fetch(:aws_access_key),
         secret_access_key: env_config.fetch(:aws_secret_key),
         region: env_config.fetch(:region),
       )
       @env_config = env_config
-      @logger = Logger.new(STDERR)
+      @logger = logger
     end
 
     def prepare_environment(cloudformation_template_file)

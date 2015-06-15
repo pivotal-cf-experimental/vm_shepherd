@@ -26,7 +26,7 @@ module VmShepherd
                 password: vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
-              error_logger
+              stdout_logger
             ).deploy(
               path,
               vcloud_deploy_options(vm_shepherd_config),
@@ -37,7 +37,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.vsphere.datacenter,
-              error_logger,
+              stdout_logger,
             ).deploy(
               path,
               {
@@ -78,7 +78,7 @@ module VmShepherd
                 password: vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
-              error_logger
+              stdout_logger
             ).prepare_environment
           end
         when VmShepherd::VSPHERE_IAAS_TYPE then
@@ -88,7 +88,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.vsphere.datacenter,
-              error_logger,
+              stdout_logger,
             ).prepare_environment
           end
         when VmShepherd::AWS_IAAS_TYPE then
@@ -115,7 +115,7 @@ module VmShepherd
                 password: vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
-              error_logger
+              stdout_logger
             ).destroy([vm_shepherd_config.vapp.ops_manager_name], vm_shepherd_config.vdc.catalog)
           when VmShepherd::VSPHERE_IAAS_TYPE then
             VmShepherd::VsphereManager.new(
@@ -123,7 +123,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.vsphere.datacenter,
-              error_logger,
+              stdout_logger,
             ).destroy(vm_shepherd_config.vm.ip, vm_shepherd_config.vsphere.resource_pool)
           when VmShepherd::AWS_IAAS_TYPE then
             ami_manager.destroy(vm_shepherd_config.to_h)
@@ -148,7 +148,7 @@ module VmShepherd
                 password: vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
-              error_logger,
+              stdout_logger,
             ).clean_environment(vm_shepherd_config.vapp.product_names || [], vm_shepherd_config.vapp.product_catalog)
           end
         when VmShepherd::VSPHERE_IAAS_TYPE then
@@ -158,7 +158,7 @@ module VmShepherd
               vm_shepherd_config.vcenter_creds.username,
               vm_shepherd_config.vcenter_creds.password,
               vm_shepherd_config.cleanup.datacenter,
-              error_logger,
+              stdout_logger,
             ).clean_environment(
               datacenter_folders_to_clean: vm_shepherd_config.cleanup.datacenter_folders_to_clean,
               datastores: vm_shepherd_config.cleanup.datastores,
@@ -178,10 +178,8 @@ module VmShepherd
 
     attr_reader :settings
 
-    def error_logger
-      Logger.new(STDOUT).tap do |lggr|
-        lggr.level = Logger::Severity::ERROR
-      end
+    def stdout_logger
+      Logger.new(STDOUT)
     end
 
     def vcloud_deploy_options(vm_shepherd_config)
@@ -210,7 +208,7 @@ module VmShepherd
             parameters: settings.vm_shepherd.env_config.parameters_as_a_hash,
             outputs: settings.vm_shepherd.env_config.outputs.to_h,
           }.merge(ami_elb_config),
-          logger: error_logger,
+          logger: stdout_logger,
         )
     end
 

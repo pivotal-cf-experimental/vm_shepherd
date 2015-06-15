@@ -238,13 +238,31 @@ module VmShepherd
         expect { ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config) }.to raise_error(AwsManager::RetryLimitExceeded)
       end
 
-      it 'creates and attaches an elastic IP' do
-        expect(ec2).to receive_message_chain(:elastic_ips, :create).with(
+      context 'vm configuration does not contain an elastic IP' do
+        it 'creates and attaches an elastic IP' do
+          expect(ec2).to receive_message_chain(:elastic_ips, :create).with(
             vpc: true).and_return(elastic_ip)
 
-        expect(instance).to receive(:associate_elastic_ip).with(elastic_ip.allocation_id)
+          expect(instance).to receive(:associate_elastic_ip).with(elastic_ip)
 
-        ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
+          ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
+        end
+      end
+
+      context 'vm configuration contains an elastic IP' do
+        let(:vm_config) do
+          {
+            vm_name: 'some-vm-name',
+            vm_ip_address: 'some-ip-address'
+          }
+        end
+
+        it 'attaches the provided ip address to the VM' do
+          expect(AWS::EC2::ElasticIp).to receive(:new).and_return(elastic_ip)
+          expect(instance).to receive(:associate_elastic_ip).with(elastic_ip)
+
+          ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
+        end
       end
 
       it 'tags the instance with a name' do

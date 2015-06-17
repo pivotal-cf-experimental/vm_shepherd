@@ -47,9 +47,10 @@ module VmShepherd
         end
 
         it 'expands the vapp_template into a TMP dir' do
-          expect(vcloud_manager).to receive(:system).with("cd #{tmpdir} && tar xfv '#{expanded_vapp_template_path}'")
+          command = "cd #{tmpdir} && tar xfv '#{expanded_vapp_template_path}'"
+          expect(vcloud_manager).to receive(:system).with(command)
 
-          expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error
+          expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error(RuntimeError, /#{command}/)
         end
 
         context 'when the template can be expanded' do
@@ -236,10 +237,14 @@ module VmShepherd
           end
 
           context 'when the vApp can NOT be deployed' do
+            let(:fake_deploy_error) { 'FAKE-VAPP-DEPLOY-ERROR' }
+
+            before { allow(VCloudSdk::Client).to receive(:new).and_raise('FAKE-VAPP-DEPLOY-ERROR') }
+
             it 'removes the expanded vApp template' do
               expect(FileUtils).to receive(:remove_entry_secure).with(tmpdir, force: true)
 
-              expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error
+              expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error(/#{fake_deploy_error}/)
             end
           end
         end
@@ -257,7 +262,7 @@ module VmShepherd
           it 'removes the expanded vApp template' do
             expect(FileUtils).to receive(:remove_entry_secure).with(tmpdir, force: true)
 
-            expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error
+            expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error(RuntimeError, /#{tar_expand_cmd}/)
           end
         end
       end
@@ -274,7 +279,7 @@ module VmShepherd
         it 'removes the expanded vApp template' do
           expect(FileUtils).to receive(:remove_entry_secure).with(tmpdir, force: true)
 
-          expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error
+          expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error(RuntimeError, /VM exists at FAKE_IP/)
         end
       end
     end

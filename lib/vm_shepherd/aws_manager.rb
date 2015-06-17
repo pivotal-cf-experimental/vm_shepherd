@@ -162,7 +162,7 @@ module VmShepherd
           logger.info("trying to delete volume: #{volume.id}")
           volume.delete
         rescue AWS::EC2::Errors::VolumeInUse
-          sleep 5
+          sleep VmShepherd::RetryHelper::RETRY_INTERVAL
           retry
         end
       end

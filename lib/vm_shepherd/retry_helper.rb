@@ -4,7 +4,7 @@ module VmShepherd
     end
 
     RETRY_LIMIT = 60
-    RETRY_INTERVAL = 5
+    RETRY_INTERVAL = 10
 
     def retry_until(retry_limit: RETRY_LIMIT, &block)
       tries = 0

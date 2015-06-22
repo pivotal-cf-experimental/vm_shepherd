@@ -213,13 +213,15 @@ module VmShepherd
     end
 
     def ami_elb_config
-      if settings.vm_shepherd.env_config.elb
+      if settings.vm_shepherd.env_config.elbs
         {
-          elb: {
-            name: settings.vm_shepherd.env_config.elb.name,
-            port_mappings: settings.vm_shepherd.env_config.elb.port_mappings,
-            stack_output_keys: settings.vm_shepherd.env_config.elb.stack_output_keys.to_h,
-          }
+          elbs: settings.vm_shepherd.env_config.elbs.map do |elb|
+            {
+              name:              elb.name,
+              port_mappings:     elb.port_mappings,
+              stack_output_keys: elb.stack_output_keys.to_h,
+            }
+          end
         }
       else
         {}

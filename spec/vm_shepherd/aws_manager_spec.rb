@@ -108,14 +108,24 @@ module VmShepherd
       context 'when the elb setting is present' do
         let(:extra_configs) do
           {
-            elb: {
-              name: 'elb-name',
-              port_mappings: [[1111, 11]],
-              stack_output_keys: {
-                vpc_id: 'vpc_id',
-                subnet_id: 'private_subnet',
-              },
-            },
+            elbs: [
+                    {
+                      name: 'elb-1-name',
+                      port_mappings: [[1111, 11]],
+                      stack_output_keys: {
+                        vpc_id: 'vpc_id',
+                        subnet_id: 'private_subnet',
+                      },
+                    },
+                    {
+                      name: 'elb-2-name',
+                      port_mappings: [[2222, 22]],
+                      stack_output_keys: {
+                        vpc_id: 'vpc_id',
+                        subnet_id: 'private_subnet',
+                      },
+                    }
+                  ],
           }
         end
         let(:stack) do
@@ -151,7 +161,7 @@ module VmShepherd
           allow(elb_client).to receive(:create_load_balancer)
         end
 
-        it 'creates and attaches a security group' do
+        it 'creates and attaches a security group for the first ELB' do
           security_group_args = {
             group_name: 'fake-stack-name',
             description: 'ELB Security Group',
@@ -163,11 +173,37 @@ module VmShepherd
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
 
-        it 'attaches an elb with the name of the stack' do
+        it 'attaches an elb with the name of the stack for the first ELB' do
           elb_params = {
-            load_balancer_name: 'elb-name',
+            load_balancer_name: 'elb-1-name',
             listeners: [
               {protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11},
+            ],
+            subnets: ['fake-subnet-id'],
+            security_groups: ['elb-security-group-id']
+          }
+          expect(elb_client).to receive(:create_load_balancer).with(elb_params)
+
+          ami_manager.prepare_environment(cloudformation_template_file.path)
+        end
+
+        it 'creates and attaches a security group for the second ELB' do
+          security_group_args = {
+            group_name: 'fake-stack-name',
+            description: 'ELB Security Group',
+            vpc_id: 'fake-vpc-id',
+          }
+          expect(ec2_client).to receive(:create_security_group).with(security_group_args).and_return(create_security_group_response)
+          expect(elb_security_group).to receive(:authorize_ingress).with(:tcp, 2222, '0.0.0.0/0')
+
+          ami_manager.prepare_environment(cloudformation_template_file.path)
+        end
+
+        it 'attaches an elb with the name of the stack for the second ELB' do
+          elb_params = {
+            load_balancer_name: 'elb-2-name',
+            listeners: [
+              {protocol: 'TCP', load_balancer_port: 2222, instance_protocol: 'TCP', instance_port: 22},
             ],
             subnets: ['fake-subnet-id'],
             security_groups: ['elb-security-group-id']

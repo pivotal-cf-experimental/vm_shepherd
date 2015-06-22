@@ -15,9 +15,14 @@ vm_shepherd:
       public_subnet_id: public-subnet-id
       private_subnet_id: private-subnet-id
       s3_bucket_name: bucket-name
-    elb:
-      name: some-elb-name
+    elbs:
+    - name: elb-1-name
       port_mappings: [[1111,11]]
+      stack_output_keys:
+        vpc_id: CloudFormationVpcIdOutputKey
+        subnet_id: CloudFormationSubnetIdOutputKey
+    - name: elb-2-name
+      port_mappings: [[2222,22]]
       stack_output_keys:
         vpc_id: CloudFormationVpcIdOutputKey
         subnet_id: CloudFormationSubnetIdOutputKey

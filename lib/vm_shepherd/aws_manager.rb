@@ -50,7 +50,7 @@ module VmShepherd
         end
       end
 
-      if (elb_config = env_config[:elb])
+      env_config.fetch(:elbs, []).each do |elb_config|
         create_elb(stack, elb_config)
       end
     end

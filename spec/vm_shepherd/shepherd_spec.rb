@@ -30,14 +30,24 @@ module VmShepherd
     end
     let(:aws_elb_config) do
       {
-        elb: {
-          name: 'some-elb-name',
-          port_mappings: [[1111, 11]],
-          stack_output_keys: {
-            vpc_id: 'CloudFormationVpcIdOutputKey',
-            subnet_id: 'CloudFormationSubnetIdOutputKey',
-          },
-        },
+        elbs: [
+                {
+                  name:              'elb-1-name',
+                  port_mappings:     [[1111, 11]],
+                  stack_output_keys: {
+                    vpc_id:    'CloudFormationVpcIdOutputKey',
+                    subnet_id: 'CloudFormationSubnetIdOutputKey',
+                  },
+                },
+                {
+                  name:              'elb-2-name',
+                  port_mappings:     [[2222, 22]],
+                  stack_output_keys: {
+                    vpc_id:    'CloudFormationVpcIdOutputKey',
+                    subnet_id: 'CloudFormationSubnetIdOutputKey',
+                  },
+                }
+              ],
       }
     end
 

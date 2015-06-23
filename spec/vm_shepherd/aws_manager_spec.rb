@@ -91,7 +91,7 @@ module VmShepherd
 
         it 'stops retrying after 360 times' do
           expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
-              exactly(360).times
+              exactly(30).times
 
           expect { ami_manager.prepare_environment(cloudformation_template_file.path) }.to raise_error(AwsManager::RetryLimitExceeded)
         end
@@ -367,7 +367,7 @@ module VmShepherd
 
       it 'stops retrying after 360 times' do
         expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS').
-            exactly(360).times
+            exactly(30).times
 
         expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
       end
@@ -467,7 +467,7 @@ module VmShepherd
 
         it 'waits for the elb to be deleted' do
           expect(load_balancer_to_delete).to receive(:exists?).and_return(true).
-              exactly(60).times
+              exactly(10).times
 
           expect(elb_security_group).not_to receive(:delete).ordered
           expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
@@ -477,10 +477,10 @@ module VmShepherd
           allow(load_balancer_to_delete).to receive(:exists?).and_return(false)
 
           expect(network_interface_1).to receive(:exists?).and_return(false).
-              exactly(60).times
+              exactly(10).times
 
           expect(network_interface_2).to receive(:exists?).and_return(true).
-              exactly(60).times
+              exactly(10).times
 
           expect(elb_security_group).not_to receive(:delete).ordered
           expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)

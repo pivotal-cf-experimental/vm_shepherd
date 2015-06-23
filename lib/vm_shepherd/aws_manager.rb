@@ -34,7 +34,7 @@ module VmShepherd
       stack = cfm.stacks.create(env_config.fetch(:stack_name), template, parameters: env_config.fetch(:parameters), capabilities: ['CAPABILITY_IAM'])
 
       logger.info("Waiting for status: #{CREATE_COMPLETE}")
-      retry_until(retry_limit: 360) do
+      retry_until(retry_limit: 30) do
         status = stack.status
         logger.info("current stack status: #{status}")
         case status
@@ -227,7 +227,7 @@ module VmShepherd
       logger.info('deleting CloudFormation stack')
       stack.delete
       logger.info("waiting until status: #{DELETE_COMPLETE}")
-      retry_until(retry_limit: 360) do
+      retry_until(retry_limit: 30) do
         begin
           status = stack.status
           logger.info("current stack status: #{status}")

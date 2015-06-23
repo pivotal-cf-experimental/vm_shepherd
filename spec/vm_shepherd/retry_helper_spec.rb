@@ -12,8 +12,8 @@ module VmShepherd
       allow(retry_helper).to receive(:sleep) # speed up retry logic
     end
 
-    it 'calls the given block 60 times by default' do
-      sixty_times = [true] + [false] * 59
+    it 'calls the given block 10 times by default' do
+      sixty_times = [true] + [false] * 9
       expect {
         retry_helper.retry_until { sixty_times.pop }
       }.not_to raise_error

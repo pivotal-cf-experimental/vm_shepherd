@@ -206,7 +206,7 @@ module VmShepherd
     def create_security_group(stack, elb_config)
       vpc_id = vpc_id(stack, elb_config)
       sg_params = {
-        group_name: stack.name,
+        group_name: [stack.name, elb_config[:name]].join('_'),
         description: 'ELB Security Group',
         vpc_id: vpc_id,
       }

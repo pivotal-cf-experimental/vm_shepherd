@@ -163,7 +163,7 @@ module VmShepherd
 
         it 'creates and attaches a security group for the first ELB' do
           security_group_args = {
-            group_name: 'fake-stack-name',
+            group_name: 'fake-stack-name_elb-1-name',
             description: 'ELB Security Group',
             vpc_id: 'fake-vpc-id',
           }
@@ -189,7 +189,7 @@ module VmShepherd
 
         it 'creates and attaches a security group for the second ELB' do
           security_group_args = {
-            group_name: 'fake-stack-name',
+            group_name: 'fake-stack-name_elb-2-name',
             description: 'ELB Security Group',
             vpc_id: 'fake-vpc-id',
           }

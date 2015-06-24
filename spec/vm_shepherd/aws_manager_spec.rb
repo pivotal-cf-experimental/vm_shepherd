@@ -143,72 +143,68 @@ module VmShepherd
           ]
         end
         let(:ec2_client) { double(AWS::EC2::Client) }
-        let(:create_security_group_response) do
-          {:group_id => 'elb-security-group'}
+        let(:create_security_group_response_1) do
+          {group_id: 'elb-1-security-group'}
+        end
+        let(:create_security_group_response_2) do
+          {group_id: 'elb-2-security-group'}
         end
         let(:security_groups) do
           {
-            'elb-security-group' => elb_security_group,
+            'elb-1-security-group' => elb_1_security_group,
+            'elb-2-security-group' => elb_2_security_group,
           }
         end
-        let(:elb_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-security-group-id') }
+        let(:elb_1_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-1-security-group-id') }
+        let(:elb_2_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-2-security-group-id') }
 
         before do
           allow(ec2).to receive(:client).and_return(ec2_client)
-          allow(ec2_client).to receive(:create_security_group).and_return(create_security_group_response)
+          allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-1-name')).
+              and_return(create_security_group_response_1)
+          allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-2-name')).
+              and_return(create_security_group_response_2)
           allow(ec2).to receive(:security_groups).and_return(security_groups)
-          allow(elb_security_group).to receive(:authorize_ingress)
+          allow(elb_1_security_group).to receive(:authorize_ingress)
+          allow(elb_2_security_group).to receive(:authorize_ingress)
           allow(elb_client).to receive(:create_load_balancer)
         end
 
-        it 'creates and attaches a security group for the first ELB' do
-          security_group_args = {
+        it 'creates and attaches a security group for the ELBs' do
+          elb_1_security_group_args = {
             group_name: 'fake-stack-name_elb-1-name',
             description: 'ELB Security Group',
             vpc_id: 'fake-vpc-id',
           }
-          expect(ec2_client).to receive(:create_security_group).with(security_group_args).and_return(create_security_group_response)
-          expect(elb_security_group).to receive(:authorize_ingress).with(:tcp, 1111, '0.0.0.0/0')
+          expect(ec2_client).to receive(:create_security_group).with(elb_1_security_group_args).and_return(create_security_group_response_1)
+          expect(elb_1_security_group).to receive(:authorize_ingress).with(:tcp, 1111, '0.0.0.0/0')
 
-          ami_manager.prepare_environment(cloudformation_template_file.path)
-        end
-
-        it 'attaches an elb with the name of the stack for the first ELB' do
-          elb_params = {
-            load_balancer_name: 'elb-1-name',
-            listeners: [
-              {protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11},
-            ],
-            subnets: ['fake-subnet-id'],
-            security_groups: ['elb-security-group-id']
-          }
-          expect(elb_client).to receive(:create_load_balancer).with(elb_params)
-
-          ami_manager.prepare_environment(cloudformation_template_file.path)
-        end
-
-        it 'creates and attaches a security group for the second ELB' do
-          security_group_args = {
+          elb_2_security_group_args = {
             group_name: 'fake-stack-name_elb-2-name',
             description: 'ELB Security Group',
             vpc_id: 'fake-vpc-id',
           }
-          expect(ec2_client).to receive(:create_security_group).with(security_group_args).and_return(create_security_group_response)
-          expect(elb_security_group).to receive(:authorize_ingress).with(:tcp, 2222, '0.0.0.0/0')
+          expect(ec2_client).to receive(:create_security_group).with(elb_2_security_group_args).and_return(create_security_group_response_2)
+          expect(elb_2_security_group).to receive(:authorize_ingress).with(:tcp, 2222, '0.0.0.0/0')
 
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
 
-        it 'attaches an elb with the name of the stack for the second ELB' do
-          elb_params = {
-            load_balancer_name: 'elb-2-name',
-            listeners: [
-              {protocol: 'TCP', load_balancer_port: 2222, instance_protocol: 'TCP', instance_port: 22},
-            ],
+        it 'attaches an elb with the name of the stack for the ELBs' do
+          elb_1_params = {
+            load_balancer_name: 'elb-1-name',
+            listeners: [{protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11}],
             subnets: ['fake-subnet-id'],
-            security_groups: ['elb-security-group-id']
+            security_groups: ['elb-1-security-group-id']
           }
-          expect(elb_client).to receive(:create_load_balancer).with(elb_params)
+          expect(elb_client).to receive(:create_load_balancer).with(elb_1_params)
+          elb_2_params = {
+            load_balancer_name: 'elb-2-name',
+            listeners: [{protocol: 'TCP', load_balancer_port: 2222, instance_protocol: 'TCP', instance_port: 22}],
+            subnets:   ['fake-subnet-id'],
+            security_groups: ['elb-2-security-group-id']
+          }
+          expect(elb_client).to receive(:create_load_balancer).with(elb_2_params)
 
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
@@ -426,69 +422,118 @@ module VmShepherd
       context 'when an elb is configured' do
         let(:extra_configs) do
           {
-            elb: {
-              name: 'elb-name',
-              stack_output_keys: {
-                subnet_id: 'private_subnet',
-              },
-            },
+            elbs: [
+                    {
+                      name: 'elb-1-name',
+                      port_mappings: [[1111, 11]],
+                      stack_output_keys: {
+                        vpc_id: 'vpc_id',
+                        subnet_id: 'private_subnet',
+                      },
+                    },
+                    {
+                      name: 'elb-2-name',
+                      port_mappings: [[2222, 22]],
+                      stack_output_keys: {
+                        vpc_id: 'vpc_id',
+                        subnet_id: 'private_subnet',
+                      },
+                    }
+                  ],
           }
         end
 
-        let(:elb) { instance_double(AWS::ELB, load_balancers: [load_balancer_to_delete, other_load_balancer]) }
-        let(:load_balancer_to_delete) do
+        let(:elb) { instance_double(AWS::ELB, load_balancers: [load_balancer_1_to_delete, load_balancer_2_to_delete, other_load_balancer]) }
+        let(:load_balancer_1_to_delete) do
           instance_double(AWS::ELB::LoadBalancer,
-            name: 'elb-name',
-            security_groups: [elb_security_group],
+            name: 'elb-1-name',
+            security_groups: [elb_1_security_group],
+            exists?: false,
+          )
+        end
+        let(:load_balancer_2_to_delete) do
+          instance_double(AWS::ELB::LoadBalancer,
+            name: 'elb-2-name',
+            security_groups: [elb_2_security_group],
             exists?: false,
           )
         end
         let(:other_load_balancer) { instance_double(AWS::ELB::LoadBalancer, name: 'other-elb-name') }
-        let(:elb_security_group) { instance_double(AWS::EC2::SecurityGroup, name: 'elb-security-group', id: 'sg-id') }
-        let(:network_interface_1) do
+        let(:elb_1_security_group) { instance_double(AWS::EC2::SecurityGroup, name: 'elb-1-security-group', id: 'sg-elb-1-id') }
+        let(:elb_2_security_group) { instance_double(AWS::EC2::SecurityGroup, name: 'elb-2-security-group', id: 'sg-elb-2-id') }
+        let(:network_interface_1_elb_1) do
           instance_double(AWS::EC2::NetworkInterface,
-            security_groups: [elb_security_group],
+            security_groups: [elb_1_security_group],
             exists?: false,
           )
         end
-        let(:network_interface_2) do
+        let(:network_interface_2_elb_1) do
           instance_double(AWS::EC2::NetworkInterface,
-            security_groups: [elb_security_group],
+            security_groups: [elb_1_security_group],
+            exists?: false,
+          )
+        end
+        let(:network_interface_1_elb_2) do
+          instance_double(AWS::EC2::NetworkInterface,
+            security_groups: [elb_2_security_group],
+            exists?: false,
+          )
+        end
+        let(:network_interface_2_elb_2) do
+          instance_double(AWS::EC2::NetworkInterface,
+            security_groups: [elb_2_security_group],
             exists?: false,
           )
         end
 
         before do
           allow(AWS::ELB).to receive(:new).and_return(elb)
-          allow(ec2).to receive(:network_interfaces).and_return([network_interface_1, network_interface_2])
-          allow(load_balancer_to_delete).to receive(:delete)
-          allow(elb_security_group).to receive(:delete)
+          allow(ec2).to receive(:network_interfaces).and_return(
+              [
+                network_interface_1_elb_1,
+                network_interface_2_elb_1,
+                network_interface_1_elb_2,
+                network_interface_2_elb_2,
+              ]
+            )
+          allow(load_balancer_1_to_delete).to receive(:delete)
+          allow(load_balancer_2_to_delete).to receive(:delete)
+          allow(elb_1_security_group).to receive(:delete)
+          allow(elb_2_security_group).to receive(:delete)
         end
 
-        it 'waits for the elb to be deleted' do
-          expect(load_balancer_to_delete).to receive(:exists?).and_return(true).
+        it 'waits for the ELBs to be deleted' do
+          expect(load_balancer_1_to_delete).to receive(:exists?).and_return(true).
               exactly(10).times
+          expect(load_balancer_2_to_delete).not_to receive(:exists?)
 
-          expect(elb_security_group).not_to receive(:delete).ordered
+          expect(elb_1_security_group).not_to receive(:delete).ordered
+          expect(elb_2_security_group).not_to receive(:delete).ordered
           expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
         end
 
         it 'waits for the network interfaces to be deleted' do
-          allow(load_balancer_to_delete).to receive(:exists?).and_return(false)
+          allow(load_balancer_1_to_delete).to receive(:exists?).and_return(false)
+          allow(load_balancer_2_to_delete).to receive(:exists?).and_return(false)
 
-          expect(network_interface_1).to receive(:exists?).and_return(false).
+          expect(network_interface_1_elb_1).to receive(:exists?).and_return(false).
               exactly(10).times
-
-          expect(network_interface_2).to receive(:exists?).and_return(true).
+          expect(network_interface_2_elb_1).to receive(:exists?).and_return(true).
               exactly(10).times
+          expect(network_interface_1_elb_2).not_to receive(:exists?)
+          expect(network_interface_2_elb_2).not_to receive(:exists?)
 
-          expect(elb_security_group).not_to receive(:delete).ordered
+          expect(elb_1_security_group).not_to receive(:delete).ordered
+          expect(elb_2_security_group).not_to receive(:delete).ordered
           expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
         end
 
-        it 'terminates the ELB then removes the security group' do
-          expect(load_balancer_to_delete).to receive(:delete).ordered
-          expect(elb_security_group).to receive(:delete).ordered
+        it 'terminates the ELBs then removes the security group' do
+          expect(load_balancer_1_to_delete).to receive(:delete).ordered
+          expect(elb_1_security_group).to receive(:delete).ordered
+
+          expect(load_balancer_2_to_delete).to receive(:delete).ordered
+          expect(elb_2_security_group).to receive(:delete).ordered
 
           ami_manager.clean_environment
         end

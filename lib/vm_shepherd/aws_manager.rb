@@ -103,7 +103,7 @@ module VmShepherd
         clear_subnet(aws_subnet_id) if aws_subnet_id
       end
 
-      if (elb_config = env_config[:elb])
+      env_config.fetch(:elbs, []).each do |elb_config|
         delete_elb(elb_config[:name])
       end
 

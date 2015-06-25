@@ -582,26 +582,52 @@ module VmShepherd
       end
 
       context 'when there is an s3 bucket configuration' do
-        let(:bucket) { instance_double(AWS::S3::Bucket) }
-        let(:extra_outputs) { {s3_bucket_name: bucket_name} }
-        let(:bucket_name) { 'bucket-name' }
+        let(:bucket_1) { instance_double(AWS::S3::Bucket) }
+        let(:bucket_2) { instance_double(AWS::S3::Bucket) }
+        let(:extra_outputs) { { s3_bucket_names: [bucket_name_1, bucket_name_2] } }
+        let(:bucket_name_1) { 'bucket-name-1' }
+        let(:bucket_name_2) { 'bucket-name-2' }
 
-        before { allow(buckets).to receive(:[]).with(bucket_name).and_return(bucket) }
+        before do
+          allow(buckets).to receive(:[]).with(bucket_name_1).and_return(bucket_1)
+          allow(buckets).to receive(:[]).with(bucket_name_2).and_return(bucket_2)
+        end
 
-        context 'and the bucket does exist' do
-          before { allow(bucket).to receive(:exists?).and_return(true) }
+        context 'and both buckets exist' do
+          before do
+            allow(bucket_1).to receive(:exists?).and_return(true)
+            allow(bucket_2).to receive(:exists?).and_return(true)
+          end
 
           it 'clears the bucket' do
-            expect(bucket).to receive(:clear!)
+            expect(bucket_1).to receive(:clear!)
+            expect(bucket_2).to receive(:clear!)
             ami_manager.clean_environment
           end
         end
 
-        context 'and the bucket does not exist' do
-          before { allow(bucket).to receive(:exists?).and_return(false) }
+        context 'and only one bucket exists' do
+          before do
+            allow(bucket_1).to receive(:exists?).and_return(false)
+            allow(bucket_2).to receive(:exists?).and_return(true)
+          end
 
-          it 'fails silently' do
-            expect(bucket).not_to receive(:clear!)
+          it 'clears the bucket' do
+            expect(bucket_1).not_to receive(:clear!)
+            expect(bucket_2).to receive(:clear!)
+            ami_manager.clean_environment
+          end
+        end
+
+        context 'and neither bucket exists' do
+          before do
+            allow(bucket_1).to receive(:exists?).and_return(false)
+            allow(bucket_2).to receive(:exists?).and_return(false)
+          end
+
+          it 'clears the bucket' do
+            expect(bucket_1).not_to receive(:clear!)
+            expect(bucket_2).not_to receive(:clear!)
             ami_manager.clean_environment
           end
         end

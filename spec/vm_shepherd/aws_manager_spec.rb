@@ -648,6 +648,23 @@ module VmShepherd
             ami_manager.clean_environment
           end
         end
+
+        context 'and the bucket name is null' do
+          let(:bucket_name_3) { nil }
+          let(:extra_outputs) { { s3_bucket_names: [bucket_name_3, bucket_name_1, bucket_name_2] } }
+
+          before do
+            allow(bucket_1).to receive(:exists?).and_return(true)
+            allow(bucket_2).to receive(:exists?).and_return(true)
+          end
+
+          it 'does not check if the bucket exists' do
+            expect(buckets).not_to receive(:[]).with(bucket_name_3)
+            expect(bucket_1).to receive(:clear!)
+            expect(bucket_2).to receive(:clear!)
+            ami_manager.clean_environment
+          end
+        end
       end
     end
 

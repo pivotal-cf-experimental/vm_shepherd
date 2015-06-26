@@ -107,7 +107,7 @@ module VmShepherd
         delete_elb(elb_config[:name])
       end
 
-      bucket_names = env_config.fetch(:outputs, {}).fetch(:s3_bucket_names, [])
+      bucket_names = env_config.fetch(:outputs, {}).fetch(:s3_bucket_names, []).compact
       bucket_names.each do |bucket_name|
         next if bucket_name.empty?
         bucket = AWS::S3.new.buckets[bucket_name]

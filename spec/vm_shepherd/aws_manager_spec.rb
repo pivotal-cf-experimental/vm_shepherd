@@ -504,7 +504,7 @@ module VmShepherd
 
         it 'waits for the ELBs to be deleted' do
           expect(load_balancer_1_to_delete).to receive(:exists?).and_return(true).
-              exactly(10).times
+              exactly(30).times
           expect(load_balancer_2_to_delete).not_to receive(:exists?)
 
           expect(elb_1_security_group).not_to receive(:delete).ordered
@@ -517,9 +517,9 @@ module VmShepherd
           allow(load_balancer_2_to_delete).to receive(:exists?).and_return(false)
 
           expect(network_interface_1_elb_1).to receive(:exists?).and_return(false).
-              exactly(10).times
+              exactly(30).times
           expect(network_interface_2_elb_1).to receive(:exists?).and_return(true).
-              exactly(10).times
+              exactly(30).times
           expect(network_interface_1_elb_2).not_to receive(:exists?)
           expect(network_interface_2_elb_2).not_to receive(:exists?)
 

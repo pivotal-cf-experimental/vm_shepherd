@@ -36,6 +36,7 @@ module VmShepherd
         allow(datacenter).to receive(:vmFolder).and_return(folder)
         allow(folder).to receive(:traverse).with('FAKE_DATACENTER_FOLDERS').and_return(folder)
         allow(service_content).to receive(:fileManager).and_return(filemanager)
+        allow(filemanager).to receive(:is_a?).with(RbVmomi::VIM::FileManager).and_return(true)
         # stubbed private methods:
         allow(subject).to receive(:find_vms).and_return(vms)
         allow(subject).to receive(:delete_folder_and_vms)

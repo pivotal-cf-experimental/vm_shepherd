@@ -41,7 +41,7 @@ module VmShepherd
           begin
             logger.info("BEGIN datastore_folder.destroy_task folder=#{folder_name}")
 
-            connection.serviceContent.fileManager.DeleteDatastoreFile_Task(
+            file_manager.DeleteDatastoreFile_Task(
               datacenter: datacenter,
               name: "[#{datastore}] #{folder_name}"
             ).wait_for_completion

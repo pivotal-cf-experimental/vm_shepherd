@@ -528,6 +528,18 @@ module VmShepherd
           expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
         end
 
+        it 'does not care about network interfaces deleted by other processes' do
+          allow(network_interface_1_elb_1).to receive(:security_groups).and_raise(AWS::EC2::Errors::InvalidNetworkInterfaceID::NotFound)
+
+          expect(load_balancer_1_to_delete).to receive(:delete).ordered
+          expect(elb_1_security_group).to receive(:delete).ordered
+
+          expect(load_balancer_2_to_delete).to receive(:delete).ordered
+          expect(elb_2_security_group).to receive(:delete).ordered
+
+          ami_manager.clean_environment
+        end
+
         it 'terminates the ELBs then removes the security group' do
           expect(load_balancer_1_to_delete).to receive(:delete).ordered
           expect(elb_1_security_group).to receive(:delete).ordered

@@ -174,7 +174,13 @@ module VmShepherd
     def delete_elb(elb_name)
       if (elb = AWS::ELB.new.load_balancers.find { |lb| lb.name == elb_name })
         sg = elb.security_groups.first
-        net_interfaces = AWS.ec2.network_interfaces.select { |ni| ni.security_groups.map(&:id).include? sg.id }
+        net_interfaces = AWS.ec2.network_interfaces.select do |ni|
+          begin
+            ni.security_groups.map(&:id).include? sg.id
+          rescue AWS::EC2::Errors::InvalidNetworkInterfaceID::NotFound
+            false
+          end
+        end
         logger.info("deleting elb: #{elb.name}")
         elb.delete
         logger.info('waiting until elb is deleted')

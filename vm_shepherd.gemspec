@@ -29,4 +29,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rspec', '~> 3.2'
   spec.add_development_dependency 'recursive-open-struct', '~> 0.5.0'
   spec.add_development_dependency 'rubocop'
+  spec.add_development_dependency 'codeclimate-test-reporter'
 end

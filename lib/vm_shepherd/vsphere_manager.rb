@@ -126,7 +126,6 @@ module VmShepherd
 
         find_vms(folder).each do |vm|
           power_off_vm(vm)
-          destroy_vm_datastore_folder(vm)
         end
 
         begin
@@ -162,18 +161,6 @@ module VmShepherd
           logger.info("ERROR vm.power_off_task vm=#{vm.name}")
           raise unless e.message.start_with?('InvalidPowerState')
         end
-      end
-    end
-
-
-    def destroy_vm_datastore_folder(vm)
-      begin
-        vm_datastore_folder = vm.config.files.snapshotDirectory
-        logger.info("BEGIN vm_datastore_folder.delete_datastore_file_task folder=#{vm_datastore_folder}")
-        file_manager.DeleteDatastoreFile_Task(name: vm_datastore_folder, datacenter: datacenter).wait_for_completion
-        logger.info("END vm_datastore_folder.delete_datastore_file_task folder=#{vm_datastore_folder}")
-      rescue RbVmomi::Fault => e
-        logger.info("ERROR vm_datastore_folder.delete_datastore_file_task. Skipping ... folder=#{vm_datastore_folder} #{e.inspect}")
       end
     end
 

@@ -322,6 +322,20 @@ module VmShepherd
         }.to change { openstack_vm_manager.service.servers.size }.from(2).to(0)
       end
 
+      it 'waits until there are no servers before deleting images' do
+        stub_const("VmShepherd::RetryHelper::RETRY_INTERVAL", 0)
+
+        servers = instance_double(Array)
+        allow(openstack_vm_manager.service).to receive(:servers).and_return(servers)
+
+        allow(servers).to receive(:size)
+        allow(servers).to receive(:each).and_return([])
+        expect(servers).to receive(:count).and_return(1,0).ordered
+        expect(openstack_vm_manager.image_service).to receive(:images).and_return([]).ordered
+
+        openstack_vm_manager.clean_environment
+      end
+
       it 'deletes all private images' do
         expect {
           openstack_vm_manager.clean_environment

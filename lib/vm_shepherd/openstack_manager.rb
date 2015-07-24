@@ -1,7 +1,10 @@
 require 'fog'
+require 'vm_shepherd/retry_helper'
 
 module VmShepherd
   class OpenstackManager
+    include VmShepherd::RetryHelper
+
     def initialize(auth_url:, username:, api_key:, tenant:)
       @auth_url = auth_url
       @username = username
@@ -73,6 +76,12 @@ module VmShepherd
 
         say("  Destroying instance #{server.id}")
         server.destroy
+      end
+
+      retry_until(retry_limit: 30) do
+        server_count = service.servers.count
+        say("  Waiting for #{server_count} servers to be destroyed")
+        server_count == 0
       end
 
       private_images = image_service.images.reject(&:is_public)

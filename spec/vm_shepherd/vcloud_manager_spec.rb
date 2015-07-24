@@ -1,4 +1,8 @@
+require 'vm_shepherd/data_object'
 require 'vm_shepherd/vcloud_manager'
+require 'vm_shepherd/vcloud/deployer'
+require 'vm_shepherd/vcloud/destroyer'
+require 'vm_shepherd/vcloud/vapp_config'
 
 module VmShepherd
   RSpec.describe VcloudManager do
@@ -18,7 +22,7 @@ module VmShepherd
 
     describe '#deploy' do
       let(:vapp_config) do
-        {
+        Vcloud::VappConfig.new(
           ip: 'FAKE_IP',
           name: 'FAKE_NAME',
           gateway: 'FAKE_GATEWAY',
@@ -27,7 +31,7 @@ module VmShepherd
           netmask: 'FAKE_NETMASK',
           catalog: 'FAKE_VAPP_CATALOG',
           network: 'FAKE_NETWORK',
-        }
+        )
       end
 
       let(:vapp_template_path) { 'FAKE_VAPP_TEMPLATE_PATH' }
@@ -39,7 +43,7 @@ module VmShepherd
         let(:expanded_vapp_template_path) { 'FAKE_EXPANDED_VAPP_TEMPLATE_PATH' }
 
         before do
-          allow(vcloud_manager).to receive(:system).with("ping -c 5 #{vapp_config.fetch(:ip)}").and_return(false)
+          allow(vcloud_manager).to receive(:system).with("ping -c 5 #{vapp_config.ip}").and_return(false)
 
           allow(File).to receive(:expand_path).with(vapp_template_path).and_return(expanded_vapp_template_path)
 
@@ -71,7 +75,7 @@ module VmShepherd
                 {
                   'type' => 'string',
                   'key' => 'gateway',
-                  'value' => vapp_config.fetch(:gateway),
+                  'value' => vapp_config.gateway,
                   'password' => 'false',
                   'userConfigurable' => 'true',
                   'Label' => 'Default Gateway',
@@ -80,7 +84,7 @@ module VmShepherd
                 {
                   'type' => 'string',
                   'key' => 'DNS',
-                  'value' => vapp_config.fetch(:dns),
+                  'value' => vapp_config.dns,
                   'password' => 'false',
                   'userConfigurable' => 'true',
                   'Label' => 'DNS',
@@ -89,7 +93,7 @@ module VmShepherd
                 {
                   'type' => 'string',
                   'key' => 'ntp_servers',
-                  'value' => vapp_config.fetch(:ntp),
+                  'value' => vapp_config.ntp,
                   'password' => 'false',
                   'userConfigurable' => 'true',
                   'Label' => 'NTP Servers',
@@ -107,7 +111,7 @@ module VmShepherd
                 {
                   'type' => 'string',
                   'key' => 'ip0',
-                  'value' => vapp_config.fetch(:ip),
+                  'value' => vapp_config.ip,
                   'password' => 'false',
                   'userConfigurable' => 'true',
                   'Label' => 'IP Address',
@@ -116,7 +120,7 @@ module VmShepherd
                 {
                   'type' => 'string',
                   'key' => 'netmask0',
-                  'value' => vapp_config.fetch(:netmask),
+                  'value' => vapp_config.netmask,
                   'password' => 'false',
                   'userConfigurable' => 'true',
                   'Label' => 'Netmask',
@@ -153,34 +157,8 @@ module VmShepherd
               vcloud_manager.deploy(vapp_template_path, vapp_config)
             end
 
-            describe 'catalog deletion' do
-              before do
-                allow(client).to receive(:catalog_exists?).and_return(catalog_exists)
-              end
-
-              context 'when the catalog exists' do
-                let(:catalog_exists) { true }
-
-                it 'deletes the catalog' do
-                  expect(client).to receive(:delete_catalog_by_name).with(vapp_config.fetch(:catalog))
-
-                  vcloud_manager.deploy(vapp_template_path, vapp_config)
-                end
-              end
-
-              context 'when the catalog does not exist' do
-                let(:catalog_exists) { false }
-
-                it 'does not delete the catalog' do
-                  expect(client).not_to receive(:delete_catalog_by_name).with(vapp_config.fetch(:catalog))
-
-                  vcloud_manager.deploy(vapp_template_path, vapp_config)
-                end
-              end
-            end
-
             it 'creates the catalog' do
-              expect(client).to receive(:create_catalog).with(vapp_config.fetch(:catalog)).and_return(catalog)
+              expect(client).to receive(:create_catalog).with(vapp_config.catalog).and_return(catalog)
 
               vcloud_manager.deploy(vapp_template_path, vapp_config)
             end
@@ -188,7 +166,7 @@ module VmShepherd
             it 'uploads the vApp template' do
               expect(catalog).to receive(:upload_vapp_template).with(
                   vdc_name,
-                  vapp_config.fetch(:name),
+                  vapp_config.name,
                   tmpdir,
                 ).and_return(catalog)
 
@@ -197,7 +175,7 @@ module VmShepherd
 
             it 'creates a VCloudSdk::NetworkConfig' do
               expect(VCloudSdk::NetworkConfig).to receive(:new).with(
-                  vapp_config.fetch(:network),
+                  vapp_config.network,
                   'Network 1',
                 ).and_return(network_config)
 
@@ -206,9 +184,9 @@ module VmShepherd
 
             it 'instantiates the vApp template' do
               expect(catalog).to receive(:instantiate_vapp_template).with(
-                  vapp_config.fetch(:name),
+                  vapp_config.name,
                   vdc_name,
-                  vapp_config.fetch(:name),
+                  vapp_config.name,
                   nil,
                   nil,
                   network_config
@@ -256,7 +234,7 @@ module VmShepherd
           end
 
           it 'raises an error' do
-            expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error("Error executing: #{tar_expand_cmd.inspect}")
+            expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error("Error executing: #{tar_expand_cmd}")
           end
 
           it 'removes the expanded vApp template' do
@@ -269,11 +247,11 @@ module VmShepherd
 
       context 'when a host exists at the specified IP' do
         before do
-          allow(vcloud_manager).to receive(:system).with("ping -c 5 #{vapp_config.fetch(:ip)}").and_return(true)
+          allow(vcloud_manager).to receive(:system).with("ping -c 5 #{vapp_config.ip}").and_return(true)
         end
 
         it 'raises an error' do
-          expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error("VM exists at #{vapp_config.fetch(:ip)}")
+          expect { vcloud_manager.deploy(vapp_template_path, vapp_config) }.to raise_error("VM exists at #{vapp_config.ip}")
         end
 
         it 'removes the expanded vApp template' do
@@ -337,7 +315,7 @@ module VmShepherd
           end
 
           it 'catches the error' do
-            allow(client).to receive(:find_vdc_by_name).and_raise(VCloudSdk::ObjectNotFoundError)
+            allow(vdc).to receive(:find_vapp_by_name).and_raise(VCloudSdk::ObjectNotFoundError)
 
             expect { vcloud_manager.destroy([vapp_name], vapp_catalog) }.not_to raise_error
           end

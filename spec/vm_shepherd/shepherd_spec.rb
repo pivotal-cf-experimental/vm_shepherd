@@ -84,7 +84,7 @@ module VmShepherd
 
           expect(first_vcloud_manager).to receive(:deploy).with(
               'FIRST_FAKE_PATH',
-              {
+              Vcloud::VappConfig.new(
                 name: first_config.vapp.ops_manager_name,
                 ip: first_config.vapp.ip,
                 gateway: first_config.vapp.gateway,
@@ -93,12 +93,12 @@ module VmShepherd
                 ntp: first_config.vapp.ntp,
                 catalog: first_config.vdc.catalog,
                 network: first_config.vdc.network,
-              }
+              )
             )
 
           expect(last_vcloud_manager).to receive(:deploy).with(
               'LAST_FAKE_PATH',
-              {
+              Vcloud::VappConfig.new(
                 name: last_config.vapp.ops_manager_name,
                 ip: last_config.vapp.ip,
                 gateway: last_config.vapp.gateway,
@@ -107,7 +107,7 @@ module VmShepherd
                 ntp: last_config.vapp.ntp,
                 catalog: last_config.vdc.catalog,
                 network: last_config.vdc.network,
-              }
+              )
             )
 
           manager.deploy(paths: ['FIRST_FAKE_PATH', 'LAST_FAKE_PATH'])

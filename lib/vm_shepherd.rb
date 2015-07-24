@@ -1,7 +1,11 @@
 require 'vm_shepherd/shepherd'
+require 'vm_shepherd/data_object'
 require 'vm_shepherd/aws_manager'
 require 'vm_shepherd/openstack_manager'
 require 'vm_shepherd/vcloud_manager'
+require 'vm_shepherd/vcloud/deployer'
+require 'vm_shepherd/vcloud/destroyer'
+require 'vm_shepherd/vcloud/vapp_config'
 require 'vm_shepherd/vsphere_manager'
 
 module VmShepherd

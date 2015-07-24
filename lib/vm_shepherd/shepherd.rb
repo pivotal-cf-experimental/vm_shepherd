@@ -184,7 +184,7 @@ module VmShepherd
 
     def vcloud_deploy_options(vm_shepherd_config)
       vm = vm_shepherd_config.vapp
-      {
+      VmShepherd::Vcloud::VappConfig.new(
         name: vm.ops_manager_name,
         ip: vm.ip,
         gateway: vm.gateway,
@@ -193,7 +193,7 @@ module VmShepherd
         ntp: vm.ntp,
         catalog: vm_shepherd_config.vdc.catalog,
         network: vm_shepherd_config.vdc.network,
-      }
+      )
     end
 
     def ami_manager

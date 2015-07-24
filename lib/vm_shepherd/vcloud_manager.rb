@@ -172,6 +172,12 @@ module VmShepherd
       vapp_names.each do |vapp_name|
         begin
           vapp = vdc.find_vapp_by_name(vapp_name)
+          vapp.vms.map do |vm|
+            vm.independent_disks.map do |disk|
+              vm.detach_disk(disk)
+              vdc.delete_disk_by_name(disk.name)
+            end
+          end
           vapp.power_off
           vapp.delete
         rescue VCloudSdk::ObjectNotFoundError => e

@@ -290,6 +290,13 @@ module VmShepherd
       let(:vapp) { instance_double(VCloudSdk::VApp) }
       let(:vapp_name) { 'FAKE_VAPP_NAME' }
       let(:vapp_catalog) { 'FAKE_VAPP_CATALOG' }
+      let(:vm) { instance_double(VCloudSdk::VM) }
+      let(:disk) { instance_double(VCloudSdk::InternalDisk, name: 'disk name') }
+
+      before do
+        allow(vapp).to receive(:vms).and_return([vm])
+        allow(vm).to receive(:independent_disks).and_return([disk])
+      end
 
       context 'when the catalog exists' do
         before do
@@ -299,6 +306,8 @@ module VmShepherd
         it 'uses VCloudSdk::Client to delete the vApp' do
           expect(client).to receive(:find_vdc_by_name).with(vdc_name).and_return(vdc)
           expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
+          expect(vm).to receive(:detach_disk).with(disk)
+          expect(vdc).to receive(:delete_disk_by_name).with('disk name')
           expect(vapp).to receive(:power_off)
           expect(vapp).to receive(:delete)
           expect(client).to receive(:delete_catalog_by_name).with(vapp_catalog)
@@ -319,6 +328,8 @@ module VmShepherd
             allow(VCloudSdk::Client).to receive(:new).and_return(client)
             allow(client).to receive(:find_vdc_by_name).and_return(vdc)
             allow(vdc).to receive(:find_vapp_by_name).and_return(vapp)
+            allow(vm).to receive(:detach_disk)
+            allow(vdc).to receive(:delete_disk_by_name)
             allow(vapp).to receive(:power_off)
             allow(vapp).to receive(:delete)
 
@@ -347,6 +358,8 @@ module VmShepherd
         it 'uses VCloudSdk::Client to delete the vApp' do
           expect(client).to receive(:find_vdc_by_name).with(vdc_name).and_return(vdc)
           expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
+          expect(vm).to receive(:detach_disk).with(disk)
+          expect(vdc).to receive(:delete_disk_by_name).with('disk name')
           expect(vapp).to receive(:power_off)
           expect(vapp).to receive(:delete)
           expect(client).not_to receive(:delete_catalog_by_name).with(vapp_catalog)

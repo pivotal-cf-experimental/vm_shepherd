@@ -6,8 +6,8 @@ module VmShepherd
   class VcloudManager
     def initialize(login_info, vdc_name, logger)
       @login_info = login_info
-      @vdc_name = vdc_name
-      @logger = logger
+      @vdc_name   = vdc_name
+      @logger     = logger
     end
 
     def deploy(vapp_template_tar_path, vapp_config)
@@ -18,10 +18,10 @@ module VmShepherd
       untar_vapp_template_tar(File.expand_path(vapp_template_tar_path), tmpdir)
 
       VmShepherd::Vcloud::Deployer.deploy_and_power_on_vapp(
-        client: client,
-        ovf_dir: tmpdir,
+        client:      client,
+        ovf_dir:     tmpdir,
         vapp_config: vapp_config,
-        vdc_name: @vdc_name,
+        vdc_name:    @vdc_name,
       )
     rescue => e
       logger.error(e.http_body) if e.respond_to?(:http_body)

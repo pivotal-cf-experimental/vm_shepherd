@@ -20,10 +20,10 @@ module VmShepherd
           when VmShepherd::VCLOUD_IAAS_TYPE then
             VmShepherd::VcloudManager.new(
               {
-                url: vm_shepherd_config.creds.url,
+                url:          vm_shepherd_config.creds.url,
                 organization: vm_shepherd_config.creds.organization,
-                user: vm_shepherd_config.creds.user,
-                password: vm_shepherd_config.creds.password,
+                user:         vm_shepherd_config.creds.user,
+                password:     vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
               stdout_logger
@@ -41,18 +41,18 @@ module VmShepherd
             ).deploy(
               path,
               {
-                ip: vm_shepherd_config.vm.ip,
-                gateway: vm_shepherd_config.vm.gateway,
-                netmask: vm_shepherd_config.vm.netmask,
-                dns: vm_shepherd_config.vm.dns,
+                ip:          vm_shepherd_config.vm.ip,
+                gateway:     vm_shepherd_config.vm.gateway,
+                netmask:     vm_shepherd_config.vm.netmask,
+                dns:         vm_shepherd_config.vm.dns,
                 ntp_servers: vm_shepherd_config.vm.ntp_servers,
               },
               {
-                cluster: vm_shepherd_config.vsphere.cluster,
+                cluster:       vm_shepherd_config.vsphere.cluster,
                 resource_pool: vm_shepherd_config.vsphere.resource_pool,
-                datastore: vm_shepherd_config.vsphere.datastore,
-                network: vm_shepherd_config.vsphere.network,
-                folder: vm_shepherd_config.vsphere.folder,
+                datastore:     vm_shepherd_config.vsphere.datastore,
+                network:       vm_shepherd_config.vsphere.network,
+                folder:        vm_shepherd_config.vsphere.folder,
               }
             )
           when VmShepherd::AWS_IAAS_TYPE then
@@ -72,10 +72,10 @@ module VmShepherd
           vm_shepherd_configs(settings).each do |vm_shepherd_config|
             VmShepherd::VcloudManager.new(
               {
-                url: vm_shepherd_config.creds.url,
+                url:          vm_shepherd_config.creds.url,
                 organization: vm_shepherd_config.creds.organization,
-                user: vm_shepherd_config.creds.user,
-                password: vm_shepherd_config.creds.password,
+                user:         vm_shepherd_config.creds.user,
+                password:     vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
               stdout_logger
@@ -109,10 +109,10 @@ module VmShepherd
           when VmShepherd::VCLOUD_IAAS_TYPE then
             VmShepherd::VcloudManager.new(
               {
-                url: vm_shepherd_config.creds.url,
+                url:          vm_shepherd_config.creds.url,
                 organization: vm_shepherd_config.creds.organization,
-                user: vm_shepherd_config.creds.user,
-                password: vm_shepherd_config.creds.password,
+                user:         vm_shepherd_config.creds.user,
+                password:     vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
               stdout_logger
@@ -142,10 +142,10 @@ module VmShepherd
           vm_shepherd_configs(settings).each do |vm_shepherd_config|
             VmShepherd::VcloudManager.new(
               {
-                url: vm_shepherd_config.creds.url,
+                url:          vm_shepherd_config.creds.url,
                 organization: vm_shepherd_config.creds.organization,
-                user: vm_shepherd_config.creds.user,
-                password: vm_shepherd_config.creds.password,
+                user:         vm_shepherd_config.creds.user,
+                password:     vm_shepherd_config.creds.password,
               },
               vm_shepherd_config.vdc.name,
               stdout_logger,
@@ -161,8 +161,8 @@ module VmShepherd
               stdout_logger,
             ).clean_environment(
               datacenter_folders_to_clean: vm_shepherd_config.cleanup.datacenter_folders_to_clean,
-              datastores: vm_shepherd_config.cleanup.datastores,
-              datastore_folders_to_clean: vm_shepherd_config.cleanup.datastore_folders_to_clean,
+              datastores:                  vm_shepherd_config.cleanup.datastores,
+              datastore_folders_to_clean:  vm_shepherd_config.cleanup.datastore_folders_to_clean,
             )
           end
         when VmShepherd::AWS_IAAS_TYPE then
@@ -185,12 +185,12 @@ module VmShepherd
     def vcloud_deploy_options(vm_shepherd_config)
       vm = vm_shepherd_config.vapp
       VmShepherd::Vcloud::VappConfig.new(
-        name: vm.ops_manager_name,
-        ip: vm.ip,
+        name:    vm.ops_manager_name,
+        ip:      vm.ip,
         gateway: vm.gateway,
         netmask: vm.netmask,
-        dns: vm.dns,
-        ntp: vm.ntp,
+        dns:     vm.dns,
+        ntp:     vm.ntp,
         catalog: vm_shepherd_config.vdc.catalog,
         network: vm_shepherd_config.vdc.network,
       )
@@ -200,15 +200,15 @@ module VmShepherd
       @ami_manager ||=
         VmShepherd::AwsManager.new(
           env_config: {
-            stack_name: settings.vm_shepherd.env_config.stack_name,
-            aws_access_key: settings.vm_shepherd.env_config.aws_access_key,
-            aws_secret_key: settings.vm_shepherd.env_config.aws_secret_key,
-            region: settings.vm_shepherd.env_config.region,
-            json_file: settings.vm_shepherd.env_config.json_file,
-            parameters: settings.vm_shepherd.env_config.parameters_as_a_hash,
-            outputs: settings.vm_shepherd.env_config.outputs.to_h,
-          }.merge(ami_elb_config),
-          logger: stdout_logger,
+                        stack_name:     settings.vm_shepherd.env_config.stack_name,
+                        aws_access_key: settings.vm_shepherd.env_config.aws_access_key,
+                        aws_secret_key: settings.vm_shepherd.env_config.aws_secret_key,
+                        region:         settings.vm_shepherd.env_config.region,
+                        json_file:      settings.vm_shepherd.env_config.json_file,
+                        parameters:     settings.vm_shepherd.env_config.parameters_as_a_hash,
+                        outputs:        settings.vm_shepherd.env_config.outputs.to_h,
+                      }.merge(ami_elb_config),
+          logger:     stdout_logger,
         )
     end
 
@@ -232,20 +232,20 @@ module VmShepherd
       OpenstackManager.new(
         auth_url: vm_shepherd_config.creds.auth_url,
         username: vm_shepherd_config.creds.username,
-        api_key: vm_shepherd_config.creds.api_key,
-        tenant: vm_shepherd_config.creds.tenant,
+        api_key:  vm_shepherd_config.creds.api_key,
+        tenant:   vm_shepherd_config.creds.tenant,
       )
     end
 
     def openstack_vm_options(vm_shepherd_config)
       {
-        name: vm_shepherd_config.vm.name,
-        flavor_name: vm_shepherd_config.vm.flavor_name,
-        network_name: vm_shepherd_config.vm.network_name,
-        key_name: vm_shepherd_config.vm.key_name,
+        name:                 vm_shepherd_config.vm.name,
+        flavor_name:          vm_shepherd_config.vm.flavor_name,
+        network_name:         vm_shepherd_config.vm.network_name,
+        key_name:             vm_shepherd_config.vm.key_name,
         security_group_names: vm_shepherd_config.vm.security_group_names,
-        public_ip: vm_shepherd_config.vm.public_ip,
-        private_ip: vm_shepherd_config.vm.private_ip,
+        public_ip:            vm_shepherd_config.vm.public_ip,
+        private_ip:           vm_shepherd_config.vm.private_ip,
       }
     end
 

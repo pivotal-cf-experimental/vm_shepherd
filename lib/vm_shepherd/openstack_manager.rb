@@ -8,41 +8,41 @@ module VmShepherd
     def initialize(auth_url:, username:, api_key:, tenant:)
       @auth_url = auth_url
       @username = username
-      @api_key = api_key
-      @tenant = tenant
+      @api_key  = api_key
+      @tenant   = tenant
     end
 
     def deploy(raw_file_path, vm_options)
       say "Uploading the image #{raw_file_path}"
       image = image_service.images.create(
-        name: vm_options[:name],
-        size: File.size(raw_file_path),
-        disk_format: 'raw',
+        name:             vm_options[:name],
+        size:             File.size(raw_file_path),
+        disk_format:      'raw',
         container_format: 'bare',
-        location: raw_file_path,
+        location:         raw_file_path,
       )
       say 'Finished uploading the image'
 
-      flavor = find_flavor(vm_options[:flavor_name])
-      network = network_service.networks.find { |net| net.name == vm_options[:network_name] }
+      flavor          = find_flavor(vm_options[:flavor_name])
+      network         = network_service.networks.find { |net| net.name == vm_options[:network_name] }
       security_groups = vm_options[:security_group_names]
 
       say('Launching an instance')
       server = service.servers.create(
-        name: vm_options[:name],
-        flavor_ref: flavor.id,
-        image_ref: image.id,
-        key_name: vm_options[:key_name],
+        name:            vm_options[:name],
+        flavor_ref:      flavor.id,
+        image_ref:       image.id,
+        key_name:        vm_options[:key_name],
         security_groups: security_groups,
-        nics: [
-          {net_id: network.id, v4_fixed_ip: vm_options[:private_ip]}
-        ],
+        nics:            [
+                           {net_id: network.id, v4_fixed_ip: vm_options[:private_ip]}
+                         ],
       )
       server.wait_for { ready? }
       say('Finished launching an instance')
 
       say('Assigning a Public IP to the instance')
-      ip = service.addresses.find { |address| address.instance_id.nil? && address.ip == vm_options[:public_ip] }
+      ip        = service.addresses.find { |address| address.instance_id.nil? && address.ip == vm_options[:public_ip] }
       ip.server = server
       say('Finished assigning a Public IP to the instance')
     end
@@ -114,42 +114,42 @@ module VmShepherd
 
     def service
       @service ||= Fog::Compute.new(
-        provider: 'openstack',
+        provider:           'openstack',
         openstack_auth_url: auth_url,
         openstack_username: username,
-        openstack_tenant: tenant,
-        openstack_api_key: api_key,
+        openstack_tenant:   tenant,
+        openstack_api_key:  api_key,
       )
     end
 
     def image_service
       @image_service ||= Fog::Image.new(
-        provider: 'openstack',
-        openstack_auth_url: auth_url,
-        openstack_username: username,
-        openstack_tenant: tenant,
-        openstack_api_key: api_key,
+        provider:                'openstack',
+        openstack_auth_url:      auth_url,
+        openstack_username:      username,
+        openstack_tenant:        tenant,
+        openstack_api_key:       api_key,
         openstack_endpoint_type: 'publicURL',
       )
     end
 
     def network_service
       @network_service ||= Fog::Network.new(
-        provider: 'openstack',
+        provider:           'openstack',
         openstack_auth_url: auth_url,
         openstack_username: username,
-        openstack_tenant: tenant,
-        openstack_api_key: api_key,
+        openstack_tenant:   tenant,
+        openstack_api_key:  api_key,
       )
     end
 
     def storage_service
       @network_service ||= Fog::Storage.new(
-        provider: 'openstack',
+        provider:           'openstack',
         openstack_auth_url: auth_url,
         openstack_username: username,
-        openstack_tenant: tenant,
-        openstack_api_key: api_key,
+        openstack_tenant:   tenant,
+        openstack_api_key:  api_key,
       )
     end
 

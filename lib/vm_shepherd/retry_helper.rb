@@ -3,11 +3,11 @@ module VmShepherd
     class RetryLimitExceeded < StandardError
     end
 
-    RETRY_LIMIT = 10
+    RETRY_LIMIT    = 10
     RETRY_INTERVAL = 60
 
     def retry_until(retry_limit: RETRY_LIMIT, &block)
-      tries = 0
+      tries             = 0
       condition_reached = false
       loop do
         tries += 1

@@ -8,11 +8,11 @@ module VmShepherd
         catalog.upload_vapp_template(vdc_name, vapp_config.name, ovf_dir)
 
         # instantiate template
-        network_config = VCloudSdk::NetworkConfig.new(vapp_config.network, 'Network 1')
-        vapp = catalog.instantiate_vapp_template(vapp_config.name, vdc_name, vapp_config.name, nil, nil, network_config)
+        network_config                = VCloudSdk::NetworkConfig.new(vapp_config.network, 'Network 1')
+        vapp                          = catalog.instantiate_vapp_template(vapp_config.name, vdc_name, vapp_config.name, nil, nil, network_config)
 
         # reconfigure vm
-        vm = vapp.find_vm_by_name(vapp_config.name)
+        vm                            = vapp.find_vm_by_name(vapp_config.name)
         vm.product_section_properties = vapp_config.build_properties
 
         # power on vapp

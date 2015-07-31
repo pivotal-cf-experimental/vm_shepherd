@@ -2,7 +2,7 @@ module VmShepherd
   module Vcloud
     class Destroyer
       def initialize(client:, vdc_name:)
-        @client = client
+        @client   = client
         @vdc_name = vdc_name
       end
 

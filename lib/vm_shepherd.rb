@@ -9,8 +9,8 @@ require 'vm_shepherd/vcloud/vapp_config'
 require 'vm_shepherd/vsphere_manager'
 
 module VmShepherd
-  AWS_IAAS_TYPE = 'aws'.freeze
+  AWS_IAAS_TYPE       = 'aws'.freeze
   OPENSTACK_IAAS_TYPE = 'openstack'.freeze
-  VCLOUD_IAAS_TYPE = 'vcloud'.freeze
-  VSPHERE_IAAS_TYPE = 'vsphere'.freeze
+  VCLOUD_IAAS_TYPE    = 'vcloud'.freeze
+  VSPHERE_IAAS_TYPE   = 'vsphere'.freeze
 end

@@ -3,16 +3,16 @@ require 'rbvmomi'
 
 module VmShepherd
   class VsphereManager
-    TEMPLATE_PREFIX = 'tpl'.freeze
-    VALID_FOLDER_REGEX = /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/
+    TEMPLATE_PREFIX         = 'tpl'.freeze
+    VALID_FOLDER_REGEX      = /\A([\w-]{1,80}\/)*[\w-]{1,80}\/?\z/
     VALID_DISK_FOLDER_REGEX = /\A[\w-]{1,80}\z/
 
     def initialize(host, username, password, datacenter_name, logger)
-      @host = host
-      @username = username
-      @password = password
+      @host            = host
+      @username        = username
+      @password        = password
       @datacenter_name = datacenter_name
-      @logger = logger
+      @logger          = logger
     end
 
     def deploy(ova_path, vm_config, vsphere_config)
@@ -43,7 +43,7 @@ module VmShepherd
 
             file_manager.DeleteDatastoreFile_Task(
               datacenter: datacenter,
-              name: "[#{datastore}] #{folder_name}"
+              name:       "[#{datastore}] #{folder_name}"
             ).wait_for_completion
 
             logger.info("END   datastore_folder.destroy_task folder=#{folder_name}")
@@ -114,7 +114,7 @@ module VmShepherd
     def boot_vm(ovf_file_path, vm_config, vsphere_config)
       datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)
       template = deploy_ovf_template(ovf_file_path, vsphere_config)
-      vm = create_vm_from_template(template, vsphere_config)
+      vm       = create_vm_from_template(template, vsphere_config)
 
       reconfigure_vm(vm, vm_config)
       power_on_vm(vm)
@@ -168,13 +168,13 @@ module VmShepherd
       template_name = [TEMPLATE_PREFIX, Time.new.strftime('%F-%H-%M'), cluster(vsphere_config).name].join('-')
       logger.info("BEGIN deploy_ovf ovf_file=#{ovf_file_path} template_name=#{template_name}")
       connection.serviceContent.ovfManager.deployOVF(
-        uri: ovf_file_path,
-        vmName: template_name,
-        vmFolder: target_folder(vsphere_config),
-        host: find_deploy_host(vsphere_config),
-        resourcePool: resource_pool(vsphere_config),
-        datastore: datastore(vsphere_config),
-        networkMappings: create_network_mappings(ovf_file_path, vsphere_config),
+        uri:              ovf_file_path,
+        vmName:           template_name,
+        vmFolder:         target_folder(vsphere_config),
+        host:             find_deploy_host(vsphere_config),
+        resourcePool:     resource_pool(vsphere_config),
+        datastore:        datastore(vsphere_config),
+        networkMappings:  create_network_mappings(ovf_file_path, vsphere_config),
         propertyMappings: {},
       ).tap do |ovf_template|
         ovf_template.add_delta_disk_layer_on_all_disks
@@ -185,7 +185,7 @@ module VmShepherd
     def find_deploy_host(vsphere_config)
       property_collector = connection.serviceContent.propertyCollector
 
-      hosts = cluster(vsphere_config).host
+      hosts                   = cluster(vsphere_config).host
       host_properties_by_host =
         property_collector.collectMultiple(
           hosts,
@@ -206,16 +206,16 @@ module VmShepherd
       logger.info("BEGIN clone_vm_task tempalte=#{template.name}")
       template.CloneVM_Task(
         folder: target_folder(vsphere_config),
-        name: "#{template.name}-vm",
-        spec: {
+        name:   "#{template.name}-vm",
+        spec:   {
           location: {
-            pool: resource_pool(vsphere_config),
-            datastore: datastore(vsphere_config),
+            pool:         resource_pool(vsphere_config),
+            datastore:    datastore(vsphere_config),
             diskMoveType: :moveChildMostDiskBacking,
           },
-          powerOn: false,
+          powerOn:  false,
           template: false,
-          config: {numCPUs: 2, memoryMB: 2048},
+          config:   {numCPUs: 2, memoryMB: 2048},
         }
       ).wait_for_completion.tap {
         logger.info("END   clone_vm_task tempalte=#{template.name}")
@@ -237,7 +237,7 @@ module VmShepherd
       vm_config_spec =
         RbVmomi::VIM::VmConfigSpec.new.tap do |vcs|
           vcs.ovfEnvironmentTransport = ['com.vmware.guestInfo']
-          vcs.property = create_vapp_property_specs(vm_config)
+          vcs.property                = create_vapp_property_specs(vm_config)
         end
       logger.info("END  VmConfigSpec creation: #{vm_config_spec.inspect}")
 
@@ -250,10 +250,10 @@ module VmShepherd
 
     def create_vapp_property_specs(vm_config)
       ip_configuration = {
-        'ip0' => vm_config[:ip],
-        'netmask0' => vm_config[:netmask],
-        'gateway' => vm_config[:gateway],
-        'DNS' => vm_config[:dns],
+        'ip0'         => vm_config[:ip],
+        'netmask0'    => vm_config[:netmask],
+        'gateway'     => vm_config[:gateway],
+        'DNS'         => vm_config[:dns],
         'ntp_servers' => vm_config[:ntp_servers],
       }
 
@@ -264,8 +264,8 @@ module VmShepherd
       ip_configuration.each_with_index do |(key, value), i|
         vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
           spec.operation = 'edit'
-          spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-            p.key = i
+          spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
+            p.key   = i
             p.label = key
             p.value = value
           end
@@ -274,8 +274,8 @@ module VmShepherd
 
       vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
         spec.operation = 'edit'
-        spec.info = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-          p.key = ip_configuration.length
+        spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
+          p.key   = ip_configuration.length
           p.label = 'admin_password'
           p.value = vm_config[:vm_password]
         end
@@ -300,10 +300,10 @@ module VmShepherd
 
     def connection
       RbVmomi::VIM.connect(
-        host: host,
-        user: username,
+        host:     host,
+        user:     username,
         password: password,
-        ssl: true,
+        ssl:      true,
         insecure: true,
       )
     end

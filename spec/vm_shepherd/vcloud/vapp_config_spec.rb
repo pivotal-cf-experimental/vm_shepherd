@@ -6,12 +6,12 @@ module VmShepherd
     RSpec.describe(VappConfig) do
       subject(:vapp_config) do
         VappConfig.new(
-          name: 'NAME',
-          ip: 'IP',
+          name:    'NAME',
+          ip:      'IP',
           gateway: 'GATEWAY',
           netmask: 'NETMASK',
-          dns: 'DNS',
-          ntp: 'NTP',
+          dns:     'DNS',
+          ntp:     'NTP',
           catalog: 'CATALOG',
           network: 'NETWORK',
         )

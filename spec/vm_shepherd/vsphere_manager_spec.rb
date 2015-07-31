@@ -19,10 +19,10 @@ module VmShepherd
     end
 
     describe 'clean_environment' do
-      let(:connection) { instance_double(RbVmomi::VIM, serviceContent: service_content, searchIndex: search_index)}
-      let(:service_content) { instance_double(RbVmomi::VIM::ServiceContent, searchIndex: search_index)}
+      let(:connection) { instance_double(RbVmomi::VIM, serviceContent: service_content, searchIndex: search_index) }
+      let(:service_content) { instance_double(RbVmomi::VIM::ServiceContent, searchIndex: search_index) }
       let(:search_index) { instance_double(RbVmomi::VIM::SearchIndex) }
-      let(:folder) {instance_double(RbVmomi::VIM::Folder) }
+      let(:folder) { instance_double(RbVmomi::VIM::Folder) }
       let(:datacenter) { instance_double(RbVmomi::VIM::Datacenter, name: datacenter_name) }
       let(:filemanager) { instance_double(RbVmomi::VIM::FileManager) }
       let(:delete_datastore_file_task) { instance_double(RbVmomi::VIM::Task) }
@@ -51,8 +51,8 @@ module VmShepherd
 
     describe 'destroy' do
       let(:search_index) { instance_double(RbVmomi::VIM::SearchIndex) }
-      let(:service_content) { instance_double(RbVmomi::VIM::ServiceContent, searchIndex: search_index)}
-      let(:connection) { instance_double(RbVmomi::VIM, serviceContent: service_content)}
+      let(:service_content) { instance_double(RbVmomi::VIM::ServiceContent, searchIndex: search_index) }
+      let(:connection) { instance_double(RbVmomi::VIM, serviceContent: service_content) }
       let(:ip_address) { '127.0.0.1' }
 
       before do

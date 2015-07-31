@@ -9,12 +9,12 @@ module VmShepherd
       describe '.deploy_and_power_on_vapp' do
         let(:vapp_config) do
           VappConfig.new(
-            name: 'NAME',
-            ip: 'IP',
+            name:    'NAME',
+            ip:      'IP',
             gateway: 'GATEWAY',
             netmask: 'NETMASK',
-            dns: 'DNS',
-            ntp: 'NTP',
+            dns:     'DNS',
+            ntp:     'NTP',
             catalog: 'CATALOG',
             network: 'NETWORK',
           )

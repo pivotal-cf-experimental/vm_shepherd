@@ -36,10 +36,10 @@ module VmShepherd
       end
 
       it 'returns true when all attributes are equal' do
-        eleventy_one = TestDataObject.new
+        eleventy_one       = TestDataObject.new
         hundred_and_eleven = TestDataObject.new
 
-        eleventy_one.name = '111'
+        eleventy_one.name       = '111'
         hundred_and_eleven.name = '111'
 
         expect(eleventy_one == hundred_and_eleven).to be_truthy

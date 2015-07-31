@@ -10,23 +10,23 @@ module VmShepherd
       {
         auth_url: 'http://example.com/version/tokens',
         username: 'username',
-        api_key: 'api-key',
-        tenant: tenant_name,
+        api_key:  'api-key',
+        tenant:   tenant_name,
       }
     end
     let(:openstack_vm_options) do
       {
-        name: 'some-vm-name',
-        flavor_name: 'some-flavor',
-        network_name: 'Public',
-        key_name: 'some-key',
+        name:                 'some-vm-name',
+        flavor_name:          'some-flavor',
+        network_name:         'Public',
+        key_name:             'some-key',
         security_group_names: [
-          'security-group-A',
-          'security-group-B',
-          'security-group-C',
-        ],
-        public_ip: '192.168.27.129', #magik ip to Fog::Mock
-        private_ip: '192.168.27.100',
+                                'security-group-A',
+                                'security-group-B',
+                                'security-group-C',
+                              ],
+        public_ip:            '192.168.27.129', #magik ip to Fog::Mock
+        private_ip:           '192.168.27.100',
       }
     end
 
@@ -36,11 +36,11 @@ module VmShepherd
       it 'creates a Fog::Compute connection' do
         expect(Fog::Compute).to receive(:new).with(
             {
-              provider: 'openstack',
+              provider:           'openstack',
               openstack_auth_url: openstack_options[:auth_url],
               openstack_username: openstack_options[:username],
-              openstack_tenant: openstack_options[:tenant],
-              openstack_api_key: openstack_options[:api_key],
+              openstack_tenant:   openstack_options[:tenant],
+              openstack_api_key:  openstack_options[:api_key],
             }
           )
         openstack_vm_manager.service
@@ -51,11 +51,11 @@ module VmShepherd
       it 'creates a Fog::Image connection' do
         expect(Fog::Image).to receive(:new).with(
             {
-              provider: 'openstack',
-              openstack_auth_url: openstack_options[:auth_url],
-              openstack_username: openstack_options[:username],
-              openstack_tenant: openstack_options[:tenant],
-              openstack_api_key: openstack_options[:api_key],
+              provider:                'openstack',
+              openstack_auth_url:      openstack_options[:auth_url],
+              openstack_username:      openstack_options[:username],
+              openstack_tenant:        openstack_options[:tenant],
+              openstack_api_key:       openstack_options[:api_key],
               openstack_endpoint_type: 'publicURL',
             }
           )
@@ -67,11 +67,11 @@ module VmShepherd
       it 'creates a Fog::Network connection' do
         expect(Fog::Network).to receive(:new).with(
             {
-              provider: 'openstack',
+              provider:           'openstack',
               openstack_auth_url: openstack_options[:auth_url],
               openstack_username: openstack_options[:username],
-              openstack_tenant: openstack_options[:tenant],
-              openstack_api_key: openstack_options[:api_key],
+              openstack_tenant:   openstack_options[:tenant],
+              openstack_api_key:  openstack_options[:api_key],
             }
           )
         openstack_vm_manager.network_service
@@ -253,17 +253,17 @@ module VmShepherd
         Fog.mock!
         Fog::Mock.reset
         Fog::Mock.delay = 0
-        Fog.interval = 0
+        Fog.interval    = 0
 
         make_server_and_image!('vm1')
         make_server_and_image!('vm2')
         openstack_vm_manager.image_service.images.create(
-          name: 'public',
-          size: 13784321,
-          disk_format: 'raw',
+          name:             'public',
+          size:             13784321,
+          disk_format:      'raw',
           container_format: 'bare',
-          location: '/tmp/notreal',
-          is_public: true,
+          location:         '/tmp/notreal',
+          is_public:        true,
         )
 
         openstack_vm_manager.storage_service.directories
@@ -285,26 +285,26 @@ module VmShepherd
 
       def make_server_and_image!(name)
         image = openstack_vm_manager.image_service.images.create(
-          name: name,
-          size: 13784321,
-          disk_format: 'raw',
+          name:             name,
+          size:             13784321,
+          disk_format:      'raw',
           container_format: 'bare',
-          location: '/tmp/notreal',
-          is_public: false,
+          location:         '/tmp/notreal',
+          is_public:        false,
         )
 
         server = openstack_vm_manager.service.servers.create(
-          name: name,
-          flavor_ref: openstack_vm_manager.service.flavors.first.id,
-          image_ref: image.id,
-          key_name: 'some key',
+          name:            name,
+          flavor_ref:      openstack_vm_manager.service.flavors.first.id,
+          image_ref:       image.id,
+          key_name:        'some key',
           security_groups: ['some security group'],
         )
 
         volume = openstack_vm_manager.service.volumes.create(
-          name: name,
+          name:        name,
           description: "description #{name}",
-          size: name.to_i,
+          size:        name.to_i,
         )
         server.attach_volume(volume.id, 'xd1')
       end
@@ -330,7 +330,7 @@ module VmShepherd
 
         allow(servers).to receive(:size)
         allow(servers).to receive(:each).and_return([])
-        expect(servers).to receive(:count).and_return(1,0).ordered
+        expect(servers).to receive(:count).and_return(1, 0).ordered
         expect(openstack_vm_manager.image_service).to receive(:images).and_return([]).ordered
 
         openstack_vm_manager.clean_environment
@@ -352,9 +352,9 @@ module VmShepherd
         let(:volumes) { [volume] }
         let(:volume) do
           openstack_vm_manager.service.volumes.create(
-            name: 'volume',
+            name:        'volume',
             description: 'description',
-            size: 1,
+            size:        1,
           )
         end
 

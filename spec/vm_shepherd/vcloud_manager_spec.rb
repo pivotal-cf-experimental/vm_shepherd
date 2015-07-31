@@ -8,10 +8,10 @@ module VmShepherd
   RSpec.describe VcloudManager do
     let(:login_info) do
       {
-        url: 'FAKE_URL',
+        url:          'FAKE_URL',
         organization: 'FAKE_ORGANIZATION',
-        user: 'FAKE_USER',
-        password: 'FAKE_PASSWORD',
+        user:         'FAKE_USER',
+        password:     'FAKE_PASSWORD',
       }
     end
     let(:vdc_name) { 'FAKE_VDC_NAME' }
@@ -23,11 +23,11 @@ module VmShepherd
     describe '#deploy' do
       let(:vapp_config) do
         Vcloud::VappConfig.new(
-          ip: 'FAKE_IP',
-          name: 'FAKE_NAME',
+          ip:      'FAKE_IP',
+          name:    'FAKE_NAME',
           gateway: 'FAKE_GATEWAY',
-          dns: 'FAKE_DNS',
-          ntp: 'FAKE_NTP',
+          dns:     'FAKE_DNS',
+          ntp:     'FAKE_NTP',
           netmask: 'FAKE_NETMASK',
           catalog: 'FAKE_VAPP_CATALOG',
           network: 'FAKE_NETWORK',
@@ -73,58 +73,58 @@ module VmShepherd
             let(:expected_properties) do
               [
                 {
-                  'type' => 'string',
-                  'key' => 'gateway',
-                  'value' => vapp_config.gateway,
-                  'password' => 'false',
+                  'type'             => 'string',
+                  'key'              => 'gateway',
+                  'value'            => vapp_config.gateway,
+                  'password'         => 'false',
                   'userConfigurable' => 'true',
-                  'Label' => 'Default Gateway',
-                  'Description' => 'The default gateway address for the VM network. Leave blank if DHCP is desired.'
+                  'Label'            => 'Default Gateway',
+                  'Description'      => 'The default gateway address for the VM network. Leave blank if DHCP is desired.'
                 },
                 {
-                  'type' => 'string',
-                  'key' => 'DNS',
-                  'value' => vapp_config.dns,
-                  'password' => 'false',
+                  'type'             => 'string',
+                  'key'              => 'DNS',
+                  'value'            => vapp_config.dns,
+                  'password'         => 'false',
                   'userConfigurable' => 'true',
-                  'Label' => 'DNS',
-                  'Description' => 'The domain name servers for the VM (comma separated). Leave blank if DHCP is desired.',
+                  'Label'            => 'DNS',
+                  'Description'      => 'The domain name servers for the VM (comma separated). Leave blank if DHCP is desired.',
                 },
                 {
-                  'type' => 'string',
-                  'key' => 'ntp_servers',
-                  'value' => vapp_config.ntp,
-                  'password' => 'false',
+                  'type'             => 'string',
+                  'key'              => 'ntp_servers',
+                  'value'            => vapp_config.ntp,
+                  'password'         => 'false',
                   'userConfigurable' => 'true',
-                  'Label' => 'NTP Servers',
-                  'Description' => 'Comma-delimited list of NTP servers'
+                  'Label'            => 'NTP Servers',
+                  'Description'      => 'Comma-delimited list of NTP servers'
                 },
                 {
-                  'type' => 'string',
-                  'key' => 'admin_password',
-                  'value' => 'tempest',
-                  'password' => 'true',
+                  'type'             => 'string',
+                  'key'              => 'admin_password',
+                  'value'            => 'tempest',
+                  'password'         => 'true',
                   'userConfigurable' => 'true',
-                  'Label' => 'Admin Password',
-                  'Description' => 'This password is used to SSH into the VM. The username is "tempest".',
+                  'Label'            => 'Admin Password',
+                  'Description'      => 'This password is used to SSH into the VM. The username is "tempest".',
                 },
                 {
-                  'type' => 'string',
-                  'key' => 'ip0',
-                  'value' => vapp_config.ip,
-                  'password' => 'false',
+                  'type'             => 'string',
+                  'key'              => 'ip0',
+                  'value'            => vapp_config.ip,
+                  'password'         => 'false',
                   'userConfigurable' => 'true',
-                  'Label' => 'IP Address',
-                  'Description' => 'The IP address for the VM. Leave blank if DHCP is desired.',
+                  'Label'            => 'IP Address',
+                  'Description'      => 'The IP address for the VM. Leave blank if DHCP is desired.',
                 },
                 {
-                  'type' => 'string',
-                  'key' => 'netmask0',
-                  'value' => vapp_config.netmask,
-                  'password' => 'false',
+                  'type'             => 'string',
+                  'key'              => 'netmask0',
+                  'value'            => vapp_config.netmask,
+                  'password'         => 'false',
                   'userConfigurable' => 'true',
-                  'Label' => 'Netmask',
-                  'Description' => 'The netmask for the VM network. Leave blank if DHCP is desired.'
+                  'Label'            => 'Netmask',
+                  'Description'      => 'The netmask for the VM network. Leave blank if DHCP is desired.'
                 }
               ]
             end

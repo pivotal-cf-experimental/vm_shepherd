@@ -92,6 +92,9 @@ module VmShepherd
       else
         logger.info('Creating an Elastic IP and assigning it to the instance')
         elastic_ip = AWS.ec2.elastic_ips.create(vpc: true)
+        retry_until do
+          elastic_ip.exists?
+        end
       end
       instance.associate_elastic_ip(elastic_ip)
       instance.add_tag('Name', value: vm_config.fetch(:vm_name))

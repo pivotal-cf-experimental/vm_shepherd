@@ -220,6 +220,7 @@ module VmShepherd
       before do
         allow(ec2).to receive(:instances).and_return(instances)
         allow(ec2).to receive(:elastic_ips).and_return(elastic_ips)
+        allow(elastic_ip).to receive(:exists?).and_return(true)
       end
 
       it 'creates an instance using AWS SDK v1' do
@@ -271,9 +272,25 @@ module VmShepherd
       end
 
       context 'vm configuration does not contain an elastic IP' do
+        before do
+          allow(ec2).to receive_message_chain(:elastic_ips, :create).and_return(elastic_ip)
+        end
+
+        it 'waits for the Elastic IP to be created' do
+          expect(elastic_ip).to receive(:exists?).exactly(AwsManager::RETRY_LIMIT - 1).times.and_return(false)
+          expect(elastic_ip).to receive(:exists?).exactly(1).times.and_return(true)
+
+          ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
+        end
+
+        it 'fails if the Elastic IP is not created in time' do
+          expect(elastic_ip).to receive(:exists?).exactly(AwsManager::RETRY_LIMIT).times.and_return(false)
+
+          expect { ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config) }.to raise_error(AwsManager::RetryLimitExceeded)
+        end
+
         it 'creates and attaches an elastic IP' do
-          expect(ec2).to receive_message_chain(:elastic_ips, :create).with(
-            vpc: true).and_return(elastic_ip)
+          expect(ec2).to receive_message_chain(:elastic_ips, :create).with(vpc: true).and_return(elastic_ip)
 
           expect(instance).to receive(:associate_elastic_ip).with(elastic_ip)
 

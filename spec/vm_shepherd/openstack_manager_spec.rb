@@ -32,6 +32,8 @@ module VmShepherd
 
     subject(:openstack_vm_manager) { OpenstackManager.new(openstack_options) }
 
+    before { stub_const('VmShepherd::RetryHelper::RETRY_INTERVAL', 0) }
+
     describe '#service' do
       it 'creates a Fog::Compute connection' do
         expect(Fog::Compute).to receive(:new).with(
@@ -189,11 +191,9 @@ module VmShepherd
       let(:compute_service) { openstack_vm_manager.service }
       let(:image_service) { openstack_vm_manager.image_service }
 
-      let(:servers) { compute_service.servers }
-      let(:flavors) { compute_service.flavors }
+      let(:flavors) { [compute_service.flavors.create(name: 'some-flavor', ram: 1, vcpus: 1, disk: 1)] }
       let(:images) { image_service.images }
-      let(:image) { images.find { |image| image.name == openstack_vm_options[:name] } }
-      let(:instance) { servers.find { |server| server.name == openstack_vm_options[:name] } }
+      let(:server) { instance_double(Fog::Compute::OpenStack::Server, id: openstack_vm_options[:name], destroy: true) }
 
       before do
         allow(File).to receive(:size).with(path).and_return(file_size)
@@ -204,10 +204,9 @@ module VmShepherd
         Fog::Mock.delay = 0
 
         allow(compute_service).to receive(:flavors).and_return(flavors)
-        allow(compute_service).to receive(:servers).and_return(servers)
-        allow(image_service).to receive(:images).and_return(images)
+        allow(openstack_vm_manager.service).to receive(:servers).and_return(compute_service.servers)
+        allow(compute_service.servers).to receive(:find).and_return(server, nil)
 
-        flavors << flavors.create(name: 'some-flavor', ram: 1, vcpus: 1, disk: 1)
         openstack_vm_manager.deploy(path, openstack_vm_options)
       end
 
@@ -220,11 +219,18 @@ module VmShepherd
 
       it 'calls destroy on the correct instance' do
         destroy_correct_server = change do
-          servers.reload
-          servers.find { |server| server.name == openstack_vm_options[:name] }
+          compute_service.servers.reload
+          compute_service.servers.find { |server| server.name == openstack_vm_options[:name] }
         end.to(nil)
 
         expect { openstack_vm_manager.destroy(openstack_vm_options) }.to(destroy_correct_server)
+      end
+
+      it 'waits until the correct server is gone before deleting the image' do
+        expect(compute_service.servers).to receive(:find).exactly(OpenstackManager::RETRY_LIMIT - 1).times.and_return(server)
+        expect(compute_service.servers).to receive(:find).exactly(1).times.and_return(nil)
+
+        openstack_vm_manager.destroy(openstack_vm_options)
       end
 
       it 'calls destroy on the correct image' do
@@ -232,9 +238,7 @@ module VmShepherd
       end
 
       context 'when the server does not exist' do
-        before do
-          allow(servers).to receive(:find).and_return(nil)
-        end
+        before { allow(compute_service.servers).to receive(:find).and_return(nil) }
 
         it 'returns without error' do
           expect { openstack_vm_manager.destroy(openstack_vm_options) }.not_to raise_error
@@ -323,8 +327,6 @@ module VmShepherd
       end
 
       it 'waits until there are no servers before deleting images' do
-        stub_const("VmShepherd::RetryHelper::RETRY_INTERVAL", 0)
-
         servers = instance_double(Array)
         allow(openstack_vm_manager.service).to receive(:servers).and_return(servers)
 

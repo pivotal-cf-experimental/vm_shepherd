@@ -54,6 +54,10 @@ module VmShepherd
       if server
         say("Found running Ops Manager instance #{server.id}")
         server.destroy
+        retry_until(retry_limit: 30) do
+          say("  Waiting for #{vm_options[:name]} server to be destroyed")
+          service.servers.find { |srv| srv.name == vm_options[:name] }.nil?
+        end
         say('Ops Manager instance destroyed')
       end
 

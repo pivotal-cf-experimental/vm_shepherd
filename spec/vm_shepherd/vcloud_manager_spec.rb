@@ -286,8 +286,6 @@ module VmShepherd
           expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
           expect(vm).to receive(:detach_disk).with(disk)
           expect(vdc).to receive(:delete_disk_by_name).with('disk name')
-          expect(vapp).to receive(:power_off)
-          expect(vapp).to receive(:delete)
           expect(client).to receive(:delete_catalog_by_name).with(vapp_catalog)
 
           expect(VCloudSdk::Client).to receive(:new).with(
@@ -338,8 +336,6 @@ module VmShepherd
           expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
           expect(vm).to receive(:detach_disk).with(disk)
           expect(vdc).to receive(:delete_disk_by_name).with('disk name')
-          expect(vapp).to receive(:power_off)
-          expect(vapp).to receive(:delete)
           expect(client).not_to receive(:delete_catalog_by_name).with(vapp_catalog)
 
           expect(VCloudSdk::Client).to receive(:new).with(

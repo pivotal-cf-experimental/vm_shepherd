@@ -28,14 +28,14 @@ module VmShepherd
         allow(vm).to receive(:detach_disk)
       end
 
-      describe '#delete_catalog_and_vapps' do
+      describe '#delete_catalog_and_vms' do
         context 'when the catalog exists' do
           before do
             allow(client).to receive(:catalog_exists?).with('CATALOG_NAME').and_return(true)
           end
 
           it 'deletes the catalog' do
-            destroyer.delete_catalog_and_vapps('CATALOG_NAME', [], fake_logger)
+            destroyer.delete_catalog_and_vms('CATALOG_NAME', [], fake_logger)
 
             expect(client).to have_received(:delete_catalog_by_name).with('CATALOG_NAME')
           end
@@ -47,24 +47,17 @@ module VmShepherd
           end
 
           it 'skips deleting the catalog' do
-            destroyer.delete_catalog_and_vapps('CATALOG_NAME', [], fake_logger)
+            destroyer.delete_catalog_and_vms('CATALOG_NAME', [], fake_logger)
 
             expect(client).not_to have_received(:delete_catalog_by_name).with('CATALOG_NAME')
           end
         end
 
         it 'detaches and deletes persistent disks' do
-          destroyer.delete_catalog_and_vapps('CATALOG_NAME', ['VAPP_NAME'], fake_logger)
+          destroyer.delete_catalog_and_vms('CATALOG_NAME', ['VAPP_NAME'], fake_logger)
 
           expect(vm).to have_received(:detach_disk).with(disk)
           expect(vdc).to have_received(:delete_disk_by_name).with('DISK_NAME')
-        end
-
-        it 'powers off and deletes vapps' do
-          destroyer.delete_catalog_and_vapps('CATALOG_NAME', ['VAPP_NAME'], fake_logger)
-
-          expect(vapp).to have_received(:power_off)
-          expect(vapp).to have_received(:delete)
         end
       end
     end

@@ -264,90 +264,19 @@ module VmShepherd
 
     describe '#destroy' do
       let(:client) { instance_double(VCloudSdk::Client) }
-      let(:vdc) { instance_double(VCloudSdk::VDC) }
-      let(:vapp) { instance_double(VCloudSdk::VApp) }
       let(:vapp_name) { 'FAKE_VAPP_NAME' }
       let(:vapp_catalog) { 'FAKE_VAPP_CATALOG' }
-      let(:vm) { instance_double(VCloudSdk::VM) }
-      let(:disk) { instance_double(VCloudSdk::InternalDisk, name: 'disk name') }
 
       before do
-        allow(vapp).to receive(:vms).and_return([vm])
-        allow(vm).to receive(:independent_disks).and_return([disk])
+        allow(VCloudSdk::Client).to receive(:new).and_return(client)
       end
 
-      context 'when the catalog exists' do
-        before do
-          allow(client).to receive(:catalog_exists?).with(vapp_catalog).and_return(true)
-        end
+      it 'uses VCloudSdk::Client to delete the vApp' do
+        destroyer = instance_double(VmShepherd::Vcloud::Destroyer)
+        expect(VmShepherd::Vcloud::Destroyer).to receive(:new).with(client: client, vdc_name: vdc_name).and_return(destroyer)
+        expect(destroyer).to receive(:delete_catalog_and_vms).with(vapp_catalog, [vapp_name], logger)
 
-        it 'uses VCloudSdk::Client to delete the vApp' do
-          expect(client).to receive(:find_vdc_by_name).with(vdc_name).and_return(vdc)
-          expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
-          expect(vm).to receive(:detach_disk).with(disk)
-          expect(vdc).to receive(:delete_disk_by_name).with('disk name')
-          expect(client).to receive(:delete_catalog_by_name).with(vapp_catalog)
-
-          expect(VCloudSdk::Client).to receive(:new).with(
-              login_info.fetch(:url),
-              [login_info.fetch(:user), login_info.fetch(:organization)].join('@'),
-              login_info.fetch(:password),
-              {},
-              logger,
-            ).and_return(client)
-
-          vcloud_manager.destroy([vapp_name], vapp_catalog)
-        end
-
-        context 'when an VCloudSdk::ObjectNotFoundError is thrown' do
-          before do
-            allow(VCloudSdk::Client).to receive(:new).and_return(client)
-            allow(client).to receive(:find_vdc_by_name).and_return(vdc)
-            allow(vdc).to receive(:find_vapp_by_name).and_return(vapp)
-            allow(vm).to receive(:detach_disk)
-            allow(vdc).to receive(:delete_disk_by_name)
-            allow(vapp).to receive(:power_off)
-            allow(vapp).to receive(:delete)
-
-            allow(client).to receive(:delete_catalog_by_name)
-          end
-
-          it 'catches the error' do
-            allow(vdc).to receive(:find_vapp_by_name).and_raise(VCloudSdk::ObjectNotFoundError)
-
-            expect { vcloud_manager.destroy([vapp_name], vapp_catalog) }.not_to raise_error
-          end
-
-          it 'deletes to catalog' do
-            expect(client).to receive(:delete_catalog_by_name).with(vapp_catalog)
-
-            vcloud_manager.destroy([vapp_name], vapp_catalog)
-          end
-        end
-      end
-
-      context 'when the catalog does not exist' do
-        before do
-          allow(client).to receive(:catalog_exists?).with(vapp_catalog).and_return(false)
-        end
-
-        it 'uses VCloudSdk::Client to delete the vApp' do
-          expect(client).to receive(:find_vdc_by_name).with(vdc_name).and_return(vdc)
-          expect(vdc).to receive(:find_vapp_by_name).with(vapp_name).and_return(vapp)
-          expect(vm).to receive(:detach_disk).with(disk)
-          expect(vdc).to receive(:delete_disk_by_name).with('disk name')
-          expect(client).not_to receive(:delete_catalog_by_name).with(vapp_catalog)
-
-          expect(VCloudSdk::Client).to receive(:new).with(
-              login_info.fetch(:url),
-              [login_info.fetch(:user), login_info.fetch(:organization)].join('@'),
-              login_info.fetch(:password),
-              {},
-              logger,
-            ).and_return(client)
-
-          vcloud_manager.destroy([vapp_name], vapp_catalog)
-        end
+        vcloud_manager.destroy([vapp_name], vapp_catalog)
       end
     end
 

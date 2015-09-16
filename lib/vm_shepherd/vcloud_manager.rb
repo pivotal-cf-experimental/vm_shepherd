@@ -35,11 +35,12 @@ module VmShepherd
 
     def destroy(vapp_names, catalog)
       VmShepherd::Vcloud::Destroyer.new(client: client, vdc_name: @vdc_name).
-        delete_catalog_and_vms(catalog, vapp_names, @logger)
+        clean_catalog_and_vapps(catalog: catalog, vapp_names: vapp_names, logger: @logger, delete_vapps: true)
     end
 
     def clean_environment(vapp_names, catalog)
-      destroy(vapp_names, catalog)
+      VmShepherd::Vcloud::Destroyer.new(client: client, vdc_name: @vdc_name).
+        clean_catalog_and_vapps(catalog: catalog, vapp_names: vapp_names, logger: @logger, delete_vapps: false)
     end
 
     private

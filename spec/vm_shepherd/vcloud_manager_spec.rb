@@ -271,23 +271,30 @@ module VmShepherd
         allow(VCloudSdk::Client).to receive(:new).and_return(client)
       end
 
-      it 'uses VCloudSdk::Client to delete the vApp' do
+      it 'destroys everything including vapps' do
         destroyer = instance_double(VmShepherd::Vcloud::Destroyer)
         expect(VmShepherd::Vcloud::Destroyer).to receive(:new).with(client: client, vdc_name: vdc_name).and_return(destroyer)
-        expect(destroyer).to receive(:delete_catalog_and_vms).with(vapp_catalog, [vapp_name], logger)
+        expect(destroyer).to receive(:clean_catalog_and_vapps).with(catalog: vapp_catalog, vapp_names: [vapp_name], logger: logger, delete_vapps: true)
 
         vcloud_manager.destroy([vapp_name], vapp_catalog)
       end
     end
 
     describe '#clean_environment' do
-      let(:vapp_names) { ['VAPP_ONE', 'VAPP_TWO'] }
+      let(:client) { instance_double(VCloudSdk::Client) }
+      let(:vapp_name) { ['VAPP_ONE', 'VAPP_TWO'] }
       let(:vapp_catalog) { 'VAPP_CATALOG' }
 
-      it 'calls #destroy' do
-        expect(vcloud_manager).to receive(:destroy).with(vapp_names, vapp_catalog)
+      before do
+        allow(VCloudSdk::Client).to receive(:new).and_return(client)
+      end
 
-        vcloud_manager.clean_environment(vapp_names, vapp_catalog)
+      it 'destroys the environment expect for vapps' do
+        destroyer = instance_double(VmShepherd::Vcloud::Destroyer)
+        expect(VmShepherd::Vcloud::Destroyer).to receive(:new).with(client: client, vdc_name: vdc_name).and_return(destroyer)
+        expect(destroyer).to receive(:clean_catalog_and_vapps).with(catalog: vapp_catalog, vapp_names: [vapp_name], logger: logger, delete_vapps: false)
+
+        vcloud_manager.clean_environment([vapp_name], vapp_catalog)
       end
     end
   end

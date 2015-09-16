@@ -28,14 +28,14 @@ module VmShepherd
         allow(vm).to receive(:detach_disk)
       end
 
-      describe '#delete_catalog_and_vms' do
+      describe '#clean_catalog_and_vapps' do
         context 'when the catalog exists' do
           before do
             allow(client).to receive(:catalog_exists?).with('CATALOG_NAME').and_return(true)
           end
 
           it 'deletes the catalog' do
-            destroyer.delete_catalog_and_vms('CATALOG_NAME', [], fake_logger)
+            destroyer.clean_catalog_and_vapps(catalog: 'CATALOG_NAME', vapp_names: [], logger: fake_logger, delete_vapps: false)
 
             expect(client).to have_received(:delete_catalog_by_name).with('CATALOG_NAME')
           end
@@ -47,17 +47,35 @@ module VmShepherd
           end
 
           it 'skips deleting the catalog' do
-            destroyer.delete_catalog_and_vms('CATALOG_NAME', [], fake_logger)
+            destroyer.clean_catalog_and_vapps(catalog: 'CATALOG_NAME', vapp_names: [], logger: fake_logger, delete_vapps: false)
 
             expect(client).not_to have_received(:delete_catalog_by_name).with('CATALOG_NAME')
           end
         end
 
         it 'detaches and deletes persistent disks' do
-          destroyer.delete_catalog_and_vms('CATALOG_NAME', ['VAPP_NAME'], fake_logger)
+          destroyer.clean_catalog_and_vapps(catalog: 'CATALOG_NAME', vapp_names: ['VAPP_NAME'], logger: fake_logger, delete_vapps: false)
 
           expect(vm).to have_received(:detach_disk).with(disk)
           expect(vdc).to have_received(:delete_disk_by_name).with('DISK_NAME')
+        end
+
+        context 'when the delete_vapps flag is true' do
+          it 'deletes the vapps' do
+            destroyer.clean_catalog_and_vapps(catalog: 'CATALOG_NAME', vapp_names: ['VAPP_NAME'], logger: fake_logger, delete_vapps: true)
+
+            expect(vapp).to have_received(:power_off).ordered
+            expect(vapp).to have_received(:delete).ordered
+          end
+        end
+
+        context 'when the delete_vapps flag is false' do
+          it 'does not delete the vapps' do
+            destroyer.clean_catalog_and_vapps(catalog: 'CATALOG_NAME', vapp_names: ['VAPP_NAME'], logger: fake_logger, delete_vapps: false)
+
+            expect(vapp).not_to have_received(:power_off)
+            expect(vapp).not_to have_received(:delete)
+          end
         end
       end
     end

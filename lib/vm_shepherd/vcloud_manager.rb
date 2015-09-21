@@ -24,7 +24,7 @@ module VmShepherd
         vdc_name:    @vdc_name,
       )
     rescue => e
-      logger.error(e.http_body) if e.respond_to?(:http_body)
+      @logger.error(e.http_body) if e.respond_to?(:http_body)
       raise e
     ensure
       FileUtils.remove_entry_secure(tmpdir, force: true)

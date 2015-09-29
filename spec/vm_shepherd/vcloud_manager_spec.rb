@@ -274,7 +274,7 @@ module VmShepherd
       it 'destroys everything including vapps' do
         destroyer = instance_double(VmShepherd::Vcloud::Destroyer)
         expect(VmShepherd::Vcloud::Destroyer).to receive(:new).with(client: client, vdc_name: vdc_name).and_return(destroyer)
-        expect(destroyer).to receive(:clean_catalog_and_vapps).with(catalog: vapp_catalog, vapp_names: [vapp_name], logger: logger, delete_vapps: true)
+        expect(destroyer).to receive(:clean_catalog_and_vapps).with(catalog: vapp_catalog, vapp_names: [vapp_name], logger: logger)
 
         vcloud_manager.destroy([vapp_name], vapp_catalog)
       end
@@ -292,7 +292,7 @@ module VmShepherd
       it 'destroys the environment expect for vapps' do
         destroyer = instance_double(VmShepherd::Vcloud::Destroyer)
         expect(VmShepherd::Vcloud::Destroyer).to receive(:new).with(client: client, vdc_name: vdc_name).and_return(destroyer)
-        expect(destroyer).to receive(:clean_catalog_and_vapps).with(catalog: vapp_catalog, vapp_names: [vapp_name], logger: logger, delete_vapps: false)
+        expect(destroyer).to receive(:clean_catalog_and_vapps).with(catalog: vapp_catalog, vapp_names: [vapp_name], logger: logger)
 
         vcloud_manager.clean_environment([vapp_name], vapp_catalog)
       end

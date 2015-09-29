@@ -6,8 +6,8 @@ module VmShepherd
         @vdc_name = vdc_name
       end
 
-      def clean_catalog_and_vapps(catalog:, vapp_names:, logger:, delete_vapps:)
-        clean_vapps(vapp_names, logger, delete_vapps)
+      def clean_catalog_and_vapps(catalog:, vapp_names:, logger:)
+        clean_vapps(vapp_names, logger)
         delete_catalog(catalog)
       end
 
@@ -17,11 +17,11 @@ module VmShepherd
         @vdc ||= @client.find_vdc_by_name(@vdc_name)
       end
 
-      def clean_vapps(vapp_names, logger, delete_vapps)
+      def clean_vapps(vapp_names, logger)
         vapp_names.each do |vapp_name|
           begin
             clean_vapp(vapp_name)
-            delete_vapp(vapp_name) if delete_vapps
+            delete_vapp(vapp_name)
           rescue VCloudSdk::ObjectNotFoundError => e
             logger.debug "Could not delete vapp '#{vapp_name}': #{e.inspect}"
           end
@@ -40,8 +40,11 @@ module VmShepherd
 
       def delete_vapp(vapp_name)
         vapp = vdc.find_vapp_by_name(vapp_name)
-        vapp.power_off
-        vapp.delete
+
+        if vapp.vms.any?
+          vapp.power_off
+          vapp.delete
+        end
       end
 
       def delete_catalog(catalog)

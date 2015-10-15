@@ -10,7 +10,7 @@ vm_shepherd:
       cluster: VSPHERE_CLUSTER
       network: VSPHERE_NETWORK
       resource_pool: VSPHERE_RESOURCE_POOL
-      datastore: VSPHERE_DATASTORE
+      persistent_datastore: VSPHERE_PERSISTENT_DATASTORE
       folder: VSPHERE_FOLDER
     vm:
       ip: OVA_IP
@@ -37,7 +37,7 @@ vm_shepherd:
       cluster: VSPHERE_CLUSTER-2
       network: VSPHERE_NETWORK-2
       resource_pool: VSPHERE_RESOURCE_POOL-2
-      datastore: VSPHERE_DATASTORE-2
+      persistent_datastore: VSPHERE_PERSISTENT_DATASTORE-2
       folder: VSPHERE_FOLDER-2
     vm:
       ip: OVA_IP-2

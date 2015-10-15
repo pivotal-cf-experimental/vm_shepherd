@@ -50,7 +50,7 @@ module VmShepherd
               {
                 cluster:       vm_shepherd_config.vsphere.cluster,
                 resource_pool: vm_shepherd_config.vsphere.resource_pool,
-                datastore:     vm_shepherd_config.vsphere.datastore,
+                datastore:     vm_shepherd_config.vsphere.persistent_datastore,
                 network:       vm_shepherd_config.vsphere.network,
                 folder:        vm_shepherd_config.vsphere.folder,
               }

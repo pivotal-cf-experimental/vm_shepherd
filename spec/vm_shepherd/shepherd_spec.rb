@@ -152,7 +152,7 @@ module VmShepherd
               {
                 cluster:       first_config.vsphere.cluster,
                 resource_pool: first_config.vsphere.resource_pool,
-                datastore:     first_config.vsphere.persistent_datastore,
+                datastore:     first_config.vsphere.datastore,
                 network:       first_config.vsphere.network,
                 folder:        first_config.vsphere.folder,
               },
@@ -170,7 +170,7 @@ module VmShepherd
               {
                 cluster:       last_config.vsphere.cluster,
                 resource_pool: last_config.vsphere.resource_pool,
-                datastore:     last_config.vsphere.persistent_datastore,
+                datastore:     last_config.vsphere.datastore,
                 network:       last_config.vsphere.network,
                 folder:        last_config.vsphere.folder,
               },

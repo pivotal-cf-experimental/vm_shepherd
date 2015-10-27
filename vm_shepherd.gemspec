@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'aws-sdk-v1'
-  spec.add_dependency 'fog'
+  spec.add_dependency 'fog', '1.34.0'
 
   spec.add_dependency 'ruby_vcloud_sdk', '0.7.2'
 

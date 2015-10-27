@@ -71,6 +71,12 @@ module VmShepherd
       end
 
       describe 'cloudformation' do
+        it 'polls the status every 300 seconds' do
+          expect(ami_manager).to receive(:retry_until).with(retry_limit: 30, retry_interval: 300)
+
+          ami_manager.prepare_environment(cloudformation_template_file.path)
+        end
+
         it 'creates the stack with the correct parameters' do
           expect(stack_collection).to receive(:create).with(
               'aws-stack-name',
@@ -89,7 +95,7 @@ module VmShepherd
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
 
-        it 'stops retrying after 360 times' do
+        it 'stops retrying after 30 times' do
           expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
               exactly(30).times
 
@@ -366,6 +372,12 @@ module VmShepherd
         ami_manager.clean_environment
       end
 
+      it 'polls the status every 300 seconds' do
+        expect(ami_manager).to receive(:retry_until).with(retry_limit: 30, retry_interval: 300)
+
+        ami_manager.clean_environment
+      end
+
       it 'deletes the stack' do
         expect(stack_collection).to receive(:[]).with('aws-stack-name').and_return(stack)
         expect(stack).to receive(:delete)
@@ -378,12 +390,14 @@ module VmShepherd
         ami_manager.clean_environment
       end
 
-      it 'stops retrying after 360 times' do
+      it 'stops retrying after 30 times' do
         expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS').
             exactly(30).times
 
         expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
       end
+
+
 
       it 'aborts if stack reports unexpected status' do
         expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS', 'UNEXPECTED_STATUS').ordered

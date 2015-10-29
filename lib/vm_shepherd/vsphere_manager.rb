@@ -88,7 +88,7 @@ module VmShepherd
     def ensure_no_running_vm(vm_config)
       ip_port = "#{vm_config.fetch(:ip)} #{vm_config.fetch(:external_port, 443)}"
       logger.info("BEGIN checking for VM at #{ip_port}")
-      fail("VM exists at #{ip_port}") if system("nc -z -w 5 #{ip_port}")
+      fail("VM exists at #{ip_port}") if system("nc -z -G 5 #{ip_port}")
       logger.info("END   checking for VM at #{ip_port}")
     end
 

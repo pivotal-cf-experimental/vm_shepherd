@@ -34,7 +34,7 @@ module VmShepherd
       stack = cfm.stacks.create(env_config.fetch(:stack_name), template, parameters: env_config.fetch(:parameters), capabilities: ['CAPABILITY_IAM'])
 
       logger.info("Waiting for status: #{CREATE_COMPLETE}")
-      retry_until(retry_limit: 30, retry_interval: 300) do
+      retry_until(retry_limit: 60, retry_interval: 30) do
         status = stack.status
         logger.info("current stack status: #{status}")
         case status

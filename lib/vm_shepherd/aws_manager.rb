@@ -187,7 +187,7 @@ module VmShepherd
         logger.info("deleting elb: #{elb.name}")
         elb.delete
         logger.info('waiting until elb is deleted')
-        retry_until(retry_limit: 30) do
+        retry_until(retry_limit: 30, retry_interval: 30) do
           !elb.exists? && !net_interfaces.map(&:exists?).any?
         end
         logger.info("deleting elb security group: #{sg.id}")

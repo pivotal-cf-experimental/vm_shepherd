@@ -19,6 +19,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'aws-sdk-v1'
   spec.add_dependency 'fog', '1.34.0'
+  spec.add_dependency 'net-ssh' # because fog uses this but doesn't require it
 
   spec.add_dependency 'recursive-open-struct', '~> 0.5.0' # newer versions break hash-key-is-symbol assumptions
 

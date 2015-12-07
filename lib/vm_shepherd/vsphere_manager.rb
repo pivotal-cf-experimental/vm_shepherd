@@ -88,7 +88,7 @@ module VmShepherd
     def ensure_no_running_vm(vm_config)
       ip_port = "#{vm_config.fetch(:ip)} #{vm_config.fetch(:external_port, 443)}"
       logger.info("BEGIN checking for VM at #{ip_port}")
-      fail("VM exists at #{ip_port}") if system("nc -z -G 5 #{ip_port}")
+      fail("VM exists at #{ip_port}") if system("nc -z -w 1 #{ip_port}")
       logger.info("END   checking for VM at #{ip_port}")
     end
 
@@ -98,7 +98,7 @@ module VmShepherd
 
       untar_dir = Dir.mktmpdir
 
-      system("cd #{untar_dir} && tar xfv '#{ova_path}'") || fail("ERROR: Untarring #{ova_path}")
+      system("cd #{untar_dir} && tar xfv '#{ova_path}'") || fail("ERROR: Untar'ing #{ova_path}")
 
       Dir["#{untar_dir}/*.ovf"].first.tap { logger.info("END   extract_ovf_from #{ova_path}") } ||
         fail('Failed to find ovf')

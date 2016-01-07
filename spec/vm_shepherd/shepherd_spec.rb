@@ -1,50 +1,47 @@
 require 'vm_shepherd'
-require 'recursive_open_struct'
 
 module VmShepherd
   RSpec.describe Shepherd do
     subject(:manager) { Shepherd.new(settings: settings) }
-    let(:first_config) { settings.vm_shepherd.vm_configs.first }
-    let(:last_config) { settings.vm_shepherd.vm_configs.last }
-    let(:settings) do
-      RecursiveOpenStruct.new(YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', settings_fixture_name)), recurse_over_arrays: true)
-    end
+    let(:first_config) { settings.dig('vm_shepherd', 'vm_configs').first }
+    let(:last_config) { settings.dig('vm_shepherd', 'vm_configs').last }
+    let(:settings) { YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', settings_fixture_name)) }
     let(:aws_env_config) do
       {
-        stack_name:     'aws-stack-name',
-        aws_access_key: 'aws-access-key',
-        aws_secret_key: 'aws-secret-key',
-        region:         'aws-region',
-        json_file:      'cloudformation.json',
-        parameters:     {
+        'stack_name'     => 'aws-stack-name',
+        'aws_access_key' => 'aws-access-key',
+        'aws_secret_key' => 'aws-secret-key',
+        'region'         => 'aws-region',
+        'json_file'      => 'cloudformation.json',
+        'parameters'     => {
           'key_pair_name' => 'key_pair_name'
         },
-        outputs:        {
-          ssh_key_name:      'ssh-key-name',
-          security_group:    'security-group-id',
-          public_subnet_id:  'public-subnet-id',
-          private_subnet_id: 'private-subnet-id',
-          s3_bucket_name:    'bucket-name',
+        'outputs'        => {
+          'ssh_key_name'      => 'ssh-key-name',
+          'security_group'    => 'security-group-id',
+          'public_subnet_id'  => 'public-subnet-id',
+          'private_subnet_id' => 'private-subnet-id',
+          's3_bucket_name'    => 'bucket-name',
         },
       }.merge(aws_elb_config)
     end
     let(:aws_elb_config) do
       {
-        elbs: [
+        'elbs' =>  [
                 {
-                  name:              'elb-1-name',
-                  port_mappings:     [[1111, 11]],
-                  stack_output_keys: {
-                    vpc_id:    'CloudFormationVpcIdOutputKey',
-                    subnet_id: 'CloudFormationSubnetIdOutputKey',
+                  'name'              => 'elb-1-name',
+                  'port_mappings'     => [[1111, 11]],
+                  'stack_output_keys' => {
+                    'vpc_id'    => 'CloudFormationVpcIdOutputKey',
+                    'subnet_id' => 'CloudFormationSubnetIdOutputKey',
                   },
                 },
                 {
-                  name:              'elb-2-name',
-                  port_mappings:     [[2222, 22]],
-                  stack_output_keys: {
-                    vpc_id:    'CloudFormationVpcIdOutputKey',
-                    subnet_id: 'CloudFormationSubnetIdOutputKey',
+                  'name'              => 'elb-2-name',
+                  'port_mappings'     => [[2222, 22]],
+                  'stack_output_keys' => {
+                    'vpc_id'    => 'CloudFormationVpcIdOutputKey',
+                    'subnet_id' => 'CloudFormationSubnetIdOutputKey',
                   },
                 }
               ],
@@ -59,56 +56,56 @@ module VmShepherd
 
         it 'uses VcloudManager to launch a vm' do
           expect(VcloudManager).to receive(:new).
-              with(
-                {
-                  url:          first_config.creds.url,
-                  organization: first_config.creds.organization,
-                  user:         first_config.creds.user,
-                  password:     first_config.creds.password,
-                },
-                first_config.vdc.name,
-                instance_of(Logger)
-              ).and_return(first_vcloud_manager)
+            with(
+              {
+                url:          first_config.dig('creds', 'url'),
+                organization: first_config.dig('creds', 'organization'),
+                user:         first_config.dig('creds', 'user'),
+                password:     first_config.dig('creds', 'password'),
+              },
+              first_config.dig('vdc', 'name'),
+              instance_of(Logger)
+            ).and_return(first_vcloud_manager)
 
           expect(VcloudManager).to receive(:new).
-              with(
-                {
-                  url:          last_config.creds.url,
-                  organization: last_config.creds.organization,
-                  user:         last_config.creds.user,
-                  password:     last_config.creds.password,
-                },
-                last_config.vdc.name,
-                instance_of(Logger)
-              ).and_return(last_vcloud_manager)
+            with(
+              {
+                url:          last_config.dig('creds', 'url'),
+                organization: last_config.dig('creds', 'organization'),
+                user:         last_config.dig('creds', 'user'),
+                password:     last_config.dig('creds', 'password'),
+              },
+              last_config.dig('vdc', 'name'),
+              instance_of(Logger)
+            ).and_return(last_vcloud_manager)
 
           expect(first_vcloud_manager).to receive(:deploy).with(
-              'FIRST_FAKE_PATH',
-              Vcloud::VappConfig.new(
-                name:    first_config.vapp.ops_manager_name,
-                ip:      first_config.vapp.ip,
-                gateway: first_config.vapp.gateway,
-                netmask: first_config.vapp.netmask,
-                dns:     first_config.vapp.dns,
-                ntp:     first_config.vapp.ntp,
-                catalog: first_config.vdc.catalog,
-                network: first_config.vdc.network,
-              )
+            'FIRST_FAKE_PATH',
+            Vcloud::VappConfig.new(
+              name:    first_config.dig('vapp', 'ops_manager_name'),
+              ip:      first_config.dig('vapp', 'ip'),
+              gateway: first_config.dig('vapp', 'gateway'),
+              netmask: first_config.dig('vapp', 'netmask'),
+              dns:     first_config.dig('vapp', 'dns'),
+              ntp:     first_config.dig('vapp', 'ntp'),
+              catalog: first_config.dig('vdc', 'catalog'),
+              network: first_config.dig('vdc', 'network'),
             )
+          )
 
           expect(last_vcloud_manager).to receive(:deploy).with(
-              'LAST_FAKE_PATH',
-              Vcloud::VappConfig.new(
-                name:    last_config.vapp.ops_manager_name,
-                ip:      last_config.vapp.ip,
-                gateway: last_config.vapp.gateway,
-                netmask: last_config.vapp.netmask,
-                dns:     last_config.vapp.dns,
-                ntp:     last_config.vapp.ntp,
-                catalog: last_config.vdc.catalog,
-                network: last_config.vdc.network,
-              )
+            'LAST_FAKE_PATH',
+            Vcloud::VappConfig.new(
+              name:    last_config.dig('vapp', 'ops_manager_name'),
+              ip:      last_config.dig('vapp', 'ip'),
+              gateway: last_config.dig('vapp', 'gateway'),
+              netmask: last_config.dig('vapp', 'netmask'),
+              dns:     last_config.dig('vapp', 'dns'),
+              ntp:     last_config.dig('vapp', 'ntp'),
+              catalog: last_config.dig('vdc', 'catalog'),
+              network: last_config.dig('vdc', 'network'),
             )
+          )
 
           manager.deploy(paths: ['FIRST_FAKE_PATH', 'LAST_FAKE_PATH'])
         end
@@ -125,56 +122,56 @@ module VmShepherd
 
         it 'uses VsphereManager to launch a vm' do
           expect(VsphereManager).to receive(:new).with(
-              first_config.vcenter_creds.ip,
-              first_config.vcenter_creds.username,
-              first_config.vcenter_creds.password,
-              first_config.vsphere.datacenter,
-              instance_of(Logger),
-            ).and_return(first_ova_manager)
+            first_config.dig('vcenter_creds', 'ip'),
+            first_config.dig('vcenter_creds', 'username'),
+            first_config.dig('vcenter_creds', 'password'),
+            first_config.dig('vsphere', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(first_ova_manager)
 
           expect(VsphereManager).to receive(:new).with(
-              last_config.vcenter_creds.ip,
-              last_config.vcenter_creds.username,
-              last_config.vcenter_creds.password,
-              last_config.vsphere.datacenter,
-              instance_of(Logger),
-            ).and_return(last_ova_manager)
+            last_config.dig('vcenter_creds', 'ip'),
+            last_config.dig('vcenter_creds', 'username'),
+            last_config.dig('vcenter_creds', 'password'),
+            last_config.dig('vsphere', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(last_ova_manager)
 
           expect(first_ova_manager).to receive(:deploy).with(
-              'FIRST_FAKE_PATH',
-              {
-                ip:          first_config.vm.ip,
-                gateway:     first_config.vm.gateway,
-                netmask:     first_config.vm.netmask,
-                dns:         first_config.vm.dns,
-                ntp_servers: first_config.vm.ntp_servers,
-              },
-              {
-                cluster:       first_config.vsphere.cluster,
-                resource_pool: first_config.vsphere.resource_pool,
-                datastore:     first_config.vsphere.datastore,
-                network:       first_config.vsphere.network,
-                folder:        first_config.vsphere.folder,
-              },
-            )
+            'FIRST_FAKE_PATH',
+            {
+              ip:          first_config.dig('vm', 'ip'),
+              gateway:     first_config.dig('vm', 'gateway'),
+              netmask:     first_config.dig('vm', 'netmask'),
+              dns:         first_config.dig('vm', 'dns'),
+              ntp_servers: first_config.dig('vm', 'ntp_servers'),
+            },
+            {
+              cluster:       first_config.dig('vsphere', 'cluster'),
+              resource_pool: first_config.dig('vsphere', 'resource_pool'),
+              datastore:     first_config.dig('vsphere', 'datastore'),
+              network:       first_config.dig('vsphere', 'network'),
+              folder:        first_config.dig('vsphere', 'folder'),
+            },
+          )
 
           expect(last_ova_manager).to receive(:deploy).with(
-              'LAST_FAKE_PATH',
-              {
-                ip:          last_config.vm.ip,
-                gateway:     last_config.vm.gateway,
-                netmask:     last_config.vm.netmask,
-                dns:         last_config.vm.dns,
-                ntp_servers: last_config.vm.ntp_servers,
-              },
-              {
-                cluster:       last_config.vsphere.cluster,
-                resource_pool: last_config.vsphere.resource_pool,
-                datastore:     last_config.vsphere.datastore,
-                network:       last_config.vsphere.network,
-                folder:        last_config.vsphere.folder,
-              },
-            )
+            'LAST_FAKE_PATH',
+            {
+              ip:          last_config.dig('vm', 'ip'),
+              gateway:     last_config.dig('vm', 'gateway'),
+              netmask:     last_config.dig('vm', 'netmask'),
+              dns:         last_config.dig('vm', 'dns'),
+              ntp_servers: last_config.dig('vm', 'ntp_servers'),
+            },
+            {
+              cluster:       last_config.dig('vsphere', 'cluster'),
+              resource_pool: last_config.dig('vsphere', 'resource_pool'),
+              datastore:     last_config.dig('vsphere', 'datastore'),
+              network:       last_config.dig('vsphere', 'network'),
+              folder:        last_config.dig('vsphere', 'folder'),
+            },
+          )
 
           manager.deploy(paths: ['FIRST_FAKE_PATH', 'LAST_FAKE_PATH'])
         end
@@ -189,8 +186,8 @@ module VmShepherd
         let(:aws_manager) { instance_double(AwsManager) }
         let(:first_ami_file_path) { 'PATH_TO_AMI_FILE' }
         let(:last_ami_file_path) { 'PATH_TO_AMI_FILE-2' }
-        let(:first_aws_options) { {vm_name: 'vm-name'} }
-        let(:last_aws_options) { {vm_name: 'vm-name-2'} }
+        let(:first_aws_options) { {'vm_name' => 'vm-name'} }
+        let(:last_aws_options) { {'vm_name' => 'vm-name-2'} }
 
         it 'uses AwsManager to launch a VM' do
           expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
@@ -303,36 +300,36 @@ module VmShepherd
 
         it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
-              {
-                url:          first_config.creds.url,
-                organization: first_config.creds.organization,
-                user:         first_config.creds.user,
-                password:     first_config.creds.password,
-              },
-              first_config.vdc.name,
-              instance_of(Logger)
-            ).and_return(first_vcloud_manager)
+            {
+              url:          first_config.dig('creds', 'url'),
+              organization: first_config.dig('creds', 'organization'),
+              user:         first_config.dig('creds', 'user'),
+              password:     first_config.dig('creds', 'password'),
+            },
+            first_config.dig('vdc', 'name'),
+            instance_of(Logger)
+          ).and_return(first_vcloud_manager)
 
           expect(first_vcloud_manager).to receive(:destroy).with(
-              [first_config.vapp.ops_manager_name],
-              first_config.vdc.catalog,
-            )
+            [first_config.dig('vapp', 'ops_manager_name')],
+            first_config.dig('vdc', 'catalog'),
+          )
 
           expect(VcloudManager).to receive(:new).with(
-              {
-                url:          last_config.creds.url,
-                organization: last_config.creds.organization,
-                user:         last_config.creds.user,
-                password:     last_config.creds.password,
-              },
-              last_config.vdc.name,
-              instance_of(Logger)
-            ).and_return(last_vcloud_manager)
+            {
+              url:          last_config.dig('creds', 'url'),
+              organization: last_config.dig('creds', 'organization'),
+              user:         last_config.dig('creds', 'user'),
+              password:     last_config.dig('creds', 'password'),
+            },
+            last_config.dig('vdc', 'name'),
+            instance_of(Logger)
+          ).and_return(last_vcloud_manager)
 
           expect(last_vcloud_manager).to receive(:destroy).with(
-              [last_config.vapp.ops_manager_name],
-              last_config.vdc.catalog,
-            )
+            [last_config.dig('vapp', 'ops_manager_name')],
+            last_config.dig('vdc', 'catalog'),
+          )
 
           manager.destroy
         end
@@ -345,22 +342,22 @@ module VmShepherd
 
         it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
-              first_config.vcenter_creds.ip,
-              first_config.vcenter_creds.username,
-              first_config.vcenter_creds.password,
-              first_config.vsphere.datacenter,
-              instance_of(Logger),
-            ).and_return(first_ova_manager)
-          expect(first_ova_manager).to receive(:destroy).with(first_config.vm.ip, first_config.vsphere.resource_pool)
+            first_config.dig('vcenter_creds', 'ip'),
+            first_config.dig('vcenter_creds', 'username'),
+            first_config.dig('vcenter_creds', 'password'),
+            first_config.dig('vsphere', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(first_ova_manager)
+          expect(first_ova_manager).to receive(:destroy).with(first_config.dig('vm', 'ip'), first_config.dig('vsphere', 'resource_pool'))
 
           expect(VsphereManager).to receive(:new).with(
-              last_config.vcenter_creds.ip,
-              last_config.vcenter_creds.username,
-              last_config.vcenter_creds.password,
-              last_config.vsphere.datacenter,
-              instance_of(Logger),
-            ).and_return(last_ova_manager)
-          expect(last_ova_manager).to receive(:destroy).with(last_config.vm.ip, last_config.vsphere.resource_pool)
+            last_config.dig('vcenter_creds', 'ip'),
+            last_config.dig('vcenter_creds', 'username'),
+            last_config.dig('vcenter_creds', 'password'),
+            last_config.dig('vsphere', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(last_ova_manager)
+          expect(last_ova_manager).to receive(:destroy).with(last_config.dig('vm', 'ip'), last_config.dig('vsphere', 'resource_pool'))
 
           manager.destroy
         end
@@ -369,8 +366,8 @@ module VmShepherd
       context 'when IAAS is AWS' do
         let(:settings_fixture_name) { 'aws.yml' }
         let(:aws_manager) { instance_double(AwsManager) }
-        let(:first_ami_options) { {vm_name: 'vm-name'} }
-        let(:last_ami_options) { {vm_name: 'vm-name-2'} }
+        let(:first_ami_options) { {'vm_name' => 'vm-name'} }
+        let(:last_ami_options) { {'vm_name' => 'vm-name-2'} }
 
         it 'uses AwsManager to destroy a VM' do
           expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
@@ -474,36 +471,36 @@ module VmShepherd
 
         it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
-              {
-                url:          first_config.creds.url,
-                organization: first_config.creds.organization,
-                user:         first_config.creds.user,
-                password:     first_config.creds.password,
-              },
-              first_config.vdc.name,
-              instance_of(Logger)
-            ).and_return(first_vcloud_manager)
+            {
+              url:          first_config.dig('creds', 'url'),
+              organization: first_config.dig('creds', 'organization'),
+              user:         first_config.dig('creds', 'user'),
+              password:     first_config.dig('creds', 'password'),
+            },
+            first_config.dig('vdc', 'name'),
+            instance_of(Logger)
+          ).and_return(first_vcloud_manager)
 
           expect(first_vcloud_manager).to receive(:clean_environment).with(
-              first_config.vapp.product_names,
-              first_config.vapp.product_catalog,
-            )
+            first_config.dig('vapp', 'product_names'),
+            first_config.dig('vapp', 'product_catalog'),
+          )
 
           expect(VcloudManager).to receive(:new).with(
-              {
-                url:          last_config.creds.url,
-                organization: last_config.creds.organization,
-                user:         last_config.creds.user,
-                password:     last_config.creds.password,
-              },
-              last_config.vdc.name,
-              instance_of(Logger)
-            ).and_return(last_vcloud_manager)
+            {
+              url:          last_config.dig('creds', 'url'),
+              organization: last_config.dig('creds', 'organization'),
+              user:         last_config.dig('creds', 'user'),
+              password:     last_config.dig('creds', 'password'),
+            },
+            last_config.dig('vdc', 'name'),
+            instance_of(Logger)
+          ).and_return(last_vcloud_manager)
 
           expect(last_vcloud_manager).to receive(:clean_environment).with(
-              [],
-              last_config.vapp.product_catalog,
-            )
+            [],
+            last_config.dig('vapp', 'product_catalog'),
+          )
 
           manager.clean_environment
         end
@@ -514,36 +511,36 @@ module VmShepherd
         let(:first_ova_manager) { instance_double(VsphereManager) }
         let(:first_clean_environment_options) do
           {
-            datacenter_folders_to_clean: first_config.cleanup.datacenter_folders_to_clean,
-            datastores:                  first_config.cleanup.datastores,
-            datastore_folders_to_clean:  first_config.cleanup.datastore_folders_to_clean,
+            datacenter_folders_to_clean: first_config.dig('cleanup', 'datacenter_folders_to_clean'),
+            datastores:                  first_config.dig('cleanup', 'datastores'),
+            datastore_folders_to_clean:  first_config.dig('cleanup', 'datastore_folders_to_clean'),
           }
         end
         let(:last_ova_manager) { instance_double(VsphereManager) }
         let(:last_clean_environment_options) do
           {
-            datacenter_folders_to_clean: last_config.cleanup.datacenter_folders_to_clean,
-            datastores:                  last_config.cleanup.datastores,
-            datastore_folders_to_clean:  last_config.cleanup.datastore_folders_to_clean,
+            datacenter_folders_to_clean: last_config.dig('cleanup', 'datacenter_folders_to_clean'),
+            datastores:                  last_config.dig('cleanup', 'datastores'),
+            datastore_folders_to_clean:  last_config.dig('cleanup', 'datastore_folders_to_clean'),
           }
         end
 
         it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
-              first_config.vcenter_creds.ip,
-              first_config.vcenter_creds.username,
-              first_config.vcenter_creds.password,
-              first_config.cleanup.datacenter,
-              instance_of(Logger),
-            ).and_return(first_ova_manager)
+            first_config.dig('vcenter_creds', 'ip'),
+            first_config.dig('vcenter_creds', 'username'),
+            first_config.dig('vcenter_creds', 'password'),
+            first_config.dig('cleanup', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(first_ova_manager)
           expect(first_ova_manager).to receive(:clean_environment).with(first_clean_environment_options)
           expect(VsphereManager).to receive(:new).with(
-              last_config.vcenter_creds.ip,
-              last_config.vcenter_creds.username,
-              last_config.vcenter_creds.password,
-              last_config.cleanup.datacenter,
-              instance_of(Logger),
-            ).and_return(last_ova_manager)
+            last_config.dig('vcenter_creds', 'ip'),
+            last_config.dig('vcenter_creds', 'username'),
+            last_config.dig('vcenter_creds', 'password'),
+            last_config.dig('cleanup', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(last_ova_manager)
           expect(last_ova_manager).to receive(:clean_environment).with(last_clean_environment_options)
 
           manager.clean_environment
@@ -642,28 +639,28 @@ module VmShepherd
 
         it 'uses VcloudManager to destroy a vm' do
           expect(VcloudManager).to receive(:new).with(
-              {
-                url:          first_config.creds.url,
-                organization: first_config.creds.organization,
-                user:         first_config.creds.user,
-                password:     first_config.creds.password,
-              },
-              first_config.vdc.name,
-              instance_of(Logger)
-            ).and_return(first_vcloud_manager)
+            {
+              url:          first_config.dig('creds', 'url'),
+              organization: first_config.dig('creds', 'organization'),
+              user:         first_config.dig('creds', 'user'),
+              password:     first_config.dig('creds', 'password'),
+            },
+            first_config.dig('vdc', 'name'),
+            instance_of(Logger)
+          ).and_return(first_vcloud_manager)
 
           expect(first_vcloud_manager).to receive(:prepare_environment)
 
           expect(VcloudManager).to receive(:new).with(
-              {
-                url:          last_config.creds.url,
-                organization: last_config.creds.organization,
-                user:         last_config.creds.user,
-                password:     last_config.creds.password,
-              },
-              last_config.vdc.name,
-              instance_of(Logger)
-            ).and_return(last_vcloud_manager)
+            {
+              url:          last_config.dig('creds', 'url'),
+              organization: last_config.dig('creds', 'organization'),
+              user:         last_config.dig('creds', 'user'),
+              password:     last_config.dig('creds', 'password'),
+            },
+            last_config.dig('vdc', 'name'),
+            instance_of(Logger)
+          ).and_return(last_vcloud_manager)
 
           expect(last_vcloud_manager).to receive(:prepare_environment)
           manager.prepare_environment
@@ -677,20 +674,20 @@ module VmShepherd
 
         it 'uses VsphereManager to destroy a vm' do
           expect(VsphereManager).to receive(:new).with(
-              first_config.vcenter_creds.ip,
-              first_config.vcenter_creds.username,
-              first_config.vcenter_creds.password,
-              first_config.vsphere.datacenter,
-              instance_of(Logger),
-            ).and_return(first_ova_manager)
+            first_config.dig('vcenter_creds', 'ip'),
+            first_config.dig('vcenter_creds', 'username'),
+            first_config.dig('vcenter_creds', 'password'),
+            first_config.dig('vsphere', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(first_ova_manager)
           expect(first_ova_manager).to receive(:prepare_environment)
           expect(VsphereManager).to receive(:new).with(
-              last_config.vcenter_creds.ip,
-              last_config.vcenter_creds.username,
-              last_config.vcenter_creds.password,
-              last_config.vsphere.datacenter,
-              instance_of(Logger),
-            ).and_return(last_ova_manager)
+            last_config.dig('vcenter_creds', 'ip'),
+            last_config.dig('vcenter_creds', 'username'),
+            last_config.dig('vcenter_creds', 'password'),
+            last_config.dig('vsphere', 'datacenter'),
+            instance_of(Logger),
+          ).and_return(last_ova_manager)
           expect(last_ova_manager).to receive(:prepare_environment)
 
           manager.prepare_environment

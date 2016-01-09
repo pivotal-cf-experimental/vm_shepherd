@@ -16,20 +16,20 @@ module VmShepherd
 
     let(:env_config) do
       {
-        stack_name:     'aws-stack-name',
-        aws_access_key: 'aws-access-key',
-        aws_secret_key: 'aws-secret-key',
-        region:         'us-east-1',
-        json_file:      'cloudformation.json',
-        parameters:     {
+        'stack_name'     => 'aws-stack-name',
+        'aws_access_key' => 'aws-access-key',
+        'aws_secret_key' => 'aws-secret-key',
+        'region'         => 'us-east-1',
+        'json_file'      => 'cloudformation.json',
+        'parameters'     => {
           'some_parameter' => 'some-answer',
         },
-        outputs:        {
-                          ssh_key_name:      'ssh-key-name',
-                          security_group:    'security-group-id',
-                          public_subnet_id:  'public-subnet-id',
-                          private_subnet_id: 'private-subnet-id',
-                        }.merge(extra_outputs),
+        'outputs'        => {
+          'ssh_key_name'      => 'ssh-key-name',
+          'security_group'    => 'security-group-id',
+          'public_subnet_id'  => 'public-subnet-id',
+          'private_subnet_id' => 'private-subnet-id',
+        }.merge(extra_outputs),
       }.merge(extra_configs)
     end
 
@@ -38,7 +38,7 @@ module VmShepherd
 
     let(:vm_config) do
       {
-        vm_name: 'some-vm-name',
+        'vm_name' => 'some-vm-name',
       }
     end
     let(:fake_logger) { instance_double(Logger).as_null_object }
@@ -47,10 +47,10 @@ module VmShepherd
 
     before do
       expect(AWS).to receive(:config).with(
-          access_key_id:     env_config.fetch(:aws_access_key),
-          secret_access_key: env_config.fetch(:aws_secret_key),
-          region:            env_config.fetch(:region),
-        )
+        access_key_id:     env_config.fetch('aws_access_key'),
+        secret_access_key: env_config.fetch('aws_secret_key'),
+        region:            env_config.fetch('region'),
+      )
 
       allow(AWS).to receive(:ec2).and_return(ec2)
       allow(ami_manager).to receive(:sleep) # speed up retry logic
@@ -79,13 +79,13 @@ module VmShepherd
 
         it 'creates the stack with the correct parameters' do
           expect(stack_collection).to receive(:create).with(
-              'aws-stack-name',
-              '{}',
-              parameters:   {
-                'some_parameter' => 'some-answer',
-              },
-              capabilities: ['CAPABILITY_IAM']
-            )
+            'aws-stack-name',
+            '{}',
+            parameters:   {
+              'some_parameter' => 'some-answer',
+            },
+            capabilities: ['CAPABILITY_IAM']
+          )
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
 
@@ -97,7 +97,7 @@ module VmShepherd
 
         it 'stops retrying after 30 times' do
           expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
-              exactly(60).times
+            exactly(60).times
 
           expect { ami_manager.prepare_environment(cloudformation_template_file.path) }.to raise_error(AwsManager::RetryLimitExceeded)
         end
@@ -114,32 +114,32 @@ module VmShepherd
       context 'when the elb setting is present' do
         let(:extra_configs) do
           {
-            elbs: [
-                    {
-                      name:              'elb-1-name',
-                      port_mappings:     [[1111, 11]],
-                      stack_output_keys: {
-                        vpc_id:    'vpc_id',
-                        subnet_id: 'private_subnet',
-                      },
-                    },
-                    {
-                      name:              'elb-2-name',
-                      port_mappings:     [[2222, 22]],
-                      stack_output_keys: {
-                        vpc_id:    'vpc_id',
-                        subnet_id: 'private_subnet',
-                      },
-                    }
-                  ],
+            'elbs' => [
+              {
+                'name'              => 'elb-1-name',
+                'port_mappings'     => [[1111, 11]],
+                'stack_output_keys' => {
+                  'vpc_id'    => 'vpc_id',
+                  'subnet_id' => 'private_subnet',
+                },
+              },
+              {
+                'name'              => 'elb-2-name',
+                'port_mappings'     => [[2222, 22]],
+                'stack_output_keys' => {
+                  'vpc_id'    => 'vpc_id',
+                  'subnet_id' => 'private_subnet',
+                },
+              }
+            ],
           }
         end
         let(:stack) do
           instance_double(AWS::CloudFormation::Stack,
-            name:          'fake-stack-name',
-            creation_time: Time.utc(2015, 5, 29),
-            status:        'CREATE_COMPLETE',
-            outputs:       stack_outputs
+                          name:          'fake-stack-name',
+                          creation_time: Time.utc(2015, 5, 29),
+                          status:        'CREATE_COMPLETE',
+                          outputs:       stack_outputs
           )
         end
         let(:stack_outputs) do
@@ -167,9 +167,9 @@ module VmShepherd
         before do
           allow(ec2).to receive(:client).and_return(ec2_client)
           allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-1-name')).
-              and_return(create_security_group_response_1)
+            and_return(create_security_group_response_1)
           allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-2-name')).
-              and_return(create_security_group_response_2)
+            and_return(create_security_group_response_2)
           allow(ec2).to receive(:security_groups).and_return(security_groups)
           allow(elb_1_security_group).to receive(:authorize_ingress)
           allow(elb_2_security_group).to receive(:authorize_ingress)
@@ -231,11 +231,11 @@ module VmShepherd
 
       it 'creates an instance using AWS SDK v1' do
         expect(ec2).to receive_message_chain(:instances, :create).with(
-            image_id:           ami_id,
-            key_name:           'ssh-key-name',
-            security_group_ids: ['security-group-id'],
-            subnet:             'public-subnet-id',
-            instance_type:      'm3.medium').and_return(instance)
+          image_id:           ami_id,
+          key_name:           'ssh-key-name',
+          security_group_ids: ['security-group-id'],
+          subnet:             'public-subnet-id',
+          instance_type:      'm3.medium').and_return(instance)
 
         ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
       end
@@ -250,7 +250,7 @@ module VmShepherd
 
         it 'stops retrying after 60 times' do
           expect(instances).to receive(:create).and_raise(AWS::EC2::Errors::InvalidIPAddress::InUse).
-              exactly(AwsManager::RETRY_LIMIT).times
+            exactly(AwsManager::RETRY_LIMIT).times
 
           expect { ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config) }.to raise_error(AwsManager::RetryLimitExceeded)
         end
@@ -264,7 +264,7 @@ module VmShepherd
 
       it 'handles API endpoints not knowing (right away) about the instance created' do
         expect(instance).to receive(:status).and_raise(AWS::EC2::Errors::InvalidInstanceID::NotFound).
-            exactly(AwsManager::RETRY_LIMIT - 1).times
+          exactly(AwsManager::RETRY_LIMIT - 1).times
         expect(instance).to receive(:status).and_return(:running).once
 
         ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
@@ -272,7 +272,7 @@ module VmShepherd
 
       it 'stops retrying after 60 times' do
         expect(instance).to receive(:status).and_return(:pending).
-            exactly(AwsManager::RETRY_LIMIT).times
+          exactly(AwsManager::RETRY_LIMIT).times
 
         expect { ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config) }.to raise_error(AwsManager::RetryLimitExceeded)
       end
@@ -307,8 +307,8 @@ module VmShepherd
       context 'vm configuration contains an elastic IP' do
         let(:vm_config) do
           {
-            vm_name:       'some-vm-name',
-            vm_ip_address: 'some-ip-address'
+            'vm_name'       => 'some-vm-name',
+            'vm_ip_address' => 'some-ip-address'
           }
         end
 
@@ -392,11 +392,10 @@ module VmShepherd
 
       it 'stops retrying after 60 times' do
         expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS').
-            exactly(60).times
+          exactly(60).times
 
         expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
       end
-
 
 
       it 'aborts if stack reports unexpected status' do
@@ -439,7 +438,7 @@ module VmShepherd
 
       context 'when a subnet is not provided' do
         before do
-          env_config[:outputs][:private_subnet_id] = nil
+          env_config['outputs']['private_subnet_id'] = nil
         end
 
         it 'only deletes instance 1' do
@@ -453,40 +452,40 @@ module VmShepherd
       context 'when an elb is configured' do
         let(:extra_configs) do
           {
-            elbs: [
-                    {
-                      name:              'elb-1-name',
-                      port_mappings:     [[1111, 11]],
-                      stack_output_keys: {
-                        vpc_id:    'vpc_id',
-                        subnet_id: 'private_subnet',
-                      },
-                    },
-                    {
-                      name:              'elb-2-name',
-                      port_mappings:     [[2222, 22]],
-                      stack_output_keys: {
-                        vpc_id:    'vpc_id',
-                        subnet_id: 'private_subnet',
-                      },
-                    }
-                  ],
+            'elbs' => [
+              {
+                'name'              => 'elb-1-name',
+                'port_mappings'     => [[1111, 11]],
+                'stack_output_keys' => {
+                  'vpc_id'    => 'vpc_id',
+                  'subnet_id' => 'private_subnet',
+                },
+              },
+              {
+                'name'              => 'elb-2-name',
+                'port_mappings'     => [[2222, 22]],
+                'stack_output_keys' => {
+                  'vpc_id'    => 'vpc_id',
+                  'subnet_id' => 'private_subnet',
+                },
+              }
+            ],
           }
         end
 
         let(:elb) { instance_double(AWS::ELB, load_balancers: [load_balancer_1_to_delete, load_balancer_2_to_delete, other_load_balancer]) }
         let(:load_balancer_1_to_delete) do
           instance_double(AWS::ELB::LoadBalancer,
-            name:            'elb-1-name',
-            security_groups: [elb_1_security_group],
-            exists?:         false,
+                          name:            'elb-1-name',
+                          security_groups: [elb_1_security_group],
+                          exists?:         false,
           )
         end
         let(:load_balancer_2_to_delete) do
           instance_double(AWS::ELB::LoadBalancer,
-            name:            'elb-2-name',
-            security_groups: [elb_2_security_group],
-            exists?:         false,
+                          name:            'elb-2-name',
+                          security_groups: [elb_2_security_group],
+                          exists?:         false,
           )
         end
         let(:other_load_balancer) { instance_double(AWS::ELB::LoadBalancer, name: 'other-elb-name') }
@@ -494,39 +493,39 @@ module VmShepherd
         let(:elb_2_security_group) { instance_double(AWS::EC2::SecurityGroup, name: 'elb-2-security-group', id: 'sg-elb-2-id') }
         let(:network_interface_1_elb_1) do
           instance_double(AWS::EC2::NetworkInterface,
-            security_groups: [elb_1_security_group],
-            exists?:         false,
+                          security_groups: [elb_1_security_group],
+                          exists?:         false,
           )
         end
         let(:network_interface_2_elb_1) do
           instance_double(AWS::EC2::NetworkInterface,
-            security_groups: [elb_1_security_group],
-            exists?:         false,
+                          security_groups: [elb_1_security_group],
+                          exists?:         false,
           )
         end
         let(:network_interface_1_elb_2) do
           instance_double(AWS::EC2::NetworkInterface,
-            security_groups: [elb_2_security_group],
-            exists?:         false,
+                          security_groups: [elb_2_security_group],
+                          exists?:         false,
           )
         end
         let(:network_interface_2_elb_2) do
           instance_double(AWS::EC2::NetworkInterface,
-            security_groups: [elb_2_security_group],
-            exists?:         false,
+                          security_groups: [elb_2_security_group],
+                          exists?:         false,
           )
         end
 
         before do
           allow(AWS::ELB).to receive(:new).and_return(elb)
           allow(ec2).to receive(:network_interfaces).and_return(
-              [
-                network_interface_1_elb_1,
-                network_interface_2_elb_1,
-                network_interface_1_elb_2,
-                network_interface_2_elb_2,
-              ]
-            )
+            [
+              network_interface_1_elb_1,
+              network_interface_2_elb_1,
+              network_interface_1_elb_2,
+              network_interface_2_elb_2,
+            ]
+          )
           allow(load_balancer_1_to_delete).to receive(:delete)
           allow(load_balancer_2_to_delete).to receive(:delete)
           allow(elb_1_security_group).to receive(:delete)
@@ -535,7 +534,7 @@ module VmShepherd
 
         it 'waits for the ELBs to be deleted' do
           expect(load_balancer_1_to_delete).to receive(:exists?).and_return(true).
-              exactly(30).times
+            exactly(30).times
           expect(load_balancer_2_to_delete).not_to receive(:exists?)
 
           expect(elb_1_security_group).not_to receive(:delete).ordered
@@ -548,9 +547,9 @@ module VmShepherd
           allow(load_balancer_2_to_delete).to receive(:exists?).and_return(false)
 
           expect(network_interface_1_elb_1).to receive(:exists?).and_return(false).
-              exactly(30).times
+            exactly(30).times
           expect(network_interface_2_elb_1).to receive(:exists?).and_return(true).
-              exactly(30).times
+            exactly(30).times
           expect(network_interface_1_elb_2).not_to receive(:exists?)
           expect(network_interface_2_elb_2).not_to receive(:exists?)
 
@@ -627,7 +626,7 @@ module VmShepherd
       context 'when there is an s3 bucket configuration' do
         let(:bucket_1) { instance_double(AWS::S3::Bucket) }
         let(:bucket_2) { instance_double(AWS::S3::Bucket) }
-        let(:extra_outputs) { {s3_bucket_names: [bucket_name_1, bucket_name_2]} }
+        let(:extra_outputs) { {'s3_bucket_names' => [bucket_name_1, bucket_name_2]} }
         let(:bucket_name_1) { 'bucket-name-1' }
         let(:bucket_name_2) { 'bucket-name-2' }
 
@@ -677,7 +676,7 @@ module VmShepherd
 
         context 'and the bucket name is empty' do
           let(:bucket_name_3) { '' }
-          let(:extra_outputs) { {s3_bucket_names: [bucket_name_3, bucket_name_1, bucket_name_2]} }
+          let(:extra_outputs) { {'s3_bucket_names' => [bucket_name_3, bucket_name_1, bucket_name_2]} }
 
           before do
             allow(bucket_1).to receive(:exists?).and_return(true)
@@ -694,7 +693,7 @@ module VmShepherd
 
         context 'and the bucket name is null' do
           let(:bucket_name_3) { nil }
-          let(:extra_outputs) { {s3_bucket_names: [bucket_name_3, bucket_name_1, bucket_name_2]} }
+          let(:extra_outputs) { {'s3_bucket_names' => [bucket_name_3, bucket_name_1, bucket_name_2]} }
 
           before do
             allow(bucket_1).to receive(:exists?).and_return(true)
@@ -756,8 +755,8 @@ module VmShepherd
         let(:elastic_ip) { instance_double(AWS::EC2::ElasticIp) }
         let(:vm_config) do
           {
-            vm_name:       'some-vm-name',
-            vm_ip_address: 'some-ip-address'
+            'vm_name'       => 'some-vm-name',
+            'vm_ip_address' => 'some-ip-address'
           }
         end
 

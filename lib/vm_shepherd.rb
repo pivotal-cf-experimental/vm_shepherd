@@ -7,6 +7,7 @@ require 'vm_shepherd/vcloud/deployer'
 require 'vm_shepherd/vcloud/destroyer'
 require 'vm_shepherd/vcloud/vapp_config'
 require 'vm_shepherd/vsphere_manager'
+require 'backport_refinements'
 
 module VmShepherd
   AWS_IAAS_TYPE       = 'aws'.freeze

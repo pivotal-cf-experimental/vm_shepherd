@@ -1,3 +1,5 @@
+using VmShepherd::BackportRefinements
+
 module VmShepherd
   class Shepherd
     class InvalidIaas < StandardError;

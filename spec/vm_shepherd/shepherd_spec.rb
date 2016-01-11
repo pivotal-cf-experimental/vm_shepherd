@@ -1,9 +1,9 @@
-require 'backport_refinements'
-require 'vm_shepherd'
+require 'vm_shepherd/backport_refinements'
+using VmShepherd::BackportRefinements
+
+require 'vm_shepherd/shepherd'
 
 module VmShepherd
-  using BackportRefinements
-
   RSpec.describe Shepherd do
     subject(:manager) { Shepherd.new(settings: settings) }
     let(:first_config) { settings.dig('vm_shepherd', 'vm_configs').first }

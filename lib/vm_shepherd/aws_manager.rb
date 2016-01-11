@@ -1,5 +1,7 @@
 require 'aws-sdk-v1'
 require 'vm_shepherd/retry_helper'
+require 'vm_shepherd/backport_refinements'
+using VmShepherd::BackportRefinements
 
 module VmShepherd
   class AwsManager

@@ -1,5 +1,5 @@
 require 'spec_helper'
-require 'backport_refinements'
+require 'vm_shepherd/backport_refinements'
 
 module VmShepherd
   RSpec.describe BackportRefinements do

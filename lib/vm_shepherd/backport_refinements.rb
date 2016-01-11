@@ -1,7 +1,7 @@
 module VmShepherd
   module BackportRefinements
     def self.should_refine?
-      Gem::Version.new(RUBY_VERSION) < Gem::Version.new("2.3.0")
+      Gem::Version.new(RUBY_VERSION) < Gem::Version.new('2.3.0')
     end
 
     def self.ported_dig(obj, indices)

@@ -1,3 +1,6 @@
+require 'vm_shepherd'
+require 'vm_shepherd/backport_refinements'
+
 using VmShepherd::BackportRefinements
 
 module VmShepherd

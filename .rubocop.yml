@@ -1,0 +1,6 @@
+AllCops:
+  Include:
+    - Gemfile
+    - Rakefile
+    - vm_shepherd.gemspec
+  TargetRubyVersion: 2.2

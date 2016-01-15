@@ -23,7 +23,7 @@ Or install it yourself as:
 ```ruby
 require 'vm_shepherd'
 
-settings =  # An OpenStruct with the expected IaaS specific settings.
+settings =  # A Hash with the expected IaaS specific settings.
             # => See YAML under spec/fixtures/shepherd/ for expected values
 
 # create a new VM

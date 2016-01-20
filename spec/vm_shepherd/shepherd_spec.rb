@@ -23,7 +23,7 @@ module VmShepherd
           'ssh_key_name'      => 'ssh-key-name',
           'security_group'    => 'security-group-id',
           'public_subnet_id'  => 'public-subnet-id',
-          'private_subnet_id' => 'private-subnet-id',
+          'subnets'           => ['private-subnet-id', 'public-subnet-id'],
           's3_bucket_name'    => 'bucket-name',
         },
       }.merge(aws_elb_config)

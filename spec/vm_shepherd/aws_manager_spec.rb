@@ -25,10 +25,10 @@ module VmShepherd
           'some_parameter' => 'some-answer',
         },
         'outputs'        => {
+          'subnets'      => ['public-subnet-id', 'private-subnet-id'],
           'ssh_key_name'      => 'ssh-key-name',
           'security_group'    => 'security-group-id',
           'public_subnet_id'  => 'public-subnet-id',
-          'private_subnet_id' => 'private-subnet-id',
         }.merge(extra_outputs),
       }.merge(extra_configs)
     end
@@ -438,7 +438,7 @@ module VmShepherd
 
       context 'when a subnet is not provided' do
         before do
-          env_config['outputs']['private_subnet_id'] = nil
+          env_config['outputs']['subnets'] = env_config['outputs']['subnets'][0..-2]
         end
 
         it 'only deletes instance 1' do

@@ -103,8 +103,7 @@ module VmShepherd
     end
 
     def clean_environment
-      ['public_subnet_id', 'private_subnet_id'].each do |subnet_id|
-        aws_subnet_id = env_config.fetch('outputs').fetch(subnet_id)
+      env_config.fetch('outputs').fetch('subnets').each do |aws_subnet_id|
         clear_subnet(aws_subnet_id) if aws_subnet_id
       end
 

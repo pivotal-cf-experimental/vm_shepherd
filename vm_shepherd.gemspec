@@ -23,13 +23,12 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'recursive-open-struct', '~> 0.5.0' # newer versions break hash-key-is-symbol assumptions
 
-  spec.add_dependency 'ruby_vcloud_sdk', '0.7.2'
+  spec.add_dependency 'ruby_vcloud_sdk', '0.7.4'
 
   spec.add_dependency 'rbvmomi'
 
   spec.add_development_dependency 'bundler'
   spec.add_development_dependency 'rake'
   spec.add_development_dependency 'rspec'
-  spec.add_development_dependency 'rubocop'
   spec.add_development_dependency 'codeclimate-test-reporter'
 end

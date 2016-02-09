@@ -30,7 +30,7 @@ module VmShepherd
           allow(client).to receive(:create_catalog).and_return(catalog)
           allow(catalog).to receive(:upload_vapp_template)
           allow(catalog).to receive(:instantiate_vapp_template).and_return(vapp)
-          allow(vapp).to receive(:find_vm_by_name).and_return(vm)
+          allow(vapp).to receive_message_chain(:vms, :first).and_return(vm)
           allow(vm).to receive(:product_section_properties=)
           allow(vapp).to receive(:power_on)
 

@@ -140,7 +140,7 @@ module VmShepherd
 
               allow(VCloudSdk::NetworkConfig).to receive(:new).and_return(network_config)
 
-              allow(vapp).to receive(:find_vm_by_name).and_return(vm)
+              allow(vapp).to receive_message_chain(:vms, :first).and_return(vm)
               allow(vm).to receive(:product_section_properties=)
               allow(vapp).to receive(:power_on)
             end

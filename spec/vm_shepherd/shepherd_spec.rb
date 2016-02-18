@@ -148,6 +148,8 @@ module VmShepherd
               netmask:     first_config.dig('vm', 'netmask'),
               dns:         first_config.dig('vm', 'dns'),
               ntp_servers: first_config.dig('vm', 'ntp_servers'),
+              cpus:        first_config.dig('vm', 'cpus'),
+              ram_mb:      first_config.dig('vm', 'ram_mb'),
             },
             {
               cluster:       first_config.dig('vsphere', 'cluster'),
@@ -166,6 +168,8 @@ module VmShepherd
               netmask:     last_config.dig('vm', 'netmask'),
               dns:         last_config.dig('vm', 'dns'),
               ntp_servers: last_config.dig('vm', 'ntp_servers'),
+              cpus:        last_config.dig('vm', 'cpus'),
+              ram_mb:      last_config.dig('vm', 'ram_mb'),
             },
             {
               cluster:       last_config.dig('vsphere', 'cluster'),

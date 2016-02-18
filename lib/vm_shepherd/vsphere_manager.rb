@@ -114,7 +114,7 @@ module VmShepherd
     def boot_vm(ovf_file_path, vm_config, vsphere_config)
       datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)
       template = deploy_ovf_template(ovf_file_path, vsphere_config)
-      vm       = create_vm_from_template(template, vsphere_config)
+      vm       = create_vm_from_template(template, vm_config, vsphere_config)
 
       reconfigure_vm(vm, vm_config)
       power_on_vm(vm)
@@ -202,7 +202,7 @@ module VmShepherd
       end || fail('ERROR finding host to upload OVF to')
     end
 
-    def create_vm_from_template(template, vsphere_config)
+    def create_vm_from_template(template, vm_config, vsphere_config)
       logger.info("BEGIN clone_vm_task tempalte=#{template.name}")
       template.CloneVM_Task(
         folder: target_folder(vsphere_config),
@@ -215,7 +215,7 @@ module VmShepherd
           },
           powerOn:  false,
           template: false,
-          config:   {numCPUs: 2, memoryMB: 2048},
+          config:   {numCPUs: vm_config[:cpus] || 2, memoryMB: vm_config[:ram_mb] || 2048},
         }
       ).wait_for_completion.tap {
         logger.info("END   clone_vm_task tempalte=#{template.name}")

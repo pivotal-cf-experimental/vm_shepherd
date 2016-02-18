@@ -52,6 +52,8 @@ module VmShepherd
                 netmask:     vm_shepherd_config.dig('vm', 'netmask'),
                 dns:         vm_shepherd_config.dig('vm', 'dns'),
                 ntp_servers: vm_shepherd_config.dig('vm', 'ntp_servers'),
+                cpus:        vm_shepherd_config.dig('vm', 'cpus'),
+                ram_mb:      vm_shepherd_config.dig('vm', 'ram_mb'),
               },
               {
                 cluster:       vm_shepherd_config.dig('vsphere', 'cluster'),

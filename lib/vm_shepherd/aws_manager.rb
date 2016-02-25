@@ -8,24 +8,24 @@ module VmShepherd
     include VmShepherd::RetryHelper
 
     OPS_MANAGER_INSTANCE_TYPE = 'm3.medium'
-    DO_NOT_TERMINATE_TAG_KEY  = 'do_not_terminate'
-    ELB_SECURITY_GROUP_NAME   = 'ELB Security Group'
+    DO_NOT_TERMINATE_TAG_KEY = 'do_not_terminate'
+    ELB_SECURITY_GROUP_NAME = 'ELB Security Group'
 
-    CREATE_IN_PROGRESS   = 'CREATE_IN_PROGRESS'
-    CREATE_COMPLETE      = 'CREATE_COMPLETE'
+    CREATE_IN_PROGRESS = 'CREATE_IN_PROGRESS'
+    CREATE_COMPLETE = 'CREATE_COMPLETE'
     ROLLBACK_IN_PROGRESS = 'ROLLBACK_IN_PROGRESS'
-    ROLLBACK_COMPLETE    = 'ROLLBACK_COMPLETE'
-    DELETE_IN_PROGRESS   = 'DELETE_IN_PROGRESS'
-    DELETE_COMPLETE      = 'DELETE_COMPLETE'
+    ROLLBACK_COMPLETE = 'ROLLBACK_COMPLETE'
+    DELETE_IN_PROGRESS = 'DELETE_IN_PROGRESS'
+    DELETE_COMPLETE = 'DELETE_COMPLETE'
 
     def initialize(env_config:, logger:)
       AWS.config(
-        access_key_id:     env_config.fetch('aws_access_key'),
+        access_key_id: env_config.fetch('aws_access_key'),
         secret_access_key: env_config.fetch('aws_secret_key'),
-        region:            env_config.fetch('region'),
+        region: env_config.fetch('region'),
       )
       @env_config = env_config
-      @logger     = logger
+      @logger = logger
     end
 
     def prepare_environment(cloudformation_template_file)
@@ -58,19 +58,11 @@ module VmShepherd
     end
 
     def deploy(ami_file_path:, vm_config:)
-      image_id = read_ami_id(ami_file_path)
-
       logger.info('Starting AMI Instance creation')
       instance =
         retry_until do
           begin
-            AWS.ec2.instances.create(
-              image_id:           image_id,
-              key_name:           env_config.fetch('outputs').fetch('ssh_key_name'),
-              security_group_ids: [env_config.fetch('outputs').fetch('security_group')],
-              subnet:             env_config.fetch('outputs').fetch('public_subnet_id'),
-              instance_type:      OPS_MANAGER_INSTANCE_TYPE
-            )
+            AWS.ec2.instances.create(instance_create_params(ami_file_path))
           rescue AWS::EC2::Errors::InvalidIPAddress::InUse
             false
           end
@@ -128,7 +120,7 @@ module VmShepherd
       AWS.ec2.instances.each do |instance|
         if instance.tags.to_h['Name'] == vm_config.fetch('vm_name')
           vm_ip_address = vm_config.fetch('vm_ip_address', nil)
-          elastic_ip    = instance.elastic_ip unless vm_ip_address
+          elastic_ip = instance.elastic_ip unless vm_ip_address
           if elastic_ip
             elastic_ip.disassociate
             elastic_ip.delete
@@ -141,6 +133,23 @@ module VmShepherd
     private
     attr_reader :env_config, :logger
 
+    def instance_create_params(ami_file_path)
+      create_params =
+        {
+          image_id: read_ami_id(ami_file_path),
+          key_name: env_config.fetch('outputs').fetch('ssh_key_name'),
+          security_group_ids: [env_config.fetch('outputs').fetch('security_group')],
+          subnet: env_config.fetch('outputs').fetch('public_subnet_id'),
+          instance_type: OPS_MANAGER_INSTANCE_TYPE
+        }
+
+      if (instance_profile = env_config.fetch('outputs').fetch('instance_profile'))
+        create_params.merge!(iam_instance_profile: instance_profile)
+      end
+
+      create_params
+    end
+
     def subnet_id(stack, elb_config)
       stack.outputs.detect { |o| o.key == elb_config.dig('stack_output_keys', 'subnet_id') }.value
     end
@@ -151,7 +160,7 @@ module VmShepherd
 
     def clear_subnet(subnet_id)
       logger.info("Clearing contents of subnet: #{subnet_id}")
-      subnet  = AWS.ec2.subnets[subnet_id]
+      subnet = AWS.ec2.subnets[subnet_id]
       volumes = []
       subnet.instances.each do |instance|
         instance.attachments.each do |_, attachment|
@@ -177,7 +186,7 @@ module VmShepherd
 
     def delete_elb(elb_name)
       if (elb = AWS::ELB.new.load_balancers.find { |lb| lb.name == elb_name })
-        sg             = elb.security_groups.first
+        sg = elb.security_groups.first
         net_interfaces = AWS.ec2.network_interfaces.select do |ni|
           begin
             ni.security_groups.map(&:id).include? sg.id
@@ -197,17 +206,17 @@ module VmShepherd
     end
 
     def create_elb(stack, elb_config)
-      elb        = AWS::ELB.new
+      elb = AWS::ELB.new
       elb_params = {
         load_balancer_name: elb_config['name'],
-        listeners:          [],
-        subnets:            [subnet_id(stack, elb_config)],
-        security_groups:    [create_security_group(stack, elb_config).security_group_id]
+        listeners: [],
+        subnets: [subnet_id(stack, elb_config)],
+        security_groups: [create_security_group(stack, elb_config).security_group_id]
       }
 
       elb_config['port_mappings'].each do |port_mapping|
         elb_params[:listeners] << {
-          protocol:          'TCP', load_balancer_port: port_mapping[0],
+          protocol: 'TCP', load_balancer_port: port_mapping[0],
           instance_protocol: 'TCP', instance_port: port_mapping[1]
         }
       end
@@ -217,11 +226,11 @@ module VmShepherd
     end
 
     def create_security_group(stack, elb_config)
-      vpc_id    = vpc_id(stack, elb_config)
+      vpc_id = vpc_id(stack, elb_config)
       sg_params = {
-        group_name:  [stack.name, elb_config['name']].join('_'),
+        group_name: [stack.name, elb_config['name']].join('_'),
         description: 'ELB Security Group',
-        vpc_id:      vpc_id,
+        vpc_id: vpc_id,
       }
 
       logger.info('Creating a Security Group for the ELB')
@@ -235,7 +244,7 @@ module VmShepherd
     end
 
     def delete_stack(stack_name)
-      cfm   = AWS::CloudFormation.new
+      cfm = AWS::CloudFormation.new
       stack = cfm.stacks[stack_name]
       logger.info('deleting CloudFormation stack')
       stack.delete

@@ -29,7 +29,6 @@ module VmShepherd
           'ssh_key_name' => 'ssh-key-name',
           'security_group' => 'security-group-id',
           'public_subnet_id' => 'public-subnet-id',
-          'instance_profile' => nil,
         }.merge(extra_outputs),
       }.merge(extra_configs)
     end

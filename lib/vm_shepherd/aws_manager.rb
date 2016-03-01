@@ -143,7 +143,7 @@ module VmShepherd
           instance_type: OPS_MANAGER_INSTANCE_TYPE
         }
 
-      if (instance_profile = env_config.fetch('outputs').fetch('instance_profile'))
+      if (instance_profile = env_config.fetch('outputs').fetch('instance_profile', nil))
         create_params.merge!(iam_instance_profile: instance_profile)
       end
 

@@ -43,6 +43,7 @@ module VmShepherd
               openstack_username: openstack_options[:username],
               openstack_tenant:   openstack_options[:tenant],
               openstack_api_key:  openstack_options[:api_key],
+              connection_options: {:ssl_verify_peer => false},
             }
           )
         openstack_vm_manager.service
@@ -59,6 +60,7 @@ module VmShepherd
               openstack_tenant:        openstack_options[:tenant],
               openstack_api_key:       openstack_options[:api_key],
               openstack_endpoint_type: 'publicURL',
+              connection_options: {:ssl_verify_peer => false},
             }
           )
         openstack_vm_manager.image_service
@@ -74,6 +76,7 @@ module VmShepherd
               openstack_username: openstack_options[:username],
               openstack_tenant:   openstack_options[:tenant],
               openstack_api_key:  openstack_options[:api_key],
+              connection_options: {:ssl_verify_peer => false},
             }
           )
         openstack_vm_manager.network_service

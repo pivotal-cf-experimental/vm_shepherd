@@ -116,6 +116,12 @@ module VmShepherd
     def prepare_environment
     end
 
+    def connection_options
+      {
+        :ssl_verify_peer => false
+      }
+    end
+
     def service
       @service ||= Fog::Compute.new(
         provider:           'openstack',
@@ -123,6 +129,7 @@ module VmShepherd
         openstack_username: username,
         openstack_tenant:   tenant,
         openstack_api_key:  api_key,
+        connection_options: connection_options,
       )
     end
 
@@ -134,6 +141,7 @@ module VmShepherd
         openstack_tenant:        tenant,
         openstack_api_key:       api_key,
         openstack_endpoint_type: 'publicURL',
+        connection_options: connection_options,
       )
     end
 
@@ -144,6 +152,7 @@ module VmShepherd
         openstack_username: username,
         openstack_tenant:   tenant,
         openstack_api_key:  api_key,
+        connection_options: connection_options,
       )
     end
 
@@ -154,6 +163,7 @@ module VmShepherd
         openstack_username: username,
         openstack_tenant:   tenant,
         openstack_api_key:  api_key,
+        connection_options: connection_options,
       )
     end
 

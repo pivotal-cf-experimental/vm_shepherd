@@ -117,7 +117,7 @@ module VmShepherd
 
         openstack_vm_manager.deploy(path, openstack_vm_options)
 
-        uploaded_image = image_service.images.find { |image| image.name == openstack_vm_options[:name] }
+        uploaded_image = image_service.images.find { |image| /#{openstack_vm_options[:name]} \d+/ =~ image.name }
         expect(uploaded_image).to be
         expect(uploaded_image.size).to eq(file_size)
         expect(uploaded_image.disk_format).to eq('raw')
@@ -142,7 +142,7 @@ module VmShepherd
           openstack_vm_manager.deploy(path, openstack_vm_options)
 
           instance_image = image_service.images.get instance.image['id']
-          expect(instance_image.name).to eq(openstack_vm_options[:name])
+          expect(instance_image.name).to match(openstack_vm_options[:name])
         end
 
         it 'assigns the correct key_name to the instance' do
@@ -216,7 +216,7 @@ module VmShepherd
       def destroy_correct_image
         change do
           images.reload
-          images.select { |image| image.name == openstack_vm_options[:name] }.any?
+          images.select { |image| /#{openstack_vm_options[:name]} \d.+/ =~ image.name }.any?
         end.from(true).to(false)
       end
 

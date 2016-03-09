@@ -15,7 +15,7 @@ module VmShepherd
     def deploy(raw_file_path, vm_options)
       say "Uploading the image #{raw_file_path}"
       image = image_service.images.create(
-        name:             vm_options[:name],
+        name:             "#{vm_options[:name]} #{Time.now}",
         size:             File.size(raw_file_path),
         disk_format:      'raw',
         container_format: 'bare',
@@ -61,9 +61,9 @@ module VmShepherd
         say('Ops Manager instance destroyed')
       end
 
-      image = image_service.images.find { |img| img.name == vm_options[:name] }
-      if image
-        say("Found Ops Manager image #{image.id}")
+      image_service.images.each do |image|
+        next unless /#{vm_options[:name]} \d+/ =~ image.name && image.status != 'deleted'
+        say("Found an Ops Manager image for env [#{vm_options[:name]}]: [#{image.id}][#{image.name}]")
         image.destroy
         say('Ops Manager image destroyed')
       end
@@ -92,6 +92,7 @@ module VmShepherd
 
       say("Destroying #{private_images.size} images:")
       private_images.each do |image|
+        next if image.status == 'deleted'
         say("  Destroying image #{image.id}")
         image.destroy
       end

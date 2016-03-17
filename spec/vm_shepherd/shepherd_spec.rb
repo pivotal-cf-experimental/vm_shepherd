@@ -16,11 +16,11 @@ module VmShepherd
         'aws_secret_key' => 'aws-secret-key',
         'region'         => 'aws-region',
         'json_file'      => 'cloudformation.json',
+        'ssh_key_name'      => 'ssh-key-name',
         'parameters'     => {
           'key_pair_name' => 'key_pair_name'
         },
         'outputs'        => {
-          'ssh_key_name'      => 'ssh-key-name',
           'security_group'    => 'security-group-id',
           'public_subnet_id'  => 'public-subnet-id',
           'subnets'           => ['private-subnet-id', 'public-subnet-id'],

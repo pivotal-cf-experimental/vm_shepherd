@@ -137,7 +137,7 @@ module VmShepherd
       create_params =
         {
           image_id: read_ami_id(ami_file_path),
-          key_name: env_config.fetch('outputs').fetch('ssh_key_name'),
+          key_name: env_config.fetch('ssh_key_name'),
           security_group_ids: [env_config.fetch('outputs').fetch('security_group')],
           subnet: env_config.fetch('outputs').fetch('public_subnet_id'),
           instance_type: OPS_MANAGER_INSTANCE_TYPE

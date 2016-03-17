@@ -21,12 +21,12 @@ module VmShepherd
         'aws_secret_key' => 'aws-secret-key',
         'region' => 'us-east-1',
         'json_file' => 'cloudformation.json',
+        'ssh_key_name' => 'ssh-key-name',
         'parameters' => {
           'some_parameter' => 'some-answer',
         },
         'outputs' => {
           'subnets' => ['public-subnet-id', 'private-subnet-id'],
-          'ssh_key_name' => 'ssh-key-name',
           'security_group' => 'security-group-id',
           'public_subnet_id' => 'public-subnet-id',
         }.merge(extra_outputs),

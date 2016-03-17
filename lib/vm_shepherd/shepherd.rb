@@ -211,6 +211,7 @@ module VmShepherd
                         'aws_secret_key' => @env_config.dig('aws_secret_key'),
                         'region'         => @env_config.dig('region'),
                         'json_file'      => @env_config.dig('json_file'),
+                        'ssh_key_name'   => @env_config.dig('ssh_key_name'),
                         'parameters'     => @env_config.dig('parameters'),
                         'outputs'        => @env_config.dig('outputs'),
                       }.merge(ami_elb_config),

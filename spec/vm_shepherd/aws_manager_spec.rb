@@ -21,7 +21,6 @@ module VmShepherd
         'aws_secret_key' => 'aws-secret-key',
         'region' => 'us-east-1',
         'json_file' => 'cloudformation.json',
-        'ssh_key_name' => 'ssh-key-name',
         'parameters' => {
           'some_parameter' => 'some-answer',
         },
@@ -39,6 +38,7 @@ module VmShepherd
     let(:vm_config) do
       {
         'vm_name' => 'some-vm-name',
+        'key_name' => 'ssh-key-name',
       }
     end
     let(:fake_logger) { instance_double(Logger).as_null_object }
@@ -326,7 +326,8 @@ module VmShepherd
         let(:vm_config) do
           {
             'vm_name' => 'some-vm-name',
-            'vm_ip_address' => 'some-ip-address'
+            'vm_ip_address' => 'some-ip-address',
+            'key_name' => 'ssh-key-name',
           }
         end
 

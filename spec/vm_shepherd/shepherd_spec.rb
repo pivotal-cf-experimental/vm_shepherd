@@ -16,7 +16,6 @@ module VmShepherd
         'aws_secret_key' => 'aws-secret-key',
         'region'         => 'aws-region',
         'json_file'      => 'cloudformation.json',
-        'ssh_key_name'      => 'ssh-key-name',
         'parameters'     => {
           'key_pair_name' => 'key_pair_name'
         },
@@ -193,8 +192,8 @@ module VmShepherd
         let(:aws_manager) { instance_double(AwsManager) }
         let(:first_ami_file_path) { 'PATH_TO_AMI_FILE' }
         let(:last_ami_file_path) { 'PATH_TO_AMI_FILE-2' }
-        let(:first_aws_options) { {'vm_name' => 'vm-name'} }
-        let(:last_aws_options) { {'vm_name' => 'vm-name-2'} }
+        let(:first_aws_options) { {'vm_name' => 'vm-name', 'key_name' => 'ssh-key-name'} }
+        let(:last_aws_options) { {'vm_name' => 'vm-name-2', 'key_name' => 'ssh-key-name-2'} }
 
         it 'uses AwsManager to launch a VM' do
           expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)
@@ -373,8 +372,8 @@ module VmShepherd
       context 'when IAAS is AWS' do
         let(:settings_fixture_name) { 'aws.yml' }
         let(:aws_manager) { instance_double(AwsManager) }
-        let(:first_ami_options) { {'vm_name' => 'vm-name'} }
-        let(:last_ami_options) { {'vm_name' => 'vm-name-2'} }
+        let(:first_ami_options) { {'vm_name' => 'vm-name', 'key_name' => 'ssh-key-name'} }
+        let(:last_ami_options) { {'vm_name' => 'vm-name-2', 'key_name' => 'ssh-key-name-2'} }
 
         it 'uses AwsManager to destroy a VM' do
           expect(AwsManager).to receive(:new).with(env_config: aws_env_config, logger: instance_of(Logger)).and_return(aws_manager)

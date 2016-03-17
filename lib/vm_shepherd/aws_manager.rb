@@ -62,7 +62,7 @@ module VmShepherd
       instance =
         retry_until do
           begin
-            AWS.ec2.instances.create(instance_create_params(ami_file_path))
+            AWS.ec2.instances.create(instance_create_params(ami_file_path, vm_config))
           rescue AWS::EC2::Errors::InvalidIPAddress::InUse
             false
           end
@@ -133,11 +133,11 @@ module VmShepherd
     private
     attr_reader :env_config, :logger
 
-    def instance_create_params(ami_file_path)
+    def instance_create_params(ami_file_path, vm_config)
       create_params =
         {
           image_id: read_ami_id(ami_file_path),
-          key_name: env_config.fetch('ssh_key_name'),
+          key_name: vm_config.fetch('key_name'),
           security_group_ids: [env_config.fetch('outputs').fetch('security_group')],
           subnet: env_config.fetch('outputs').fetch('public_subnet_id'),
           instance_type: OPS_MANAGER_INSTANCE_TYPE

@@ -7,7 +7,6 @@ vm_shepherd:
     aws_secret_key: aws-secret-key
     region: aws-region
     json_file: cloudformation.json
-    ssh_key_name: ssh-key-name
     parameters:
       key_pair_name: key_pair_name
     outputs:
@@ -28,4 +27,6 @@ vm_shepherd:
         subnet_id: CloudFormationSubnetIdOutputKey
   vm_configs:
   - vm_name: vm-name
+    key_name: ssh-key-name
   - vm_name: vm-name-2
+    key_name: ssh-key-name-2

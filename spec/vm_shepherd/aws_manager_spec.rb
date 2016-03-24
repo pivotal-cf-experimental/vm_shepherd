@@ -105,6 +105,8 @@ module VmShepherd
         it 'aborts if stack fails to create' do
           expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_COMPLETE').ordered
           expect(stack).to receive(:delete)
+          expect(stack).to receive(:name).and_return('dummy')
+          expect(stack).to receive(:events).and_return([])
           expect {
             ami_manager.prepare_environment(cloudformation_template_file.path)
           }.to raise_error('Unexpected status for stack aws-stack-name : ROLLBACK_COMPLETE')

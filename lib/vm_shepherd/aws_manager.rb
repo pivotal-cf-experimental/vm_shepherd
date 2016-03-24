@@ -47,7 +47,13 @@ module VmShepherd
           when ROLLBACK_IN_PROGRESS
             false
           else
-            stack.delete if status == ROLLBACK_COMPLETE
+            if ROLLBACK_COMPLETE == status
+              logger.info("Rolling back stack [#{stack.name}]; events listed below")
+              stack.events.select{|event| event.resource_status_reason}.each do |failed_event|
+                logger.info("#{failed_event.resource_properties} #{failed_event.resource_status_reason}")
+              end
+              stack.delete
+            end
             raise "Unexpected status for stack #{env_config.fetch('stack_name')} : #{status}"
         end
       end

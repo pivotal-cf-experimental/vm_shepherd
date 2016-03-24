@@ -62,7 +62,7 @@ module VmShepherd
       end
 
       image_service.images.each do |image|
-        next unless /#{vm_options[:name]} \d+/ =~ image.name && image.status != 'deleted'
+        next unless /^#{vm_options[:name]} \d+/ =~ image.name && image.status != 'deleted'
         say("Found an Ops Manager image for env [#{vm_options[:name]}]: [#{image.id}][#{image.name}]")
         image.destroy
         say('Ops Manager image destroyed')

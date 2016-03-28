@@ -371,6 +371,7 @@ module VmShepherd
           expect(volume).to receive(:status).and_return('detaching', 'detaching', 'available')
           openstack_vm_manager.clean_environment
         end
+        
       end
 
       it 'deletes everything in the correct container' do

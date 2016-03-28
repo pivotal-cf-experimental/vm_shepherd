@@ -99,7 +99,7 @@ module VmShepherd
 
       say("Destroying #{service.volumes.size} volumes:")
       service.volumes.each do |volume|
-        say("  Destroying volume #{volume.id}")
+        say("  Destroying volume #{volume.id}; current status: [#{volume.status}]")
         volume.wait_for { volume.ready? }
         volume.destroy
       end

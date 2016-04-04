@@ -215,7 +215,7 @@ module VmShepherd
           },
           powerOn:  false,
           template: false,
-          config:   {numCPUs: vm_config[:cpus] || 2, memoryMB: vm_config[:ram_mb] || 2048},
+          config:   {numCPUs: vm_config[:cpus] || 2, memoryMB: vm_config[:ram_mb] || 4096},
         }
       ).wait_for_completion.tap {
         logger.info("END   clone_vm_task tempalte=#{template.name}")

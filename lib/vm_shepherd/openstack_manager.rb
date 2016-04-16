@@ -72,20 +72,22 @@ module VmShepherd
 
     def clean_environment
       say("Destroying #{service.servers.size} instances:")
-      service.servers.each do |server|
-        server.volumes.each do |volume|
-          say("  Detaching volume #{volume.id} from server #{server.id}")
-          server.detach_volume(volume.id)
+      retry_until(retry_limit: 2) do
+        service.servers.each do |server|
+          server.volumes.each do |volume|
+            say("  Detaching volume #{volume.id} from server #{server.id}")
+            server.detach_volume(volume.id)
+          end
+
+          say("  Destroying instance #{server.id}")
+          server.destroy
         end
 
-        say("  Destroying instance #{server.id}")
-        server.destroy
-      end
-
-      retry_until(retry_limit: 30) do
-        server_count = service.servers.count
-        say("  Waiting for #{server_count} servers to be destroyed")
-        server_count == 0
+        retry_until(retry_limit: 15) do
+          server_count = service.servers.count
+          say("  Waiting for #{server_count} servers to be destroyed")
+          server_count == 0
+        end
       end
 
       private_images = image_service.images.reject(&:is_public)

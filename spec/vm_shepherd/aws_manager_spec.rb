@@ -72,7 +72,7 @@ module VmShepherd
 
       describe 'cloudformation' do
         it 'polls the status every 30 seconds' do
-          expect(ami_manager).to receive(:retry_until).with(retry_limit: 60, retry_interval: 30)
+          expect(ami_manager).to receive(:retry_until).with(retry_limit: 80, retry_interval: 30)
 
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
@@ -95,9 +95,9 @@ module VmShepherd
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
 
-        it 'stops retrying after 30 times' do
+        it 'stops retrying after 80 times' do
           expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
-            exactly(60).times
+            exactly(80).times
 
           expect { ami_manager.prepare_environment(cloudformation_template_file.path) }.to raise_error(AwsManager::RetryLimitExceeded)
         end

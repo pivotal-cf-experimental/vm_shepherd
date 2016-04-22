@@ -17,6 +17,7 @@ module VmShepherd
     ROLLBACK_COMPLETE = 'ROLLBACK_COMPLETE'
     DELETE_IN_PROGRESS = 'DELETE_IN_PROGRESS'
     DELETE_COMPLETE = 'DELETE_COMPLETE'
+    DELETE_FAILED = 'DELETE_FAILED'
 
     def initialize(env_config:, logger:)
       AWS.config(
@@ -253,6 +254,7 @@ module VmShepherd
       cfm = AWS::CloudFormation.new
       stack = cfm.stacks[stack_name]
       logger.info('deleting CloudFormation stack')
+      delete_retried = false
       stack.delete
       logger.info("waiting until status: #{DELETE_COMPLETE}")
       retry_until(retry_limit: 60, retry_interval: 30) do
@@ -264,6 +266,15 @@ module VmShepherd
               true
             when DELETE_IN_PROGRESS
               false
+            when DELETE_FAILED
+              if delete_retried
+                raise "Two delete retries have failed #{stack_name} : #{status}"
+              else
+                delete_retried = true
+                stack.delete
+                sleep 2 * 60
+                false
+              end
             else
               raise "Unexpected status for stack #{stack_name} : #{status}"
           end

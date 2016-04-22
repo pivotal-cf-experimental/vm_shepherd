@@ -418,7 +418,6 @@ module VmShepherd
         expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
       end
 
-
       it 'aborts if stack reports unexpected status' do
         expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS', 'UNEXPECTED_STATUS').ordered
         expect {
@@ -455,6 +454,28 @@ module VmShepherd
       it 'does not look up buckets when there is no name' do
         expect(buckets).to_not receive(:[])
         ami_manager.clean_environment
+      end
+
+      context 'when the stack fails to delete' do
+        it 'retries deletes twice' do
+          expect(stack).to receive(:delete).ordered
+          expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS', 'DELETE_FAILED').ordered
+          expect(stack).to receive(:delete).ordered
+          expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS', 'DELETE_COMPLETE').ordered
+
+          ami_manager.clean_environment
+        end
+
+        it 'fails after two delete retries' do
+          expect(stack).to receive(:delete).ordered
+          expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS', 'DELETE_FAILED').ordered
+          expect(stack).to receive(:delete).ordered
+          expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS', 'DELETE_FAILED').ordered
+
+          expect {
+            ami_manager.clean_environment
+          }.to raise_error(/Two delete retries have failed/)
+        end
       end
 
       context 'when a subnet is not provided' do

@@ -759,7 +759,7 @@ module VmShepherd
       let(:instances) { [non_terminated_instance, instance] }
 
       before do
-        allow(ec2).to receive(:instances).and_return(instances)
+        allow(ec2).to receive_message_chain(:instances, :with_tag).and_return(instances)
         allow(instance).to receive(:terminate)
       end
 

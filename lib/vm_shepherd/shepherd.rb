@@ -54,6 +54,7 @@ module VmShepherd
                 ntp_servers: vm_shepherd_config.dig('vm', 'ntp_servers'),
                 cpus:        vm_shepherd_config.dig('vm', 'cpus'),
                 ram_mb:      vm_shepherd_config.dig('vm', 'ram_mb'),
+                vm_password: (vm_shepherd_config.dig('vm', 'vm_password') || 'tempest'),
               },
               {
                 cluster:       vm_shepherd_config.dig('vsphere', 'cluster'),

@@ -20,6 +20,7 @@ vm_shepherd:
       ntp_servers: OVA_NTP
       cpus: OVA_CPUS
       ram_mb: OVA_RAM_MB
+      vm_password: not-tempest
     cleanup:
       datacenter: VSPHERE_OTHER_DATACENTER
       datastores:

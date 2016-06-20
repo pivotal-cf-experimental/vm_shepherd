@@ -149,6 +149,7 @@ module VmShepherd
               ntp_servers: first_config.dig('vm', 'ntp_servers'),
               cpus:        first_config.dig('vm', 'cpus'),
               ram_mb:      first_config.dig('vm', 'ram_mb'),
+              vm_password: first_config.dig('vm', 'vm_password'),
             },
             {
               cluster:       first_config.dig('vsphere', 'cluster'),
@@ -167,6 +168,7 @@ module VmShepherd
               netmask:     last_config.dig('vm', 'netmask'),
               dns:         last_config.dig('vm', 'dns'),
               ntp_servers: last_config.dig('vm', 'ntp_servers'),
+              vm_password: 'tempest',
               cpus:        last_config.dig('vm', 'cpus'),
               ram_mb:      last_config.dig('vm', 'ram_mb'),
             },

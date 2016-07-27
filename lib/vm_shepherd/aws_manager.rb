@@ -50,7 +50,7 @@ module VmShepherd
           else
             if ROLLBACK_COMPLETE == status
               logger.info("Rolling back stack [#{stack.name}]; events listed below")
-              stack.events.select{|event| event.resource_status_reason}.each do |failed_event|
+              stack.events.select { |event| event.resource_status_reason }.each do |failed_event|
                 logger.info("#{failed_event.resource_properties} #{failed_event.resource_status_reason}")
               end
               stack.delete
@@ -213,7 +213,6 @@ module VmShepherd
     end
 
     def create_elb(stack, elb_config)
-      elb = AWS::ELB.new
       elb_params = {
         load_balancer_name: elb_config['name'],
         listeners: [],
@@ -229,7 +228,17 @@ module VmShepherd
       end
 
       logger.info('Creating an ELB')
-      elb.client.create_load_balancer(elb_params)
+      elb = AWS::ELB.new.client.create_load_balancer(elb_params)
+      port = elb_config.fetch('health_check', {})['port'] || 'TCP:80'
+      elb.configure_health_check(
+        {
+          target: port,
+          healthy_threshold: 2,
+          unhealthy_threshold: 5,
+          interval: 5,
+          timeout: 2,
+        }
+      )
     end
 
     def create_security_group(stack, elb_config)

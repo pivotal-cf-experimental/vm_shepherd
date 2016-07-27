@@ -120,6 +120,9 @@ module VmShepherd
               {
                 'name' => 'elb-1-name',
                 'port_mappings' => [[1111, 11]],
+                'health_check' => {
+                  'port' => 'TCP:1234',
+                },
                 'stack_output_keys' => {
                   'vpc_id' => 'vpc_id',
                   'subnet_id' => 'private_subnet',
@@ -166,6 +169,9 @@ module VmShepherd
         let(:elb_1_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-1-security-group-id') }
         let(:elb_2_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-2-security-group-id') }
 
+        let(:elb_1) { instance_double(AWS::ELB::LoadBalancer, configure_health_check: nil) }
+        let(:elb_2) { instance_double(AWS::ELB::LoadBalancer) }
+
         before do
           allow(ec2).to receive(:client).and_return(ec2_client)
           allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-1-name')).
@@ -175,7 +181,7 @@ module VmShepherd
           allow(ec2).to receive(:security_groups).and_return(security_groups)
           allow(elb_1_security_group).to receive(:authorize_ingress)
           allow(elb_2_security_group).to receive(:authorize_ingress)
-          allow(elb_client).to receive(:create_load_balancer)
+          allow(elb_client).to receive(:create_load_balancer).and_return(elb_1)
         end
 
         it 'creates and attaches a security group for the ELBs' do
@@ -199,21 +205,32 @@ module VmShepherd
         end
 
         it 'attaches an elb with the name of the stack for the ELBs' do
+          health_check_params = {
+            healthy_threshold: 2,
+            unhealthy_threshold: 5,
+            interval: 5,
+            timeout: 2,
+          }
           elb_1_params = {
             load_balancer_name: 'elb-1-name',
             listeners: [{protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11}],
             subnets: ['fake-subnet-id'],
             security_groups: ['elb-1-security-group-id']
           }
-          expect(elb_client).to receive(:create_load_balancer).with(elb_1_params)
+          expect(elb_client).to receive(:create_load_balancer).with(elb_1_params).and_return(elb_1)
+          expect(elb_1).to receive(:configure_health_check).with(
+            health_check_params.merge(target: 'TCP:1234')
+          )
           elb_2_params = {
             load_balancer_name: 'elb-2-name',
             listeners: [{protocol: 'TCP', load_balancer_port: 2222, instance_protocol: 'TCP', instance_port: 22}],
             subnets: ['fake-subnet-id'],
             security_groups: ['elb-2-security-group-id']
           }
-          expect(elb_client).to receive(:create_load_balancer).with(elb_2_params)
-
+          expect(elb_client).to receive(:create_load_balancer).with(elb_2_params).and_return(elb_2)
+          expect(elb_2).to receive(:configure_health_check).with(
+            health_check_params.merge(target: 'TCP:80')
+          )
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
       end

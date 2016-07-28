@@ -61,8 +61,8 @@ module VmShepherd
       let(:cfm) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
       let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'CREATE_COMPLETE') }
       let(:stack_collection) { instance_double(AWS::CloudFormation::StackCollection) }
-      let(:elb) { instance_double(AWS::ELB, client: elb_client) }
-      let(:elb_client) { double(AWS::ELB::Client) }
+      let(:elb) { instance_double(AWS::ELB, load_balancers: load_balancers) }
+      let(:load_balancers) { instance_double(AWS::ELB::LoadBalancerCollection) }
 
       before do
         allow(AWS::CloudFormation).to receive(:new).and_return(cfm)
@@ -121,7 +121,7 @@ module VmShepherd
                 'name' => 'elb-1-name',
                 'port_mappings' => [[1111, 11]],
                 'health_check' => {
-                  'port' => 'TCP:1234',
+                  'ping_target' => 'TCP:1234',
                 },
                 'stack_output_keys' => {
                   'vpc_id' => 'vpc_id',
@@ -181,7 +181,7 @@ module VmShepherd
           allow(ec2).to receive(:security_groups).and_return(security_groups)
           allow(elb_1_security_group).to receive(:authorize_ingress)
           allow(elb_2_security_group).to receive(:authorize_ingress)
-          allow(elb_client).to receive(:create_load_balancer).and_return(elb_1)
+          allow(load_balancers).to receive(:create).and_return(elb_1)
         end
 
         it 'creates and attaches a security group for the ELBs' do
@@ -212,22 +212,20 @@ module VmShepherd
             timeout: 2,
           }
           elb_1_params = {
-            load_balancer_name: 'elb-1-name',
             listeners: [{protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11}],
             subnets: ['fake-subnet-id'],
             security_groups: ['elb-1-security-group-id']
           }
-          expect(elb_client).to receive(:create_load_balancer).with(elb_1_params).and_return(elb_1)
+          expect(load_balancers).to receive(:create).with('elb-1-name', elb_1_params).and_return(elb_1)
           expect(elb_1).to receive(:configure_health_check).with(
             health_check_params.merge(target: 'TCP:1234')
           )
           elb_2_params = {
-            load_balancer_name: 'elb-2-name',
             listeners: [{protocol: 'TCP', load_balancer_port: 2222, instance_protocol: 'TCP', instance_port: 22}],
             subnets: ['fake-subnet-id'],
             security_groups: ['elb-2-security-group-id']
           }
-          expect(elb_client).to receive(:create_load_balancer).with(elb_2_params).and_return(elb_2)
+          expect(load_balancers).to receive(:create).with('elb-2-name', elb_2_params).and_return(elb_2)
           expect(elb_2).to receive(:configure_health_check).with(
             health_check_params.merge(target: 'TCP:80')
           )

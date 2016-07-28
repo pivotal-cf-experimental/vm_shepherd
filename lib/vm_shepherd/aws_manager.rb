@@ -214,7 +214,6 @@ module VmShepherd
 
     def create_elb(stack, elb_config)
       elb_params = {
-        load_balancer_name: elb_config['name'],
         listeners: [],
         subnets: [subnet_id(stack, elb_config)],
         security_groups: [create_security_group(stack, elb_config).security_group_id]
@@ -227,9 +226,9 @@ module VmShepherd
         }
       end
 
-      logger.info('Creating an ELB')
-      elb = AWS::ELB.new.client.create_load_balancer(elb_params)
-      port = elb_config.fetch('health_check', {})['port'] || 'TCP:80'
+      logger.info("Creating #{elb_config['name']} ELB")
+      elb = AWS::ELB.new.load_balancers.create(elb_config['name'], elb_params)
+      port = elb_config.fetch('health_check', {})['ping_target'] || 'TCP:80'
       elb.configure_health_check(
         {
           target: port,

@@ -226,19 +226,8 @@ module VmShepherd
     end
 
     def ami_elb_config
-      if @env_config.dig('elbs')
-        {
-          'elbs' => @env_config.dig('elbs').map do |elb|
-            {
-              'name' => elb.dig('name'),
-              'port_mappings' => elb.dig('port_mappings'),
-              'stack_output_keys' => elb.dig('stack_output_keys'),
-            }
-          end
-        }
-      else
-        {}
-      end
+      return {} unless @env_config.dig('elbs')
+      {'elbs' => @env_config.dig('elbs')}
     end
 
     def openstack_vm_manager(vm_shepherd_config)

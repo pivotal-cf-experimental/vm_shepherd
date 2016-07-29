@@ -226,9 +226,7 @@ module VmShepherd
             security_groups: ['elb-2-security-group-id']
           }
           expect(load_balancers).to receive(:create).with('elb-2-name', elb_2_params).and_return(elb_2)
-          expect(elb_2).to receive(:configure_health_check).with(
-            health_check_params.merge(target: 'TCP:80')
-          )
+          expect(elb_2).not_to receive(:configure_health_check)
           ami_manager.prepare_environment(cloudformation_template_file.path)
         end
       end

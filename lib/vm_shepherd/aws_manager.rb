@@ -228,7 +228,7 @@ module VmShepherd
 
       logger.info("Creating #{elb_config['name']} ELB")
       elb = AWS::ELB.new.load_balancers.create(elb_config['name'], elb_params)
-      port = elb_config.fetch('health_check', {})['ping_target'] || 'TCP:80'
+      port = elb_config.fetch('health_check', {})['ping_target'] || return
       elb.configure_health_check(
         {
           target: port,

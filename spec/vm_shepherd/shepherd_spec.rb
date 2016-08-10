@@ -16,6 +16,7 @@ module VmShepherd
         'aws_secret_key' => 'aws-secret-key',
         'region'         => 'aws-region',
         'json_file'      => 'cloudformation.json',
+        'update_existing' => false,
         'parameters'     => {
           'key_pair_name' => 'key_pair_name'
         },

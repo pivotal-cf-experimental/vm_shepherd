@@ -213,15 +213,16 @@ module VmShepherd
       @ami_manager ||=
         VmShepherd::AwsManager.new(
           env_config: {
-            'stack_name' => @env_config.dig('stack_name'),
-            'aws_access_key' => @env_config.dig('aws_access_key'),
-            'aws_secret_key' => @env_config.dig('aws_secret_key'),
-            'region' => @env_config.dig('region'),
-            'json_file' => @env_config.dig('json_file'),
-            'parameters' => @env_config.dig('parameters'),
-            'outputs' => @env_config.dig('outputs'),
-          }.merge(ami_elb_config),
-          logger: stdout_logger,
+                        'stack_name'        => @env_config.dig('stack_name'),
+                        'aws_access_key'    => @env_config.dig('aws_access_key'),
+                        'aws_secret_key'    => @env_config.dig('aws_secret_key'),
+                        'region'            => @env_config.dig('region'),
+                        'json_file'         => @env_config.dig('json_file'),
+                        'parameters'        => @env_config.dig('parameters'),
+                        'outputs'           => @env_config.dig('outputs'),
+                        'update_existing'  => true == @env_config.dig('update_existing'),
+                      }.merge(ami_elb_config),
+          logger:     stdout_logger,
         )
     end
 

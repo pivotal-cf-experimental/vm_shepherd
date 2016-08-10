@@ -58,176 +58,223 @@ module VmShepherd
 
     describe '#prepare_environment' do
       let(:cloudformation_template_file) { Tempfile.new('cloudformation_template_file').tap { |f| f.write('{}'); f.close } }
-      let(:cfm) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
-      let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'CREATE_COMPLETE') }
+      let(:cfn) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
+      let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'CREATE_COMPLETE', update: true, name: 'sample-stack') }
+
       let(:stack_collection) { instance_double(AWS::CloudFormation::StackCollection) }
       let(:elb) { instance_double(AWS::ELB, load_balancers: load_balancers) }
       let(:load_balancers) { instance_double(AWS::ELB::LoadBalancerCollection) }
 
       before do
-        allow(AWS::CloudFormation).to receive(:new).and_return(cfm)
+        allow(AWS::CloudFormation).to receive(:new).and_return(cfn)
         allow(AWS::ELB).to receive(:new).and_return(elb)
-        allow(stack_collection).to receive(:create).and_return(stack)
+        allow(stack_collection).to receive(:[]).and_return(nil)
       end
 
-      describe 'cloudformation' do
-        it 'polls the status every 30 seconds' do
-          expect(ami_manager).to receive(:retry_until).with(retry_limit: 80, retry_interval: 30)
-
-          ami_manager.prepare_environment(cloudformation_template_file.path)
-        end
-
-        it 'creates the stack with the correct parameters' do
-          expect(stack_collection).to receive(:create).with(
-            'aws-stack-name',
-            '{}',
-            parameters: {
-              'some_parameter' => 'some-answer',
-            },
-            capabilities: ['CAPABILITY_IAM']
-          )
-          ami_manager.prepare_environment(cloudformation_template_file.path)
-        end
-
-        it 'waits for the stack to finish creating' do
-          expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_COMPLETE')
-
-          ami_manager.prepare_environment(cloudformation_template_file.path)
-        end
-
-        it 'stops retrying after 80 times' do
-          expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
-            exactly(80).times
-
-          expect { ami_manager.prepare_environment(cloudformation_template_file.path) }.to raise_error(AwsManager::RetryLimitExceeded)
-        end
-
-        it 'aborts if stack fails to create' do
-          expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_COMPLETE').ordered
-          expect(stack).to receive(:delete)
-          expect(stack).to receive(:name).and_return('dummy')
-          expect(stack).to receive(:events).and_return([])
-          expect {
-            ami_manager.prepare_environment(cloudformation_template_file.path)
-          }.to raise_error('Unexpected status for stack aws-stack-name : ROLLBACK_COMPLETE')
-        end
-      end
-
-      context 'when the elb setting is present' do
-        let(:extra_configs) do
-          {
-            'elbs' => [
-              {
-                'name' => 'elb-1-name',
-                'port_mappings' => [[1111, 11]],
-                'health_check' => {
-                  'ping_target' => 'TCP:1234',
-                },
-                'stack_output_keys' => {
-                  'vpc_id' => 'vpc_id',
-                  'subnet_id' => 'private_subnet',
-                },
-              },
-              {
-                'name' => 'elb-2-name',
-                'port_mappings' => [[2222, 22]],
-                'stack_output_keys' => {
-                  'vpc_id' => 'vpc_id',
-                  'subnet_id' => 'private_subnet',
-                },
-              }
-            ],
-          }
-        end
-        let(:stack) do
-          instance_double(AWS::CloudFormation::Stack,
-            name: 'fake-stack-name',
-            creation_time: Time.utc(2015, 5, 29),
-            status: 'CREATE_COMPLETE',
-            outputs: stack_outputs
-          )
-        end
-        let(:stack_outputs) do
-          [
-            instance_double(AWS::CloudFormation::StackOutput, key: 'private_subnet', value: 'fake-subnet-id'),
-            instance_double(AWS::CloudFormation::StackOutput, key: 'vpc_id', value: 'fake-vpc-id'),
-          ]
-        end
-        let(:ec2_client) { double(AWS::EC2::Client) }
-        let(:create_security_group_response_1) do
-          {group_id: 'elb-1-security-group'}
-        end
-        let(:create_security_group_response_2) do
-          {group_id: 'elb-2-security-group'}
-        end
-        let(:security_groups) do
-          {
-            'elb-1-security-group' => elb_1_security_group,
-            'elb-2-security-group' => elb_2_security_group,
-          }
-        end
-        let(:elb_1_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-1-security-group-id') }
-        let(:elb_2_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-2-security-group-id') }
-
-        let(:elb_1) { instance_double(AWS::ELB::LoadBalancer, configure_health_check: nil) }
-        let(:elb_2) { instance_double(AWS::ELB::LoadBalancer) }
-
+      context 'when a stack already exists' do
         before do
-          allow(ec2).to receive(:client).and_return(ec2_client)
-          allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-1-name')).
-            and_return(create_security_group_response_1)
-          allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-2-name')).
-            and_return(create_security_group_response_2)
-          allow(ec2).to receive(:security_groups).and_return(security_groups)
-          allow(elb_1_security_group).to receive(:authorize_ingress)
-          allow(elb_2_security_group).to receive(:authorize_ingress)
-          allow(load_balancers).to receive(:create).and_return(elb_1)
+          allow(stack_collection).to receive(:[]).with('aws-stack-name').and_return(stack)
         end
 
-        it 'creates and attaches a security group for the ELBs' do
-          elb_1_security_group_args = {
-            group_name: 'fake-stack-name_elb-1-name',
-            description: 'ELB Security Group',
-            vpc_id: 'fake-vpc-id',
-          }
-          expect(ec2_client).to receive(:create_security_group).with(elb_1_security_group_args).and_return(create_security_group_response_1)
-          expect(elb_1_security_group).to receive(:authorize_ingress).with(:tcp, 1111, '0.0.0.0/0')
+        context 'when update_existing is enabled' do
 
-          elb_2_security_group_args = {
-            group_name: 'fake-stack-name_elb-2-name',
-            description: 'ELB Security Group',
-            vpc_id: 'fake-vpc-id',
-          }
-          expect(ec2_client).to receive(:create_security_group).with(elb_2_security_group_args).and_return(create_security_group_response_2)
-          expect(elb_2_security_group).to receive(:authorize_ingress).with(:tcp, 2222, '0.0.0.0/0')
+          let(:extra_configs) { {'update_existing' => true} }
+          let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'UPDATE_COMPLETE', update: true, name: 'stack-fails-to-update') }
 
-          ami_manager.prepare_environment(cloudformation_template_file.path)
+          it 'upgrades the existing stack with the provided template' do
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+
+            expect(stack).to have_received(:update)
+          end
+
+          it 'aborts if stack fails to update' do
+            expect(stack).to receive(:status).and_return('UPDATE_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_COMPLETE').ordered
+            expect(stack).to receive(:delete)
+            expect(stack).to receive(:events).and_return([])
+            expect {
+              ami_manager.prepare_environment(cloudformation_template_file.path)
+            }.to raise_error('Unexpected status for stack aws-stack-name : ROLLBACK_COMPLETE')
+          end
         end
 
-        it 'attaches an elb with the name of the stack for the ELBs' do
-          health_check_params = {
-            healthy_threshold: 2,
-            unhealthy_threshold: 5,
-            interval: 5,
-            timeout: 2,
-          }
-          elb_1_params = {
-            listeners: [{protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11}],
-            subnets: ['fake-subnet-id'],
-            security_groups: ['elb-1-security-group-id']
-          }
-          expect(load_balancers).to receive(:create).with('elb-1-name', elb_1_params).and_return(elb_1)
-          expect(elb_1).to receive(:configure_health_check).with(
-            health_check_params.merge(target: 'TCP:1234')
-          )
-          elb_2_params = {
-            listeners: [{protocol: 'TCP', load_balancer_port: 2222, instance_protocol: 'TCP', instance_port: 22}],
-            subnets: ['fake-subnet-id'],
-            security_groups: ['elb-2-security-group-id']
-          }
-          expect(load_balancers).to receive(:create).with('elb-2-name', elb_2_params).and_return(elb_2)
-          expect(elb_2).not_to receive(:configure_health_check)
-          ami_manager.prepare_environment(cloudformation_template_file.path)
+        context 'when update_existing is disabled' do
+          let(:extra_configs) { {'update_existing' => false} }
+
+          it 'errors out due to the stack already existing' do
+            allow(stack_collection).to receive(:create).and_return(stack)
+
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+
+            expect(stack).not_to have_received(:update)
+          end
+        end
+      end
+
+      context 'when the stack does not yet exist' do
+        before do
+          allow(stack_collection).to receive(:[]).and_return([])
+          allow(stack_collection).to receive(:create).and_return(stack)
+        end
+
+        describe 'cloudformation' do
+          it 'polls the status every 30 seconds' do
+            expect(ami_manager).to receive(:retry_until).with(retry_limit: 80, retry_interval: 30)
+
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+          end
+
+          it 'creates the stack with the correct parameters' do
+            expect(stack_collection).to receive(:create).with(
+              'aws-stack-name',
+              '{}',
+              parameters: {
+                'some_parameter' => 'some-answer',
+              },
+              capabilities: ['CAPABILITY_IAM']
+            )
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+          end
+
+          it 'waits for the stack to finish creating' do
+            expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_IN_PROGRESS', 'CREATE_COMPLETE')
+
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+          end
+
+          it 'stops retrying after 80 times' do
+            expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS').
+              exactly(80).times
+
+            expect { ami_manager.prepare_environment(cloudformation_template_file.path) }.to raise_error(AwsManager::RetryLimitExceeded)
+          end
+
+          it 'aborts if stack fails to create' do
+            expect(stack).to receive(:status).and_return('CREATE_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_IN_PROGRESS', 'ROLLBACK_COMPLETE').ordered
+            expect(stack).to receive(:delete)
+            expect(stack).to receive(:name).and_return('dummy')
+            expect(stack).to receive(:events).and_return([])
+            expect {
+              ami_manager.prepare_environment(cloudformation_template_file.path)
+            }.to raise_error('Unexpected status for stack aws-stack-name : ROLLBACK_COMPLETE')
+          end
+        end
+
+        context 'when the elb setting is present' do
+          let(:extra_configs) do
+            {
+              'elbs' => [
+                {
+                  'name' => 'elb-1-name',
+                  'port_mappings' => [[1111, 11]],
+                  'health_check' => {
+                    'ping_target' => 'TCP:1234',
+                  },
+                  'stack_output_keys' => {
+                    'vpc_id' => 'vpc_id',
+                    'subnet_id' => 'private_subnet',
+                  },
+                },
+                {
+                  'name' => 'elb-2-name',
+                  'port_mappings' => [[2222, 22]],
+                  'stack_output_keys' => {
+                    'vpc_id' => 'vpc_id',
+                    'subnet_id' => 'private_subnet',
+                  },
+                }
+              ],
+            }
+          end
+          let(:stack) do
+            instance_double(AWS::CloudFormation::Stack,
+              name: 'fake-stack-name',
+              creation_time: Time.utc(2015, 5, 29),
+              status: 'CREATE_COMPLETE',
+              outputs: stack_outputs
+            )
+          end
+          let(:stack_outputs) do
+            [
+              instance_double(AWS::CloudFormation::StackOutput, key: 'private_subnet', value: 'fake-subnet-id'),
+              instance_double(AWS::CloudFormation::StackOutput, key: 'vpc_id', value: 'fake-vpc-id'),
+            ]
+          end
+          let(:ec2_client) { double(AWS::EC2::Client) }
+          let(:create_security_group_response_1) do
+            {group_id: 'elb-1-security-group'}
+          end
+          let(:create_security_group_response_2) do
+            {group_id: 'elb-2-security-group'}
+          end
+          let(:security_groups) do
+            {
+              'elb-1-security-group' => elb_1_security_group,
+              'elb-2-security-group' => elb_2_security_group,
+            }
+          end
+          let(:elb_1_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-1-security-group-id') }
+          let(:elb_2_security_group) { instance_double(AWS::EC2::SecurityGroup, security_group_id: 'elb-2-security-group-id') }
+
+          let(:elb_1) { instance_double(AWS::ELB::LoadBalancer, configure_health_check: nil) }
+          let(:elb_2) { instance_double(AWS::ELB::LoadBalancer) }
+
+          before do
+            allow(ec2).to receive(:client).and_return(ec2_client)
+            allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-1-name')).
+              and_return(create_security_group_response_1)
+            allow(ec2_client).to receive(:create_security_group).with(hash_including(group_name: 'fake-stack-name_elb-2-name')).
+              and_return(create_security_group_response_2)
+            allow(ec2).to receive(:security_groups).and_return(security_groups)
+            allow(elb_1_security_group).to receive(:authorize_ingress)
+            allow(elb_2_security_group).to receive(:authorize_ingress)
+            allow(load_balancers).to receive(:create).and_return(elb_1)
+          end
+
+          it 'creates and attaches a security group for the ELBs' do
+            elb_1_security_group_args = {
+              group_name: 'fake-stack-name_elb-1-name',
+              description: 'ELB Security Group',
+              vpc_id: 'fake-vpc-id',
+            }
+            expect(ec2_client).to receive(:create_security_group).with(elb_1_security_group_args).and_return(create_security_group_response_1)
+            expect(elb_1_security_group).to receive(:authorize_ingress).with(:tcp, 1111, '0.0.0.0/0')
+
+            elb_2_security_group_args = {
+              group_name: 'fake-stack-name_elb-2-name',
+              description: 'ELB Security Group',
+              vpc_id: 'fake-vpc-id',
+            }
+            expect(ec2_client).to receive(:create_security_group).with(elb_2_security_group_args).and_return(create_security_group_response_2)
+            expect(elb_2_security_group).to receive(:authorize_ingress).with(:tcp, 2222, '0.0.0.0/0')
+
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+          end
+
+          it 'attaches an elb with the name of the stack for the ELBs' do
+            health_check_params = {
+              healthy_threshold: 2,
+              unhealthy_threshold: 5,
+              interval: 5,
+              timeout: 2,
+            }
+            elb_1_params = {
+              listeners: [{protocol: 'TCP', load_balancer_port: 1111, instance_protocol: 'TCP', instance_port: 11}],
+              subnets: ['fake-subnet-id'],
+              security_groups: ['elb-1-security-group-id']
+            }
+            expect(load_balancers).to receive(:create).with('elb-1-name', elb_1_params).and_return(elb_1)
+            expect(elb_1).to receive(:configure_health_check).with(
+              health_check_params.merge(target: 'TCP:1234')
+            )
+            elb_2_params = {
+              listeners: [{protocol: 'TCP', load_balancer_port: 2222, instance_protocol: 'TCP', instance_port: 22}],
+              subnets: ['fake-subnet-id'],
+              security_groups: ['elb-2-security-group-id']
+            }
+            expect(load_balancers).to receive(:create).with('elb-2-name', elb_2_params).and_return(elb_2)
+            expect(elb_2).not_to receive(:configure_health_check)
+            ami_manager.prepare_environment(cloudformation_template_file.path)
+          end
         end
       end
     end
@@ -369,7 +416,7 @@ module VmShepherd
       let(:instance2) { instance_double(AWS::EC2::Instance, tags: {}, id: 'instance2') }
       let(:subnet1_instances) { [instance1] }
       let(:subnet2_instances) { [instance2] }
-      let(:cfm) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
+      let(:cfn) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
       let(:stack) { instance_double(AWS::CloudFormation::Stack, status: 'DELETE_COMPLETE', delete: nil) }
       let(:stack_collection) { instance_double(AWS::CloudFormation::StackCollection) }
 
@@ -382,7 +429,7 @@ module VmShepherd
       let(:s3_client) { instance_double(AWS::S3, buckets: buckets) }
 
       before do
-        allow(AWS::CloudFormation).to receive(:new).and_return(cfm)
+        allow(AWS::CloudFormation).to receive(:new).and_return(cfn)
         allow(stack_collection).to receive(:[]).and_return(stack)
 
         allow(ec2).to receive(:subnets).and_return(subnets)

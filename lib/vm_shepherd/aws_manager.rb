@@ -13,6 +13,9 @@ module VmShepherd
 
     CREATE_IN_PROGRESS = 'CREATE_IN_PROGRESS'
     CREATE_COMPLETE = 'CREATE_COMPLETE'
+    UPDATE_IN_PROGRESS = 'UPDATE_IN_PROGRESS'
+    UPDATE_COMPLETE = 'UPDATE_COMPLETE'
+    UPDATE_COMPLETE_CLEANUP_IN_PROGRESS = 'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS'
     ROLLBACK_IN_PROGRESS = 'ROLLBACK_IN_PROGRESS'
     ROLLBACK_COMPLETE = 'ROLLBACK_COMPLETE'
     DELETE_IN_PROGRESS = 'DELETE_IN_PROGRESS'
@@ -33,17 +36,34 @@ module VmShepherd
       template = File.read(cloudformation_template_file)
 
       cfm = AWS::CloudFormation.new
-      logger.info('Starting CloudFormation Stack Creation')
-      stack = cfm.stacks.create(env_config.fetch('stack_name'), template, parameters: env_config.fetch('parameters'), capabilities: ['CAPABILITY_IAM'])
+      stack_name = env_config.fetch('stack_name')
 
-      logger.info("Waiting for status: #{CREATE_COMPLETE}")
+      stack = cfm.stacks[stack_name]
+
+      if stack and env_config.fetch('update_existing', false)
+        logger.info('Found existing stack - upgrading it')
+        stack.update(:template => template, parameters: env_config.fetch('parameters'), capabilities: ['CAPABILITY_IAM'])
+        waiting_for_status = UPDATE_COMPLETE
+      else
+        logger.info('Starting CloudFormation Stack Creation')
+        stack = cfm.stacks.create(stack_name, template, parameters: env_config.fetch('parameters'), capabilities: ['CAPABILITY_IAM'])
+        waiting_for_status = CREATE_COMPLETE
+      end
+
+      logger.info("Waiting for status [#{waiting_for_status}] on stack [#{stack.name}]")
       retry_until(retry_limit: 80, retry_interval: 30) do
         status = stack.status
         logger.info("current stack status: #{status}")
         case status
           when CREATE_COMPLETE
             true
+          when UPDATE_COMPLETE
+            true
           when CREATE_IN_PROGRESS
+            false
+          when UPDATE_IN_PROGRESS
+            false
+          when UPDATE_COMPLETE_CLEANUP_IN_PROGRESS
             false
           when ROLLBACK_IN_PROGRESS
             false

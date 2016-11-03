@@ -454,7 +454,7 @@ module VmShepherd
       end
 
       it 'polls the status every 30' do
-        expect(ami_manager).to receive(:retry_until).with(retry_limit: 60, retry_interval: 30)
+        expect(ami_manager).to receive(:retry_until).with(retry_limit: 90, retry_interval: 30)
 
         ami_manager.clean_environment
       end
@@ -471,9 +471,9 @@ module VmShepherd
         ami_manager.clean_environment
       end
 
-      it 'stops retrying after 60 times' do
+      it 'stops retrying after 90 times' do
         expect(stack).to receive(:status).and_return('DELETE_IN_PROGRESS').
-          exactly(60).times
+          exactly(90).times
 
         expect { ami_manager.clean_environment }.to raise_error(AwsManager::RetryLimitExceeded)
       end

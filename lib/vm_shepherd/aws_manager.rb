@@ -285,7 +285,7 @@ module VmShepherd
       delete_retried = false
       stack.delete
       logger.info("waiting until status: #{DELETE_COMPLETE}")
-      retry_until(retry_limit: 60, retry_interval: 30) do
+      retry_until(retry_limit: 90, retry_interval: 30) do
         begin
           status = stack.status
           logger.info("current stack status: #{status}")

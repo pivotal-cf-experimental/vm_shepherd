@@ -412,8 +412,8 @@ module VmShepherd
       let(:subnets) { instance_double(AWS::EC2::SubnetCollection) }
       let(:subnet1) { instance_double(AWS::EC2::Subnet, instances: subnet1_instances) }
       let(:subnet2) { instance_double(AWS::EC2::Subnet, instances: subnet2_instances) }
-      let(:instance1) { instance_double(AWS::EC2::Instance, tags: {}, id: 'instance1') }
-      let(:instance2) { instance_double(AWS::EC2::Instance, tags: {}, id: 'instance2') }
+      let(:instance1) { instance_double(AWS::EC2::Instance, tags: {}, id: 'instance1', status: :terminated) }
+      let(:instance2) { instance_double(AWS::EC2::Instance, tags: {}, id: 'instance2', status: :terminated) }
       let(:subnet1_instances) { [instance1] }
       let(:subnet2_instances) { [instance2] }
       let(:cfn) { instance_double(AWS::CloudFormation, stacks: stack_collection) }
@@ -444,6 +444,8 @@ module VmShepherd
 
         allow(AWS::S3).to receive(:new).and_return(s3_client)
         allow(buckets).to receive(:[]).and_return(instance_double(AWS::S3::Bucket, exists?: false))
+
+        allow(ec2).to receive_message_chain(:instances, :[]).and_return(instance1, instance2)
       end
 
       it 'terminates all VMs in the subnet' do
@@ -451,6 +453,22 @@ module VmShepherd
         expect(instance2).to receive(:terminate)
 
         ami_manager.clean_environment
+      end
+
+      it 'ensures the instances are terminated' do
+        expect(instance1).to receive(:status).and_return(:shutting_down, :shutting_down, :terminated)
+        expect(instance2).to receive(:status).and_return(:terminated)
+
+        ami_manager.clean_environment
+      end
+
+      it 'raises if any vms do not terminate' do
+        allow(ec2).to receive_message_chain(:instances, :[]).and_return(instance1, instance2)
+
+        expect(instance1).to receive(:status).and_return(:terminated).twice
+        expect(instance2).to receive(:status).and_return(:running).exactly(3).times
+
+        expect { ami_manager.clean_environment }.to raise_error("Expected instance: #{instance2.id} to be terminated, but was running")
       end
 
       it 'polls the status every 30' do

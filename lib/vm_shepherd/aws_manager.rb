@@ -189,7 +189,9 @@ module VmShepherd
       logger.info("Clearing contents of subnet: #{subnet_id}")
       subnet = AWS.ec2.subnets[subnet_id]
       volumes = []
+      instance_ids = []
       subnet.instances.each do |instance|
+        instance_ids.push instance.id
         instance.attachments.each do |_, attachment|
           volumes.push(attachment.volume) unless attachment.delete_on_termination
         end
@@ -197,6 +199,7 @@ module VmShepherd
         instance.terminate
       end
       destroy_volumes(volumes)
+      ensure_instances_terminated(instance_ids)
     end
 
     def destroy_volumes(volumes)
@@ -316,6 +319,19 @@ module VmShepherd
 
     def read_ami_id(ami_file_path)
       YAML.load_file(ami_file_path)[env_config.fetch('region')]
+    end
+
+    def ensure_instances_terminated(instance_ids)
+      instances = instance_ids.collect {|instance_id| AWS.ec2.instances[instance_id] }
+      instances.each do |instance|
+        while instance.status == :shutting_down
+          sleep VmShepherd::RetryHelper::RETRY_INTERVAL
+        end
+
+        if instance.status != :terminated
+          raise "Expected instance: #{instance.id} to be terminated, but was #{instance.status}"
+        end
+      end
     end
   end
 end

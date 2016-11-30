@@ -21,6 +21,7 @@ vm_shepherd:
       cpus: OVA_CPUS
       ram_mb: OVA_RAM_MB
       vm_password: not-tempest
+      custom_hostname: not-default-hostname
     cleanup:
       datacenter: VSPHERE_OTHER_DATACENTER
       datastores:

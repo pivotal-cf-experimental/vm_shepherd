@@ -11,6 +11,28 @@ module VmShepherd
     let(:vm3) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name3', resourcePool: instance_double(RbVmomi::VIM::ResourcePool, name: 'second_resource_pool')) }
     let(:vms) { [vm1, vm2, vm3] }
     let(:fake_logger) { instance_double(Logger).as_null_object }
+    let(:datacenter) do
+      instance_double(RbVmomi::VIM::Datacenter,
+        name: datacenter_name,
+        vmFolder: folder,
+        find_compute_resource: cluster,
+        find_datastore: datastore
+      )
+    end
+    let(:datastore) { double(name: datastore_name) }
+    let(:datastore_name) { 'datastore-name' }
+    let(:cluster) { instance_double(RbVmomi::VIM::ComputeResource, name: 'cluster-name', host: [host], resourcePool: double)}
+    let(:folder) { instance_double(RbVmomi::VIM::Folder, traverse: instance_double(RbVmomi::VIM::Folder)) }
+    let(:connection) { instance_double(RbVmomi::VIM, serviceContent: service_content, searchIndex: search_index) }
+    let(:service_content) do
+      instance_double(RbVmomi::VIM::ServiceContent,
+        searchIndex: search_index,
+        ovfManager: ovf_manager,
+        propertyCollector: instance_double(RbVmomi::VIM::PropertyCollector, collectMultiple: {}),
+      )
+    end
+    let(:search_index) { instance_double(RbVmomi::VIM::SearchIndex) }
+    let(:ovf_manager) { instance_double(RbVmomi::VIM::OvfManager) }
 
     subject(:vsphere_manager) { VsphereManager.new(host, username, password, datacenter_name, fake_logger) }
 
@@ -18,12 +40,49 @@ module VmShepherd
       expect { vsphere_manager }.not_to raise_error
     end
 
+    describe 'deploy' do
+      let(:tar_path) { 'example-tar' }
+      let(:ovf_path) { 'example-ovf' }
+      let(:folder_name) { 'example-folder' }
+      let(:ovf_template) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name', add_delta_disk_layer_on_all_disks: nil, MarkAsTemplate: nil) }
+      let(:vsphere_config) { { folder: folder_name, datastore: datastore_name } }
+      let(:vm_config) { {ip: '10.0.0.1'} }
+
+      before do
+        allow(vsphere_manager).to receive(:system).with("nc -z -w 1 #{vm_config[:ip]} 443").and_return(false)
+        allow(vsphere_manager).to receive(:system).with(/tar xfv/).and_return(true)
+        allow(Dir).to receive(:[]).and_return(['foo.ovf'])
+        allow(vsphere_manager).to receive(:datacenter).and_return(datacenter)
+        allow(vsphere_manager).to receive(:connection).and_return(connection)
+        allow(ovf_manager).to receive(:deployOVF).and_return(ovf_template)
+        allow(vsphere_manager).to receive(:ovf_template_options).and_return({})
+      end
+
+      context 'A' do
+
+        it 'does something' do
+          # expect(vsphere_manager).to receive(:deploy_ovf_template).with(
+          #   ovf_path,
+          #   vsphere_config
+          # ).and_return(ovf_template)
+
+          expect(vsphere_manager).to receive(:create_vm_from_template).and_return(vm1)
+          expect(vm1).to receive(:ReconfigVM_Task) do |options|
+            expect(options[:spec].vAppConfig.property).to be_a(String)
+          end
+
+          expect { vsphere_manager.deploy(tar_path, vm_config, vsphere_config) }
+            .not_to raise_error
+        end
+      end
+
+      context 'B' do
+
+      end
+    end
+
     describe 'clean_environment' do
-      let(:connection) { instance_double(RbVmomi::VIM, serviceContent: service_content, searchIndex: search_index) }
-      let(:service_content) { instance_double(RbVmomi::VIM::ServiceContent, searchIndex: search_index) }
-      let(:search_index) { instance_double(RbVmomi::VIM::SearchIndex) }
-      let(:folder) { instance_double(RbVmomi::VIM::Folder) }
-      let(:datacenter) { instance_double(RbVmomi::VIM::Datacenter, name: datacenter_name) }
+
       let(:filemanager) { instance_double(RbVmomi::VIM::FileManager) }
       let(:delete_datastore_file_task) { instance_double(RbVmomi::VIM::Task) }
 

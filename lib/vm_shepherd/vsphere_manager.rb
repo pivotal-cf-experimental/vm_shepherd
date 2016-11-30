@@ -112,12 +112,16 @@ module VmShepherd
     end
 
     def boot_vm(ovf_file_path, vm_config, vsphere_config)
-      datacenter.vmFolder.traverse(vsphere_config[:folder], RbVmomi::VIM::Folder, true)
+      ensure_folder_exists(vsphere_config[:folder])
       template = deploy_ovf_template(ovf_file_path, vsphere_config)
       vm       = create_vm_from_template(template, vm_config, vsphere_config)
 
       reconfigure_vm(vm, vm_config)
       power_on_vm(vm)
+    end
+
+    def ensure_folder_exists(folder_name)
+      datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
     end
 
     def delete_folder_and_vms(folder_name)
@@ -167,7 +171,17 @@ module VmShepherd
     def deploy_ovf_template(ovf_file_path, vsphere_config)
       template_name = [TEMPLATE_PREFIX, Time.new.strftime('%F-%H-%M'), cluster(vsphere_config).name].join('-')
       logger.info("BEGIN deploy_ovf ovf_file=#{ovf_file_path} template_name=#{template_name}")
+
       connection.serviceContent.ovfManager.deployOVF(
+        ovf_template_options(ovf_file_path, template_name, vsphere_config)
+      ).tap do |ovf_template|
+        ovf_template.add_delta_disk_layer_on_all_disks
+        ovf_template.MarkAsTemplate
+      end
+    end
+
+    def ovf_template_options(ovf_file_path, template_name, vsphere_config)
+      {
         uri:              ovf_file_path,
         vmName:           template_name,
         vmFolder:         target_folder(vsphere_config),
@@ -176,10 +190,7 @@ module VmShepherd
         datastore:        datastore(vsphere_config),
         networkMappings:  create_network_mappings(ovf_file_path, vsphere_config),
         propertyMappings: {},
-      ).tap do |ovf_template|
-        ovf_template.add_delta_disk_layer_on_all_disks
-        ovf_template.MarkAsTemplate
-      end
+      }
     end
 
     def find_deploy_host(vsphere_config)
@@ -203,7 +214,7 @@ module VmShepherd
     end
 
     def create_vm_from_template(template, vm_config, vsphere_config)
-      logger.info("BEGIN clone_vm_task tempalte=#{template.name}")
+      logger.info("BEGIN clone_vm_task template=#{template.name}")
       template.CloneVM_Task(
         folder: target_folder(vsphere_config),
         name:   "#{template.name}-vm",
@@ -218,17 +229,17 @@ module VmShepherd
           config:   {numCPUs: vm_config[:cpus] || 2, memoryMB: vm_config[:ram_mb] || 4096},
         }
       ).wait_for_completion.tap {
-        logger.info("END   clone_vm_task tempalte=#{template.name}")
+        logger.info("END   clone_vm_task template=#{template.name}")
       }
     end
 
     def reconfigure_vm(vm, vm_config)
       virtual_machine_config_spec = create_virtual_machine_config_spec(vm_config)
-      logger.info("BEGIN reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+      logger.info("BEGIN reconfigure_vm_task virtual_machine_config_spec=#{virtual_machine_config_spec.inspect}")
       vm.ReconfigVM_Task(
         spec: virtual_machine_config_spec
       ).wait_for_completion.tap {
-        logger.info("END   reconfigure_vm_task virtual_machine_cofig_spec=#{virtual_machine_config_spec.inspect}")
+        logger.info("END   reconfigure_vm_task virtual_machine_config_spec=#{virtual_machine_config_spec.inspect}")
       }
     end
 

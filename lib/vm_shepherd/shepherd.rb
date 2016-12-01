@@ -9,8 +9,8 @@ module VmShepherd
     end
 
     def initialize(settings:)
-      @iaas_type  = settings.dig('iaas_type')
-      @configs    = settings.dig('vm_shepherd', 'vm_configs') || []
+      @iaas_type = settings.dig('iaas_type')
+      @configs = settings.dig('vm_shepherd', 'vm_configs') || []
       @env_config = settings.dig('vm_shepherd', 'env_config')
     end
 
@@ -26,10 +26,10 @@ module VmShepherd
           when VmShepherd::VCLOUD_IAAS_TYPE then
             VmShepherd::VcloudManager.new(
               {
-                url:          vm_shepherd_config.dig('creds', 'url'),
+                url: vm_shepherd_config.dig('creds', 'url'),
                 organization: vm_shepherd_config.dig('creds', 'organization'),
-                user:         vm_shepherd_config.dig('creds', 'user'),
-                password:     vm_shepherd_config.dig('creds', 'password'),
+                user: vm_shepherd_config.dig('creds', 'user'),
+                password: vm_shepherd_config.dig('creds', 'password'),
               },
               vm_shepherd_config.dig('vdc', 'name'),
               stdout_logger
@@ -46,22 +46,13 @@ module VmShepherd
               stdout_logger,
             ).deploy(
               path,
+              vsphere_vm_options(vm_shepherd_config),
               {
-                ip:          vm_shepherd_config.dig('vm', 'ip'),
-                gateway:     vm_shepherd_config.dig('vm', 'gateway'),
-                netmask:     vm_shepherd_config.dig('vm', 'netmask'),
-                dns:         vm_shepherd_config.dig('vm', 'dns'),
-                ntp_servers: vm_shepherd_config.dig('vm', 'ntp_servers'),
-                cpus:        vm_shepherd_config.dig('vm', 'cpus'),
-                ram_mb:      vm_shepherd_config.dig('vm', 'ram_mb'),
-                vm_password: (vm_shepherd_config.dig('vm', 'vm_password') || 'tempest'),
-              },
-              {
-                cluster:       vm_shepherd_config.dig('vsphere', 'cluster'),
+                cluster: vm_shepherd_config.dig('vsphere', 'cluster'),
                 resource_pool: vm_shepherd_config.dig('vsphere', 'resource_pool'),
-                datastore:     vm_shepherd_config.dig('vsphere', 'datastore'),
-                network:       vm_shepherd_config.dig('vsphere', 'network'),
-                folder:        vm_shepherd_config.dig('vsphere', 'folder'),
+                datastore: vm_shepherd_config.dig('vsphere', 'datastore'),
+                network: vm_shepherd_config.dig('vsphere', 'network'),
+                folder: vm_shepherd_config.dig('vsphere', 'folder'),
               }
             )
           when VmShepherd::AWS_IAAS_TYPE then
@@ -81,10 +72,10 @@ module VmShepherd
           @configs.each do |vm_shepherd_config|
             VmShepherd::VcloudManager.new(
               {
-                url:          vm_shepherd_config.dig('creds', 'url'),
+                url: vm_shepherd_config.dig('creds', 'url'),
                 organization: vm_shepherd_config.dig('creds', 'organization'),
-                user:         vm_shepherd_config.dig('creds', 'user'),
-                password:     vm_shepherd_config.dig('creds', 'password'),
+                user: vm_shepherd_config.dig('creds', 'user'),
+                password: vm_shepherd_config.dig('creds', 'password'),
               },
               vm_shepherd_config.dig('vdc', 'name'),
               stdout_logger
@@ -118,10 +109,10 @@ module VmShepherd
           when VmShepherd::VCLOUD_IAAS_TYPE then
             VmShepherd::VcloudManager.new(
               {
-                url:          vm_shepherd_config.dig('creds', 'url'),
+                url: vm_shepherd_config.dig('creds', 'url'),
                 organization: vm_shepherd_config.dig('creds', 'organization'),
-                user:         vm_shepherd_config.dig('creds', 'user'),
-                password:     vm_shepherd_config.dig('creds', 'password'),
+                user: vm_shepherd_config.dig('creds', 'user'),
+                password: vm_shepherd_config.dig('creds', 'password'),
               },
               vm_shepherd_config.dig('vdc', 'name'),
               stdout_logger
@@ -151,10 +142,10 @@ module VmShepherd
           @configs.each do |vm_shepherd_config|
             VmShepherd::VcloudManager.new(
               {
-                url:          vm_shepherd_config.dig('creds', 'url'),
+                url: vm_shepherd_config.dig('creds', 'url'),
                 organization: vm_shepherd_config.dig('creds', 'organization'),
-                user:         vm_shepherd_config.dig('creds', 'user'),
-                password:     vm_shepherd_config.dig('creds', 'password'),
+                user: vm_shepherd_config.dig('creds', 'user'),
+                password: vm_shepherd_config.dig('creds', 'password'),
               },
               vm_shepherd_config.dig('vdc', 'name'),
               stdout_logger,
@@ -170,8 +161,8 @@ module VmShepherd
               stdout_logger,
             ).clean_environment(
               datacenter_folders_to_clean: vm_shepherd_config.dig('cleanup', 'datacenter_folders_to_clean'),
-              datastores:                  vm_shepherd_config.dig('cleanup', 'datastores'),
-              datastore_folders_to_clean:  vm_shepherd_config.dig('cleanup', 'datastore_folders_to_clean'),
+              datastores: vm_shepherd_config.dig('cleanup', 'datastores'),
+              datastore_folders_to_clean: vm_shepherd_config.dig('cleanup', 'datastore_folders_to_clean'),
             )
           end
         when VmShepherd::AWS_IAAS_TYPE then
@@ -185,19 +176,34 @@ module VmShepherd
 
     private
 
-
     def stdout_logger
       Logger.new(STDOUT)
     end
 
+    def vsphere_vm_options(input_config)
+      {
+        ip: input_config.dig('vm', 'ip'),
+        gateway: input_config.dig('vm', 'gateway'),
+        netmask: input_config.dig('vm', 'netmask'),
+        dns: input_config.dig('vm', 'dns'),
+        ntp_servers: input_config.dig('vm', 'ntp_servers'),
+        cpus: input_config.dig('vm', 'cpus'),
+        ram_mb: input_config.dig('vm', 'ram_mb'),
+        vm_password: (input_config.dig('vm', 'vm_password') || 'tempest'),
+      }.tap do |result|
+        hostname = input_config.dig('vm', 'custom_hostname')
+        result[:custom_hostname] = hostname unless hostname.nil?
+      end
+    end
+
     def vcloud_deploy_options(vm_shepherd_config)
       VmShepherd::Vcloud::VappConfig.new(
-        name:    vm_shepherd_config.dig('vapp', 'ops_manager_name'),
-        ip:      vm_shepherd_config.dig('vapp', 'ip'),
+        name: vm_shepherd_config.dig('vapp', 'ops_manager_name'),
+        ip: vm_shepherd_config.dig('vapp', 'ip'),
         gateway: vm_shepherd_config.dig('vapp', 'gateway'),
         netmask: vm_shepherd_config.dig('vapp', 'netmask'),
-        dns:     vm_shepherd_config.dig('vapp', 'dns'),
-        ntp:     vm_shepherd_config.dig('vapp', 'ntp'),
+        dns: vm_shepherd_config.dig('vapp', 'dns'),
+        ntp: vm_shepherd_config.dig('vapp', 'ntp'),
         catalog: vm_shepherd_config.dig('vdc', 'catalog'),
         network: vm_shepherd_config.dig('vdc', 'network'),
       )
@@ -229,20 +235,20 @@ module VmShepherd
       OpenstackManager.new(
         auth_url: vm_shepherd_config.dig('creds', 'auth_url'),
         username: vm_shepherd_config.dig('creds', 'username'),
-        api_key:  vm_shepherd_config.dig('creds', 'api_key'),
-        tenant:   vm_shepherd_config.dig('creds', 'tenant'),
+        api_key: vm_shepherd_config.dig('creds', 'api_key'),
+        tenant: vm_shepherd_config.dig('creds', 'tenant'),
       )
     end
 
     def openstack_vm_options(vm_shepherd_config)
       {
-        name:                 vm_shepherd_config.dig('vm', 'name'),
-        flavor_name:          vm_shepherd_config.dig('vm', 'flavor_name'),
-        network_name:         vm_shepherd_config.dig('vm', 'network_name'),
-        key_name:             vm_shepherd_config.dig('vm', 'key_name'),
+        name: vm_shepherd_config.dig('vm', 'name'),
+        flavor_name: vm_shepherd_config.dig('vm', 'flavor_name'),
+        network_name: vm_shepherd_config.dig('vm', 'network_name'),
+        key_name: vm_shepherd_config.dig('vm', 'key_name'),
         security_group_names: vm_shepherd_config.dig('vm', 'security_group_names'),
-        public_ip:            vm_shepherd_config.dig('vm', 'public_ip'),
-        private_ip:           vm_shepherd_config.dig('vm', 'private_ip'),
+        public_ip: vm_shepherd_config.dig('vm', 'public_ip'),
+        private_ip: vm_shepherd_config.dig('vm', 'private_ip'),
       }
     end
 

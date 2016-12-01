@@ -151,6 +151,7 @@ module VmShepherd
               cpus:        first_config.dig('vm', 'cpus'),
               ram_mb:      first_config.dig('vm', 'ram_mb'),
               vm_password: first_config.dig('vm', 'vm_password'),
+              custom_hostname: first_config.dig('vm', 'custom_hostname')
             },
             {
               cluster:       first_config.dig('vsphere', 'cluster'),

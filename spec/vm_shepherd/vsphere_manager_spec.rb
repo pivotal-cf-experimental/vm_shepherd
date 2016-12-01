@@ -10,6 +10,7 @@ module VmShepherd
     let(:vm2) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name2', resourcePool: instance_double(RbVmomi::VIM::ResourcePool, name: 'second_resource_pool')) }
     let(:vm3) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name3', resourcePool: instance_double(RbVmomi::VIM::ResourcePool, name: 'second_resource_pool')) }
     let(:vms) { [vm1, vm2, vm3] }
+    let(:task) { instance_double(RbVmomi::VIM::Task) }
     let(:fake_logger) { instance_double(Logger).as_null_object }
     let(:datacenter) do
       instance_double(RbVmomi::VIM::Datacenter,
@@ -42,7 +43,7 @@ module VmShepherd
 
     describe 'deploy' do
       let(:tar_path) { 'example-tar' }
-      let(:ovf_path) { 'example-ovf' }
+      let(:ova_path) { 'example-ova' }
       let(:folder_name) { 'example-folder' }
       let(:ovf_template) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name', add_delta_disk_layer_on_all_disks: nil, MarkAsTemplate: nil) }
       let(:vsphere_config) { { folder: folder_name, datastore: datastore_name } }
@@ -58,26 +59,46 @@ module VmShepherd
         allow(vsphere_manager).to receive(:ovf_template_options).and_return({})
       end
 
-      context 'A' do
+      context 'When custom hostname is not set' do
 
-        it 'does something' do
-          # expect(vsphere_manager).to receive(:deploy_ovf_template).with(
-          #   ovf_path,
-          #   vsphere_config
-          # ).and_return(ovf_template)
-
+        it 'verifies the value of custom hostname is nil' do
           expect(vsphere_manager).to receive(:create_vm_from_template).and_return(vm1)
+          allow(subject).to receive(:power_on_vm)
+          allow(task).to receive(:wait_for_completion)
+
           expect(vm1).to receive(:ReconfigVM_Task) do |options|
-            expect(options[:spec].vAppConfig.property).to be_a(String)
+            custom_hostname_property = options[:spec].vAppConfig.property.find do |prop|
+              prop.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:label] == 'custom_hostname'
+            end
+            expect(custom_hostname_property).to_not be_nil
+            custom_hostname_value = custom_hostname_property.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:value]
+            expect(custom_hostname_value).to be_nil
+            task
           end
 
-          expect { vsphere_manager.deploy(tar_path, vm_config, vsphere_config) }
-            .not_to raise_error
+          subject.deploy(ova_path, vm_config, vsphere_config)
         end
       end
 
-      context 'B' do
+      context 'When custom hostname is set' do
+        let(:vm_config) { {ip: '10.0.0.1', custom_hostname: 'meow' } }
+        it 'sets the custom hostname' do
+          expect(vsphere_manager).to receive(:create_vm_from_template).and_return(vm1)
+          allow(subject).to receive(:power_on_vm)
+          allow(task).to receive(:wait_for_completion)
 
+          expect(vm1).to receive(:ReconfigVM_Task) do |options|
+            custom_hostname_property = options[:spec].vAppConfig.property.find do |prop|
+              prop.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:label] == 'custom_hostname'
+            end
+            expect(custom_hostname_property).to_not be_nil
+            custom_hostname_value = custom_hostname_property.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:value]
+            expect(custom_hostname_value).to eq('meow')
+            task
+          end
+
+          subject.deploy(ova_path, vm_config, vsphere_config)
+        end
       end
     end
 

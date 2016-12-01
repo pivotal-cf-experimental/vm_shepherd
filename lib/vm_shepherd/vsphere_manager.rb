@@ -266,6 +266,7 @@ module VmShepherd
         'gateway'     => vm_config[:gateway],
         'DNS'         => vm_config[:dns],
         'ntp_servers' => vm_config[:ntp_servers],
+        'custom_hostname' => vm_config[:custom_hostname],
       }
 
       vapp_property_specs = []

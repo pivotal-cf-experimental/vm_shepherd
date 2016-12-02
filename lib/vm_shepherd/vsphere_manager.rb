@@ -266,7 +266,6 @@ module VmShepherd
         'gateway'     => vm_config[:gateway],
         'DNS'         => vm_config[:dns],
         'ntp_servers' => vm_config[:ntp_servers],
-        'custom_hostname' => vm_config[:custom_hostname],
       }
 
       vapp_property_specs = []
@@ -287,11 +286,21 @@ module VmShepherd
       vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
         spec.operation = 'edit'
         spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-          p.key   = ip_configuration.length
+          p.key   = 5 # this needs to be 5th to match the ovf template property order.
           p.label = 'admin_password'
           p.value = vm_config[:vm_password]
         end
       end
+
+      vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
+        spec.operation = 'edit'
+        spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
+          p.key   = 6 # ditto. see above. it makes me sad, too.
+          p.label = 'custom_hostname'
+          p.value = vm_config[:custom_hostname]
+        end
+      end unless vm_config[:custom_hostname].nil?
+
       logger.info("END   VAppPropertySpec creation vapp_property_specs=#{vapp_property_specs.inspect}")
       vapp_property_specs
     end

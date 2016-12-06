@@ -60,7 +60,6 @@ module VmShepherd
       end
 
       context 'When custom hostname is not set' do
-
         it 'verifies the value of custom hostname is nil' do
           expect(vsphere_manager).to receive(:create_vm_from_template).and_return(vm1)
           allow(subject).to receive(:power_on_vm)
@@ -70,9 +69,7 @@ module VmShepherd
             custom_hostname_property = options[:spec].vAppConfig.property.find do |prop|
               prop.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:label] == 'custom_hostname'
             end
-            expect(custom_hostname_property).to_not be_nil
-            custom_hostname_value = custom_hostname_property.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:value]
-            expect(custom_hostname_value).to be_nil
+            expect(custom_hostname_property).to be_nil
             task
           end
 

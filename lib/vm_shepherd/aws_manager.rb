@@ -51,7 +51,7 @@ module VmShepherd
       end
 
       logger.info("Waiting for status [#{waiting_for_status}] on stack [#{stack.name}]")
-      retry_until(retry_limit: 80, retry_interval: 30) do
+      retry_until(retry_limit: 60, retry_interval: 30) do
         status = stack.status
         logger.info("current stack status: #{status}")
         case status

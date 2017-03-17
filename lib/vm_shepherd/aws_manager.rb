@@ -7,7 +7,7 @@ module VmShepherd
   class AwsManager
     include VmShepherd::RetryHelper
 
-    OPS_MANAGER_INSTANCE_TYPE = 'm3.medium'
+    OPS_MANAGER_INSTANCE_TYPE = 't2.medium'
     DO_NOT_TERMINATE_TAG_KEY = 'do_not_terminate'
     ELB_SECURITY_GROUP_NAME = 'ELB Security Group'
 

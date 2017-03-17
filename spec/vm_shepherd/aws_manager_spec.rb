@@ -298,7 +298,7 @@ module VmShepherd
             key_name: 'ssh-key-name',
             security_group_ids: ['security-group-id'],
             subnet: 'public-subnet-id',
-            instance_type: 'm3.medium').and_return(instance)
+            instance_type: 't2.medium').and_return(instance)
 
           ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
         end
@@ -314,7 +314,7 @@ module VmShepherd
             security_group_ids: ['security-group-id'],
             subnet: 'public-subnet-id',
             iam_instance_profile: 'FAKE_INSTANCE_PROFILE',
-            instance_type: 'm3.medium').and_return(instance)
+            instance_type: 't2.medium').and_return(instance)
 
           ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
         end

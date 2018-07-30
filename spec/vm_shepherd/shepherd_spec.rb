@@ -1,3 +1,5 @@
+#require 'tmpdir'
+#require 'fileutils'
 require 'vm_shepherd/backport_refinements'
 using VmShepherd::BackportRefinements
 
@@ -5,7 +7,8 @@ require 'vm_shepherd/shepherd'
 
 module VmShepherd
   RSpec.describe Shepherd do
-    subject(:manager) { Shepherd.new(settings: settings) }
+    subject(:manager) { Shepherd.new(settings: settings, system_env: system_env) }
+    let(:system_env) { {} }
     let(:first_config) { settings.dig('vm_shepherd', 'vm_configs').first }
     let(:last_config) { settings.dig('vm_shepherd', 'vm_configs').last }
     let(:settings) { YAML.load_file(File.join(SPEC_ROOT, 'fixtures', 'shepherd', settings_fixture_name)) }
@@ -151,6 +154,7 @@ module VmShepherd
               cpus:        first_config.dig('vm', 'cpus'),
               ram_mb:      first_config.dig('vm', 'ram_mb'),
               vm_password: first_config.dig('vm', 'vm_password'),
+              public_ssh_key:  first_config.dig('vm', 'public_ssh_key'),
               custom_hostname: first_config.dig('vm', 'custom_hostname')
             },
             {
@@ -171,6 +175,7 @@ module VmShepherd
               dns:         last_config.dig('vm', 'dns'),
               ntp_servers: last_config.dig('vm', 'ntp_servers'),
               vm_password: 'tempest',
+              public_ssh_key: nil,
               cpus:        last_config.dig('vm', 'cpus'),
               ram_mb:      last_config.dig('vm', 'ram_mb'),
             },
@@ -188,6 +193,93 @@ module VmShepherd
 
         it 'fails if improper paths are given' do
           expect { manager.deploy(paths: ['FIRST_FAKE_PATH']) }.to raise_error(ArgumentError)
+        end
+
+        context 'when the ASSETS_HOME path is available' do
+          let(:first_config) do
+            settings.dig('vm_shepherd', 'vm_configs').first.tap do |vm_config|
+              vm_config.dig('vm').merge!({ 'public_ssh_key' => 'subdir/pub.key' })
+            end
+          end
+          let(:system_env) { { 'ASSETS_HOME' => assets_home } }
+          let(:assets_home) { Dir.mktmpdir }
+
+          before do
+            assets_subdir = File.join(assets_home, 'subdir')
+            Dir.mkdir(assets_subdir)
+            File.open(File.join(assets_subdir, 'pub.key'), 'w') do |f|
+              f.write('public key contents')
+            end
+          end
+
+          after do
+            FileUtils.rm_rf(assets_home)
+          end
+
+          it 'reads the value from the relative path in ASSETS_HOME' do
+            expect(VsphereManager).to receive(:new).with(
+              first_config.dig('vcenter_creds', 'ip'),
+              first_config.dig('vcenter_creds', 'username'),
+              first_config.dig('vcenter_creds', 'password'),
+              first_config.dig('vsphere', 'datacenter'),
+              instance_of(Logger),
+            ).and_return(first_ova_manager)
+
+            expect(VsphereManager).to receive(:new).with(
+              last_config.dig('vcenter_creds', 'ip'),
+              last_config.dig('vcenter_creds', 'username'),
+              last_config.dig('vcenter_creds', 'password'),
+              last_config.dig('vsphere', 'datacenter'),
+              instance_of(Logger),
+            ).and_return(last_ova_manager)
+
+            expect(first_ova_manager).to receive(:deploy).with(
+              'FIRST_FAKE_PATH',
+              {
+                ip:          first_config.dig('vm', 'ip'),
+                gateway:     first_config.dig('vm', 'gateway'),
+                netmask:     first_config.dig('vm', 'netmask'),
+                dns:         first_config.dig('vm', 'dns'),
+                ntp_servers: first_config.dig('vm', 'ntp_servers'),
+                cpus:        first_config.dig('vm', 'cpus'),
+                ram_mb:      first_config.dig('vm', 'ram_mb'),
+                vm_password: first_config.dig('vm', 'vm_password'),
+                public_ssh_key:     'public key contents',
+                custom_hostname: first_config.dig('vm', 'custom_hostname')
+              },
+              {
+                cluster:       first_config.dig('vsphere', 'cluster'),
+                resource_pool: first_config.dig('vsphere', 'resource_pool'),
+                datastore:     first_config.dig('vsphere', 'datastore'),
+                network:       first_config.dig('vsphere', 'network'),
+                folder:        first_config.dig('vsphere', 'folder'),
+              },
+            )
+
+            expect(last_ova_manager).to receive(:deploy).with(
+              'LAST_FAKE_PATH',
+              {
+                ip:          last_config.dig('vm', 'ip'),
+                gateway:     last_config.dig('vm', 'gateway'),
+                netmask:     last_config.dig('vm', 'netmask'),
+                dns:         last_config.dig('vm', 'dns'),
+                ntp_servers: last_config.dig('vm', 'ntp_servers'),
+                vm_password: 'tempest',
+                public_ssh_key: nil,
+                cpus:        last_config.dig('vm', 'cpus'),
+                ram_mb:      last_config.dig('vm', 'ram_mb'),
+              },
+              {
+                cluster:       last_config.dig('vsphere', 'cluster'),
+                resource_pool: last_config.dig('vsphere', 'resource_pool'),
+                datastore:     last_config.dig('vsphere', 'datastore'),
+                network:       last_config.dig('vsphere', 'network'),
+                folder:        last_config.dig('vsphere', 'folder'),
+              },
+            )
+
+            manager.deploy(paths: ['FIRST_FAKE_PATH', 'LAST_FAKE_PATH'])
+          end
         end
       end
 

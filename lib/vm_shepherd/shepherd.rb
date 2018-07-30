@@ -8,10 +8,11 @@ module VmShepherd
     class InvalidIaas < StandardError;
     end
 
-    def initialize(settings:)
+    def initialize(settings:,system_env:)
       @iaas_type = settings.dig('iaas_type')
       @configs = settings.dig('vm_shepherd', 'vm_configs') || []
       @env_config = settings.dig('vm_shepherd', 'env_config')
+      @system_env = system_env
     end
 
     def deploy(paths:)
@@ -190,10 +191,19 @@ module VmShepherd
         cpus: input_config.dig('vm', 'cpus'),
         ram_mb: input_config.dig('vm', 'ram_mb'),
         vm_password: (input_config.dig('vm', 'vm_password') || 'tempest'),
+        public_ssh_key: read_assets_home(input_config.dig('vm', 'public_ssh_key')),
       }.tap do |result|
         hostname = input_config.dig('vm', 'custom_hostname')
         result[:custom_hostname] = hostname unless hostname.nil?
       end
+    end
+
+    def read_assets_home(path_or_value)
+      assets_home = @system_env.to_h.dig('ASSETS_HOME')
+      return path_or_value if path_or_value.nil? || assets_home.nil?
+
+      file_path = File.join(assets_home, path_or_value)
+      File.read(file_path)
     end
 
     def vcloud_deploy_options(vm_shepherd_config)

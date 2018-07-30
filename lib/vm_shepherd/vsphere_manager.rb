@@ -296,6 +296,15 @@ module VmShepherd
         spec.operation = 'edit'
         spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
           p.key   = 6 # ditto. see above. it makes me sad, too.
+          p.label = 'public_ssh_key'
+          p.value = vm_config[:public_ssh_key]
+        end
+      end
+
+      vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
+        spec.operation = 'edit'
+        spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
+          p.key   = 7 # ditto. see above. it makes me sad, too.
           p.label = 'custom_hostname'
           p.value = vm_config[:custom_hostname]
         end

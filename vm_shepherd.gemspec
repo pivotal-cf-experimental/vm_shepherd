@@ -20,6 +20,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'aws-sdk-v1'
   spec.add_dependency 'fog', '1.34.0'
   spec.add_dependency 'net-ssh' # because fog uses this but doesn't require it
+  spec.add_dependency 'xmlrpc'
 
   spec.add_dependency 'ruby_vcloud_sdk', '0.7.4'
 

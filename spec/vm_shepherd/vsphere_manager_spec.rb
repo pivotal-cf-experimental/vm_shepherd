@@ -97,6 +97,27 @@ module VmShepherd
           subject.deploy(ova_path, vm_config, vsphere_config)
         end
       end
+
+      context 'when the ssh key is set' do
+        let(:vm_config) { { ip: '10.0.0.1', public_ssh_key: 'ssh-key-contents' } }
+        it 'sets the ssh key' do
+          expect(vsphere_manager).to receive(:create_vm_from_template).and_return(vm1)
+          allow(subject).to receive(:power_on_vm)
+          allow(task).to receive(:wait_for_completion)
+
+          expect(vm1).to receive(:ReconfigVM_Task) do |options|
+            ssh_key_property = options[:spec].vAppConfig.property.find do |prop|
+              prop.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:label] == 'public_ssh_key'
+            end
+            expect(ssh_key_property).to_not be_nil
+            ssh_key_value = ssh_key_property.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:value]
+            expect(ssh_key_value).to eq('ssh-key-contents')
+            task
+          end
+
+          subject.deploy(ova_path, vm_config, vsphere_config)
+        end
+      end
     end
 
     describe 'clean_environment' do

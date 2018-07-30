@@ -18,6 +18,7 @@ vm_shepherd:
       netmask: OVA_NETMASK
       dns: OVA_DNS
       ntp_servers: OVA_NTP
+      public_ssh_key: OVA_SSH_KEY
       cpus: OVA_CPUS
       ram_mb: OVA_RAM_MB
       vm_password: not-tempest

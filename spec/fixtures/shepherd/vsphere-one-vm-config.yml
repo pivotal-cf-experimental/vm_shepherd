@@ -1,0 +1,35 @@
+iaas_type: vsphere
+vm_shepherd:
+  vm_configs:
+  - vcenter_creds:
+      ip: OVA_URL
+      username: OVA_ORGANIZATION
+      password: OVA_PASSWORD
+    vsphere:
+      datacenter: VSPHERE_DATACENTER
+      cluster: VSPHERE_CLUSTER
+      network: VSPHERE_NETWORK
+      resource_pool: VSPHERE_RESOURCE_POOL
+      datastore: VSPHERE_DATASTORE
+      folder: VSPHERE_FOLDER
+    vm:
+      ip: OVA_IP
+      gateway: OVA_GATEWAY
+      netmask: OVA_NETMASK
+      dns: OVA_DNS
+      ntp_servers: OVA_NTP
+      public_ssh_key: OVA_SSH_KEY
+      cpus: OVA_CPUS
+      ram_mb: OVA_RAM_MB
+      vm_password: not-tempest
+      custom_hostname: not-default-hostname
+    cleanup:
+      datacenter: VSPHERE_OTHER_DATACENTER
+      datastores:
+        - VSPHERE_DATASTORE_ONE
+        - VSPHERE_DATASTORE_TWO
+      datacenter_folders_to_clean:
+        - DC_FOLDER_ONE
+        - DC_FOLDER_TWO
+      datastore_folders_to_clean:
+        - DS_DISK_FOLDER

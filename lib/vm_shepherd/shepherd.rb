@@ -38,7 +38,7 @@ module VmShepherd
               path,
               vcloud_deploy_options(vm_shepherd_config),
             )
-          when VmShepherd::VSPHERE_IAAS_TYPE then
+        when VmShepherd::VSPHERE_IAAS_TYPE then
             VmShepherd::VsphereManager.new(
               vm_shepherd_config.dig('vcenter_creds', 'ip'),
               vm_shepherd_config.dig('vcenter_creds', 'username'),
@@ -182,20 +182,31 @@ module VmShepherd
     end
 
     def vsphere_vm_options(input_config)
-      {
+      vsphere_vm_options = {
         ip: input_config.dig('vm', 'ip'),
         gateway: input_config.dig('vm', 'gateway'),
         netmask: input_config.dig('vm', 'netmask'),
         dns: input_config.dig('vm', 'dns'),
         ntp_servers: input_config.dig('vm', 'ntp_servers'),
         cpus: input_config.dig('vm', 'cpus'),
-        ram_mb: input_config.dig('vm', 'ram_mb'),
-        vm_password: (input_config.dig('vm', 'vm_password') || 'tempest'),
-        public_ssh_key: read_assets_home(input_config.dig('vm', 'public_ssh_key')),
+        ram_mb: input_config.dig('vm', 'ram_mb')
       }.tap do |result|
         hostname = input_config.dig('vm', 'custom_hostname')
         result[:custom_hostname] = hostname unless hostname.nil?
       end
+
+      vsphere_vm_options.merge!(vm_password: get_vsphere_vm_password(input_config))
+      vsphere_vm_options.merge!(public_ssh_key: get_vsphere_vm_public_ssh_key(input_config))
+
+      vsphere_vm_options
+    end
+
+    def get_vsphere_vm_password(input_config)
+      ENV['PROVISION_WITH_PASSWORD'] == 'false' ? nil : (input_config.dig('vm', 'vm_password') || 'tempest')
+    end
+
+    def get_vsphere_vm_public_ssh_key(input_config)
+      ENV['PROVISION_WITH_SSH_KEY'] == 'false' ? nil : (read_assets_home(input_config.dig('vm', 'public_ssh_key')))
     end
 
     def read_assets_home(path_or_value)

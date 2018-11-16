@@ -1,0 +1,136 @@
+<?xml version="1.0"?>
+<Envelope ovf:version="1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xml:lang="en-US" xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData"
+          xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
+          xmlns:vmw="http://www.vmware.com/schema/ovf">
+
+  <References>
+    <File ovf:href="pivotal-ops-manager-disk1.vmdk" ovf:size="4243996160" ovf:id="file1"/>
+  </References>
+
+  <DiskSection>
+    <Info>List of the virtual disks used in the package</Info>
+    <Disk ovf:capacity="171798603879"
+          ovf:diskId="vmdisk1"
+          ovf:fileRef="file1"
+          ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
+  </DiskSection>
+
+  <NetworkSection>
+    <Info>Logical networks used in the package</Info>
+    <Network ovf:name="Network 1">
+      <Description>Logical network used by this appliance.</Description>
+    </Network>
+  </NetworkSection>
+
+  <vmw:IpAssignmentSection ovf:required="false" vmw:protocols="IPv4" vmw:schemes="">
+    <Info>Supported IP assignment schemes</Info>
+  </vmw:IpAssignmentSection>
+
+  <VirtualSystem ovf:id="FAKE_FILENAME">
+    <Info>A virtual machine</Info>
+
+    <ProductSection>
+      <Info/>
+      <Product>Ops Manager</Product>
+      <Vendor>Pivotal</Vendor>
+      <Version>2.3-build.203</Version>
+      <Property ovf:key="ip0" ovf:userConfigurable="true" ovf:type="string">
+        <Label>IP Address</Label>
+        <Description>The IP address for the Ops Manager. Leave blank if DHCP is desired.</Description>
+      </Property>
+      <Property ovf:key="netmask0" ovf:userConfigurable="true" ovf:type="string">
+        <Label>Netmask</Label>
+        <Description>The netmask for the Ops Manager's network. Leave blank if DHCP is desired.</Description>
+      </Property>
+      <Property ovf:key="gateway" ovf:userConfigurable="true" ovf:type="string">
+        <Label>Default Gateway</Label>
+        <Description>The default gateway address for the Ops Manager's network. Leave blank if DHCP is desired.</Description>
+      </Property>
+      <Property ovf:key="DNS" ovf:userConfigurable="true" ovf:type="string">
+        <Label>DNS</Label>
+        <Description>The domain name servers for the Ops Manager (comma separated). Leave blank if DHCP is desired.</Description>
+      </Property>
+      <Property ovf:key="ntp_servers" ovf:userConfigurable="true" ovf:type="string">
+        <Label>NTP Servers</Label>
+        <Description>Comma-delimited list of NTP servers</Description>
+      </Property>
+      <Property ovf:key="admin_password" ovf:userConfigurable="true" ovf:type="password">
+        <Label>Admin Password</Label>
+        <Description>This password is used to SSH into the Ops Manager. The username is 'ubuntu'. One or both of Admin Password and SSH Key is required.</Description>
+      </Property>
+      <Property ovf:key="public_ssh_key" ovf:userConfigurable="true" ovf:type="string">
+        <Label>Public SSH Key</Label>
+        <Description>The Public SSH Key is used to allow SSHing into the Ops Manager with your private ssh key. The username is 'ubuntu'. One or both of Admin Password and SSH Key is required.</Description>
+      </Property>
+      <Property ovf:key="custom_hostname" ovf:userConfigurable="true" ovf:type="string">
+        <Label>Custom Hostname</Label>
+        <Description>This will be set as the hostname on the VM. Default: 'pivotal-ops-manager'.</Description>
+      </Property>
+    </ProductSection>
+
+    <AnnotationSection>
+      <Info/>
+      <Annotation>Ops Manager for Pivotal Cloud Foundry
+        installs and manages PCF products and services.</Annotation>
+    </AnnotationSection>
+
+    <VirtualHardwareSection ovf:required="false" ovf:transport="com.vmware.guestInfo">
+      <Info>Virtual hardware requirements for a virtual machine</Info>
+      <System>
+        <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
+        <vssd:InstanceID>0</vssd:InstanceID>
+        <vssd:VirtualSystemIdentifier>FAKE_FILENAME</vssd:VirtualSystemIdentifier>
+        <vssd:VirtualSystemType>vmx-09</vssd:VirtualSystemType>
+      </System>
+      <Item>
+        <rasd:Caption>1 virtual CPU</rasd:Caption>
+        <rasd:Description>Number of virtual CPUs</rasd:Description>
+        <rasd:ElementName>1 virtual CPU</rasd:ElementName>
+        <rasd:InstanceID>1</rasd:InstanceID>
+        <rasd:ResourceType>3</rasd:ResourceType>
+        <rasd:VirtualQuantity>1</rasd:VirtualQuantity>
+      </Item>
+      <Item>
+        <rasd:AllocationUnits>MegaBytes</rasd:AllocationUnits>
+        <rasd:Caption>8192 MB of memory</rasd:Caption>
+        <rasd:Description>Memory Size</rasd:Description>
+        <rasd:ElementName>8192 MB of memory</rasd:ElementName>
+        <rasd:InstanceID>2</rasd:InstanceID>
+        <rasd:ResourceType>4</rasd:ResourceType>
+        <rasd:VirtualQuantity>8192</rasd:VirtualQuantity>
+      </Item>
+      <Item>
+        <rasd:Address>0</rasd:Address>
+        <rasd:Caption>scsiController0</rasd:Caption>
+        <rasd:Description>SCSI Controller</rasd:Description>
+        <rasd:ElementName>scsiController0</rasd:ElementName>
+        <rasd:InstanceID>3</rasd:InstanceID>
+        <rasd:ResourceSubType>lsilogic</rasd:ResourceSubType>
+        <rasd:ResourceType>6</rasd:ResourceType>
+      </Item>
+      <Item>
+        <rasd:AutomaticAllocation>true</rasd:AutomaticAllocation>
+        <rasd:Caption>Ethernet adapter on 'Network 1'</rasd:Caption>
+        <rasd:Connection>Network 1</rasd:Connection>
+        <rasd:ElementName>Ethernet adapter on 'Network 1'</rasd:ElementName>
+        <rasd:InstanceID>4</rasd:InstanceID>
+        <rasd:ResourceSubType>E1000</rasd:ResourceSubType>
+        <rasd:ResourceType>10</rasd:ResourceType>
+      </Item>
+      <Item>
+        <rasd:AddressOnParent>0</rasd:AddressOnParent>
+        <rasd:Caption>disk1</rasd:Caption>
+        <rasd:Description>Disk Image</rasd:Description>
+        <rasd:ElementName>disk1</rasd:ElementName>
+        <rasd:HostResource>/disk/vmdisk1</rasd:HostResource>
+        <rasd:InstanceID>5</rasd:InstanceID>
+        <rasd:Parent>3</rasd:Parent>
+        <rasd:ResourceType>17</rasd:ResourceType>
+      </Item>
+    </VirtualHardwareSection>
+  </VirtualSystem>
+</Envelope>

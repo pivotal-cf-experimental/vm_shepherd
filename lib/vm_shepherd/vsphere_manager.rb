@@ -105,10 +105,15 @@ module VmShepherd
     end
 
     def create_network_mappings(ovf_file_path, vsphere_config)
-      ovf = Nokogiri::XML(File.read(ovf_file_path))
-      ovf.remove_namespaces!
+      ovf = parse_ovf(ovf_file_path)
       networks = ovf.xpath('//NetworkSection/Network').map { |x| x['name'] }
       Hash[networks.map { |ovf_network| [ovf_network, network(vsphere_config)] }]
+    end
+
+    def parse_ovf(ovf_file_path)
+      ovf = Nokogiri::XML(File.read(ovf_file_path))
+      ovf.remove_namespaces!
+      ovf
     end
 
     def boot_vm(ovf_file_path, vm_config, vsphere_config)
@@ -116,7 +121,7 @@ module VmShepherd
       template = deploy_ovf_template(ovf_file_path, vsphere_config)
       vm       = create_vm_from_template(template, vm_config, vsphere_config)
 
-      reconfigure_vm(vm, vm_config)
+      reconfigure_vm(vm, vm_config, ovf_file_path)
       power_on_vm(vm)
     end
 
@@ -233,8 +238,8 @@ module VmShepherd
       }
     end
 
-    def reconfigure_vm(vm, vm_config)
-      virtual_machine_config_spec = create_virtual_machine_config_spec(vm_config)
+    def reconfigure_vm(vm, vm_config, ovf_file_path)
+      virtual_machine_config_spec = create_virtual_machine_config_spec(vm_config, ovf_file_path)
       logger.info("BEGIN reconfigure_vm_task virtual_machine_config_spec=#{virtual_machine_config_spec.inspect}")
       vm.ReconfigVM_Task(
         spec: virtual_machine_config_spec
@@ -243,12 +248,12 @@ module VmShepherd
       }
     end
 
-    def create_virtual_machine_config_spec(vm_config)
+    def create_virtual_machine_config_spec(vm_config, ovf_file_path)
       logger.info('BEGIN VmConfigSpec creation')
       vm_config_spec =
         RbVmomi::VIM::VmConfigSpec.new.tap do |vcs|
           vcs.ovfEnvironmentTransport = ['com.vmware.guestInfo']
-          vcs.property                = create_vapp_property_specs(vm_config)
+          vcs.property                = create_vapp_property_specs(vm_config, ovf_file_path)
         end
       logger.info("END  VmConfigSpec creation: #{vm_config_spec.inspect}")
 
@@ -259,56 +264,35 @@ module VmShepherd
       end
     end
 
-    def create_vapp_property_specs(vm_config)
-      ip_configuration = {
-        'ip0'         => vm_config[:ip],
-        'netmask0'    => vm_config[:netmask],
-        'gateway'     => vm_config[:gateway],
-        'DNS'         => vm_config[:dns],
+    def create_vapp_property_specs(vm_config, ovf_file_path)
+      property_value_map = {
+        'ip0' => vm_config[:ip],
+        'netmask0' => vm_config[:netmask],
+        'gateway' => vm_config[:gateway],
+        'DNS' => vm_config[:dns],
         'ntp_servers' => vm_config[:ntp_servers],
+        'admin_password' => vm_config[:vm_password],
+        'public_ssh_key' => vm_config[:public_ssh_key],
+        'custom_hostname' => vm_config[:custom_hostname],
       }
 
       vapp_property_specs = []
 
-      logger.info("BEGIN VAppPropertySpec creation configuration=#{ip_configuration.inspect}")
-      # IP Configuration key order must match OVF template property order
-      ip_configuration.each_with_index do |(key, value), i|
+      logger.info("BEGIN VAppPropertySpec creation configuration=#{property_value_map.inspect}")
+
+      # VAppPropertySpec order must match OVF template property order
+      ovf = parse_ovf(ovf_file_path)
+      ovf.xpath('//ProductSection/Property').each_with_index do |property, index|
+        label = property.attribute('key').value
         vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
           spec.operation = 'edit'
           spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-            p.key   = i
-            p.label = key
-            p.value = value
+            p.key   = index
+            p.label = label
+            p.value = property_value_map[label]
           end
         end
       end
-
-      vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
-        spec.operation = 'edit'
-        spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-          p.key   = 5 # this needs to be 5th to match the ovf template property order.
-          p.label = 'admin_password'
-          p.value = vm_config[:vm_password]
-        end
-      end
-
-      vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
-        spec.operation = 'edit'
-        spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-          p.key   = 6 # ditto. see above. it makes me sad, too.
-          p.label = 'public_ssh_key'
-          p.value = vm_config[:public_ssh_key]
-        end
-      end
-
-      vapp_property_specs << RbVmomi::VIM::VAppPropertySpec.new.tap do |spec|
-        spec.operation = 'edit'
-        spec.info      = RbVmomi::VIM::VAppPropertyInfo.new.tap do |p|
-          p.key   = 7 # ditto. see above. it makes me sad, too.
-          p.label = 'custom_hostname'
-          p.value = vm_config[:custom_hostname]
-        end
-      end unless vm_config[:custom_hostname].nil?
 
       logger.info("END   VAppPropertySpec creation vapp_property_specs=#{vapp_property_specs.inspect}")
       vapp_property_specs

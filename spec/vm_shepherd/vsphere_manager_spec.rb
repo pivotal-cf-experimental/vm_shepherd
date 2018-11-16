@@ -48,18 +48,20 @@ module VmShepherd
       let(:ovf_template) { instance_double(RbVmomi::VIM::VirtualMachine, name: 'vm_name', add_delta_disk_layer_on_all_disks: nil, MarkAsTemplate: nil) }
       let(:vsphere_config) { { folder: folder_name, datastore: datastore_name } }
       let(:vm_config) { {ip: '10.0.0.1'} }
+      let(:ovf_path) { 'spec/fixtures/ova_manager/default.ovf' }
 
       before do
         allow(vsphere_manager).to receive(:system).with("nc -z -w 1 #{vm_config[:ip]} 443").and_return(false)
         allow(vsphere_manager).to receive(:system).with(/tar xfv/).and_return(true)
-        allow(Dir).to receive(:[]).and_return(['foo.ovf'])
+        allow(Dir).to receive(:[]).and_return([ovf_path])
+        allow(FileUtils).to receive(:remove_entry_secure)
         allow(vsphere_manager).to receive(:datacenter).and_return(datacenter)
         allow(vsphere_manager).to receive(:connection).and_return(connection)
         allow(ovf_manager).to receive(:deployOVF).and_return(ovf_template)
         allow(vsphere_manager).to receive(:ovf_template_options).and_return({})
       end
 
-      context 'When custom hostname is not set' do
+      context 'When a property value is not set' do
         it 'verifies the value of custom hostname is nil' do
           expect(vsphere_manager).to receive(:create_vm_from_template).and_return(vm1)
           allow(subject).to receive(:power_on_vm)
@@ -69,7 +71,34 @@ module VmShepherd
             custom_hostname_property = options[:spec].vAppConfig.property.find do |prop|
               prop.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:label] == 'custom_hostname'
             end
+            expect(custom_hostname_property.info.value).to be_nil
+            task
+          end
+
+          subject.deploy(ova_path, vm_config, vsphere_config)
+        end
+      end
+
+      context 'When the ovf does not contain a public_ssh_key property' do
+        let(:ovf_path) { 'spec/fixtures/ova_manager/without_public_ssh_key.ovf' }
+        let(:vm_config) { {ip: '10.0.0.1', custom_hostname: 'meow' } }
+
+        it 'does not create a property spec' do
+          expect(vsphere_manager).to receive(:create_vm_from_template).and_return(vm1)
+          allow(subject).to receive(:power_on_vm)
+          allow(task).to receive(:wait_for_completion)
+
+          expect(vm1).to receive(:ReconfigVM_Task) do |options|
+            custom_hostname_property = options[:spec].vAppConfig.property.find do |prop|
+              prop.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:label] == 'custom_hostname'
+            end
+            expect(custom_hostname_property.info.key).to eq(6)
+
+            custom_hostname_property = options[:spec].vAppConfig.property.find do |prop|
+              prop.instance_variable_get(:@props)[:info].instance_variable_get(:@props)[:label] == 'public_ssh_key'
+            end
             expect(custom_hostname_property).to be_nil
+
             task
           end
 

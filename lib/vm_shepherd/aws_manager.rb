@@ -167,7 +167,7 @@ module VmShepherd
           key_name: vm_config.fetch('key_name'),
           security_group_ids: [env_config.fetch('outputs').fetch('security_group')],
           subnet: env_config.fetch('outputs').fetch('public_subnet_id'),
-          instance_type: OPS_MANAGER_INSTANCE_TYPE
+          instance_type: vm_config.dig('instance_type') || OPS_MANAGER_INSTANCE_TYPE
         }
 
       if (instance_profile = env_config.fetch('outputs').fetch('instance_profile', nil))

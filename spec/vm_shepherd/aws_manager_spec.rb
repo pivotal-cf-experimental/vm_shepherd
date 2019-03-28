@@ -320,6 +320,27 @@ module VmShepherd
         end
       end
 
+      context 'when the instance type is specified in the vm config' do
+        let(:vm_config) do
+          {
+            'vm_name' => 'some-vm-name',
+            'key_name' => 'ssh-key-name',
+            'instance_type' => 't3.medium'
+          }
+        end
+
+        it 'creates an instance' do
+          expect(ec2).to receive_message_chain(:instances, :create).with(
+            image_id: ami_id,
+            key_name: 'ssh-key-name',
+            security_group_ids: ['security-group-id'],
+            subnet: 'public-subnet-id',
+            instance_type: 't3.medium').and_return(instance)
+
+          ami_manager.deploy(ami_file_path: ami_file_path, vm_config: vm_config)
+        end
+      end
+
       context 'when the ip address is in use' do
         it 'retries until the IP address is available' do
           expect(instances).to receive(:create).and_raise(AWS::EC2::Errors::InvalidIPAddress::InUse).once

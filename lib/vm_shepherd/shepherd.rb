@@ -202,7 +202,7 @@ module VmShepherd
     end
 
     def get_vsphere_vm_password(input_config)
-      ENV['PROVISION_WITH_PASSWORD'] == 'false' ? nil : (input_config.dig('vm', 'vm_password') || 'tempest')
+      ENV['PROVISION_WITH_PASSWORD'] == 'false' ? nil : (input_config.dig('vm', 'vm_password') || ENV['VSPHERE_VM_PASSWORD'] || 'tempest')
     end
 
     def get_vsphere_vm_public_ssh_key(input_config)

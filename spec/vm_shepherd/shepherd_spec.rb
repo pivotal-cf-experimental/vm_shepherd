@@ -300,30 +300,100 @@ module VmShepherd
             context 'and it is true' do
               before { stub_const('ENV', {'PROVISION_WITH_PASSWORD' => 'true'}) }
 
-              it 'deploys with the set vm password' do
-                expect(first_ova_manager).to receive(:deploy).with(
-                  'FIRST_FAKE_PATH',
-                  {
-                    ip:          first_config.dig('vm', 'ip'),
-                    gateway:     first_config.dig('vm', 'gateway'),
-                    netmask:     first_config.dig('vm', 'netmask'),
-                    dns:         first_config.dig('vm', 'dns'),
-                    ntp_servers: first_config.dig('vm', 'ntp_servers'),
-                    cpus:        first_config.dig('vm', 'cpus'),
-                    ram_mb:      first_config.dig('vm', 'ram_mb'),
-                    vm_password: first_config.dig('vm', 'vm_password'),
-                    public_ssh_key: 'A PUBLIC KEY',
-                    custom_hostname: first_config.dig('vm', 'custom_hostname')
-                  },
-                  {
-                    cluster:       first_config.dig('vsphere', 'cluster'),
-                    resource_pool: first_config.dig('vsphere', 'resource_pool'),
-                    datastore:     first_config.dig('vsphere', 'datastore'),
-                    network:       first_config.dig('vsphere', 'network'),
-                    folder:        first_config.dig('vsphere', 'folder'),
-                  },
-                )
-                manager.deploy(paths: ['FIRST_FAKE_PATH'])
+              context 'when the vm_password is set' do
+                before { stub_const('ENV', {'PROVISION_WITH_PASSWORD' => 'true', 'VSPHERE_VM_PASSWORD' => 'a-password'}) }
+                it 'deploys with the set vm password' do
+                  expect(first_ova_manager).to receive(:deploy).with(
+                    'FIRST_FAKE_PATH',
+                    {
+                      ip:          first_config.dig('vm', 'ip'),
+                      gateway:     first_config.dig('vm', 'gateway'),
+                      netmask:     first_config.dig('vm', 'netmask'),
+                      dns:         first_config.dig('vm', 'dns'),
+                      ntp_servers: first_config.dig('vm', 'ntp_servers'),
+                      cpus:        first_config.dig('vm', 'cpus'),
+                      ram_mb:      first_config.dig('vm', 'ram_mb'),
+                      vm_password: first_config.dig('vm', 'vm_password'),
+                      public_ssh_key: 'A PUBLIC KEY',
+                      custom_hostname: first_config.dig('vm', 'custom_hostname')
+                    },
+                    {
+                      cluster:       first_config.dig('vsphere', 'cluster'),
+                      resource_pool: first_config.dig('vsphere', 'resource_pool'),
+                      datastore:     first_config.dig('vsphere', 'datastore'),
+                      network:       first_config.dig('vsphere', 'network'),
+                      folder:        first_config.dig('vsphere', 'folder'),
+                    },
+                  )
+
+                  manager.deploy(paths: ['FIRST_FAKE_PATH'])
+                end
+              end
+
+              context 'when the ENV vsphere VM password is set' do
+                before do
+                  stub_const('ENV', { 'PROVISION_WITH_PASSWORD' => 'true', 'VSPHERE_VM_PASSWORD' => 'a-password' })
+                  first_config['vm']['vm_password'] = nil
+                end
+
+                it 'deploys with the ENV vm password' do
+                  expect(first_ova_manager).to receive(:deploy).with(
+                    'FIRST_FAKE_PATH',
+                    {
+                      ip:          first_config.dig('vm', 'ip'),
+                      gateway:     first_config.dig('vm', 'gateway'),
+                      netmask:     first_config.dig('vm', 'netmask'),
+                      dns:         first_config.dig('vm', 'dns'),
+                      ntp_servers: first_config.dig('vm', 'ntp_servers'),
+                      cpus:        first_config.dig('vm', 'cpus'),
+                      ram_mb:      first_config.dig('vm', 'ram_mb'),
+                      vm_password: 'a-password',
+                      public_ssh_key: 'A PUBLIC KEY',
+                      custom_hostname: first_config.dig('vm', 'custom_hostname')
+                    },
+                    {
+                      cluster:       first_config.dig('vsphere', 'cluster'),
+                      resource_pool: first_config.dig('vsphere', 'resource_pool'),
+                      datastore:     first_config.dig('vsphere', 'datastore'),
+                      network:       first_config.dig('vsphere', 'network'),
+                      folder:        first_config.dig('vsphere', 'folder'),
+                    },
+                  )
+
+                  manager.deploy(paths: ['FIRST_FAKE_PATH'])
+                end
+              end
+
+              context 'and neither vm password is set' do
+                before do
+                  first_config['vm']['vm_password'] = nil
+                end
+
+                it 'deploys with the hardcoded vm password' do
+                  expect(first_ova_manager).to receive(:deploy).with(
+                    'FIRST_FAKE_PATH',
+                    {
+                      ip:          first_config.dig('vm', 'ip'),
+                      gateway:     first_config.dig('vm', 'gateway'),
+                      netmask:     first_config.dig('vm', 'netmask'),
+                      dns:         first_config.dig('vm', 'dns'),
+                      ntp_servers: first_config.dig('vm', 'ntp_servers'),
+                      cpus:        first_config.dig('vm', 'cpus'),
+                      ram_mb:      first_config.dig('vm', 'ram_mb'),
+                      vm_password: 'tempest',
+                      public_ssh_key: 'A PUBLIC KEY',
+                      custom_hostname: first_config.dig('vm', 'custom_hostname')
+                    },
+                    {
+                      cluster:       first_config.dig('vsphere', 'cluster'),
+                      resource_pool: first_config.dig('vsphere', 'resource_pool'),
+                      datastore:     first_config.dig('vsphere', 'datastore'),
+                      network:       first_config.dig('vsphere', 'network'),
+                      folder:        first_config.dig('vsphere', 'folder'),
+                    },
+                  )
+                  manager.deploy(paths: ['FIRST_FAKE_PATH'])
+                end
               end
             end
 

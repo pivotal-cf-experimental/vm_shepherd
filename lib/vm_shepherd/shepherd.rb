@@ -164,6 +164,8 @@ module VmShepherd
               datacenter_folders_to_clean: vm_shepherd_config.dig('cleanup', 'datacenter_folders_to_clean'),
               datastores: vm_shepherd_config.dig('cleanup', 'datastores'),
               datastore_folders_to_clean: vm_shepherd_config.dig('cleanup', 'datastore_folders_to_clean'),
+              cluster_name: vm_shepherd_config.dig('vsphere', 'cluster'),
+              resource_pool_name: vm_shepherd_config.dig('vsphere', 'resource_pool'),
             )
           end
         when VmShepherd::AWS_IAAS_TYPE then

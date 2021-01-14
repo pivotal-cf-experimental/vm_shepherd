@@ -24,6 +24,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'ruby_vcloud_sdk', '0.7.4'
 
   spec.add_dependency 'rbvmomi', '1.11.3'
+  spec.add_dependency 'xmlrpc'
 
   spec.add_development_dependency 'bundler'
   spec.add_development_dependency 'rake'

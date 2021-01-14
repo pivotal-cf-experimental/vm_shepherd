@@ -27,12 +27,12 @@ module VmShepherd
       FileUtils.remove_entry_secure(ovf_file_path, force: true) unless ovf_file_path.nil?
     end
 
-    def clean_environment(datacenter_folders_to_clean:, datastores:, datastore_folders_to_clean:)
+    def clean_environment(datacenter_folders_to_clean:, datastores:, datastore_folders_to_clean:, cluster_name: nil, resource_pool_name: nil)
       return if datacenter_folders_to_clean.nil? || datastores.nil? || datacenter_folders_to_clean.nil?
 
       datacenter_folders_to_clean.each do |folder_name|
         validate_folder_name!(folder_name)
-        delete_folder_and_vms(folder_name)
+        delete_folder_and_vms(folder_name, cluster_name, resource_pool_name)
       end
 
       datastore_folders_to_clean.each do |folder_name|
@@ -129,12 +129,13 @@ module VmShepherd
       datacenter.vmFolder.traverse(folder_name, RbVmomi::VIM::Folder, true)
     end
 
-    def delete_folder_and_vms(folder_name)
+    def delete_folder_and_vms(folder_name, cluster_name = nil, resource_pool_name = nil)
       3.times do |attempt|
         break unless (folder = datacenter.vmFolder.traverse(folder_name))
 
         find_vms(folder).each do |vm|
           power_off_vm(vm)
+          convert_template_to_vm(vm, cluster_name, resource_pool_name)
         end
 
         begin
@@ -160,6 +161,7 @@ module VmShepherd
 
     def power_off_vm(vm)
       2.times do
+        # This will implicitly skip over VM templates, which always are in the "poweredOff" state
         break if vm.runtime.powerState == 'poweredOff'
 
         begin
@@ -171,6 +173,14 @@ module VmShepherd
           raise unless e.message.start_with?('InvalidPowerState')
         end
       end
+    end
+
+    def convert_template_to_vm(vm, cluster_name, resource_pool_name)
+      return unless vm.config.template
+
+      cluster = datacenter.find_compute_resource(cluster_name)
+      pool = cluster.resourcePool.resourcePool.find { |rp| rp.name == resource_pool_name }
+      vm.MarkAsVirtualMachine(pool: pool)
     end
 
     def deploy_ovf_template(ovf_file_path, vsphere_config)

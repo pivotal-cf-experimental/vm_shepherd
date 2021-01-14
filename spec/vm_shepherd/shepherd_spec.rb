@@ -825,6 +825,8 @@ module VmShepherd
             datacenter_folders_to_clean: first_config.dig('cleanup', 'datacenter_folders_to_clean'),
             datastores:                  first_config.dig('cleanup', 'datastores'),
             datastore_folders_to_clean:  first_config.dig('cleanup', 'datastore_folders_to_clean'),
+            cluster_name:  first_config.dig('vsphere', 'cluster'),
+            resource_pool_name:  first_config.dig('vsphere', 'resource_pool'),
           }
         end
         let(:last_ova_manager) { instance_double(VsphereManager) }
@@ -833,6 +835,8 @@ module VmShepherd
             datacenter_folders_to_clean: last_config.dig('cleanup', 'datacenter_folders_to_clean'),
             datastores:                  last_config.dig('cleanup', 'datastores'),
             datastore_folders_to_clean:  last_config.dig('cleanup', 'datastore_folders_to_clean'),
+            cluster_name:  last_config.dig('vsphere', 'cluster'),
+            resource_pool_name:  last_config.dig('vsphere', 'resource_pool'),
           }
         end
 

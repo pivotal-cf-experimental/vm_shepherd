@@ -313,7 +313,7 @@ module VmShepherd
       vm.PowerOnVM_Task.wait_for_completion
       logger.info('END  power_on_vm_task')
 
-      Timeout.timeout(7*60) do
+      Timeout.timeout(20*60) do
         until vm.guest_ip
           logger.info('BEGIN polling for VM IP address')
           sleep 30

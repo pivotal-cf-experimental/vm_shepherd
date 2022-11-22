@@ -1,3 +1,12 @@
+# DEPRECATED - 2022-11-22
+
+As of 2022-11-22 this gem is no longer mainained, or supported. Use at your own risk.
+
+The original README.md contents are preserved below.
+
+---
+
+
 # VmShepherd [![Build Status](https://travis-ci.org/pivotal-cf-experimental/vm_shepherd.svg)](https://travis-ci.org/pivotal-cf-experimental/vm_shepherd)
 
 Gem for deploying and destroying a VM on different IAASs such as AWS, vSphere, vCloud, and Openstack

@@ -24,20 +24,6 @@ module VmShepherd
       end
       @configs.zip(paths).each do |vm_shepherd_config, path|
         case @iaas_type
-          when VmShepherd::VCLOUD_IAAS_TYPE then
-            VmShepherd::VcloudManager.new(
-              {
-                url: vm_shepherd_config.dig('creds', 'url'),
-                organization: vm_shepherd_config.dig('creds', 'organization'),
-                user: vm_shepherd_config.dig('creds', 'user'),
-                password: vm_shepherd_config.dig('creds', 'password'),
-              },
-              vm_shepherd_config.dig('vdc', 'name'),
-              stdout_logger
-            ).deploy(
-              path,
-              vcloud_deploy_options(vm_shepherd_config),
-            )
         when VmShepherd::VSPHERE_IAAS_TYPE then
             VmShepherd::VsphereManager.new(
               vm_shepherd_config.dig('vcenter_creds', 'ip'),
@@ -69,19 +55,6 @@ module VmShepherd
         fail(InvalidIaas, "Unknown IaaS type: #{@iaas_type.inspect}")
       end
       case @iaas_type
-        when VmShepherd::VCLOUD_IAAS_TYPE then
-          @configs.each do |vm_shepherd_config|
-            VmShepherd::VcloudManager.new(
-              {
-                url: vm_shepherd_config.dig('creds', 'url'),
-                organization: vm_shepherd_config.dig('creds', 'organization'),
-                user: vm_shepherd_config.dig('creds', 'user'),
-                password: vm_shepherd_config.dig('creds', 'password'),
-              },
-              vm_shepherd_config.dig('vdc', 'name'),
-              stdout_logger
-            ).prepare_environment
-          end
         when VmShepherd::VSPHERE_IAAS_TYPE then
           @configs.each do |vm_shepherd_config|
             VmShepherd::VsphereManager.new(
@@ -107,17 +80,6 @@ module VmShepherd
       end
       @configs.each do |vm_shepherd_config|
         case @iaas_type
-          when VmShepherd::VCLOUD_IAAS_TYPE then
-            VmShepherd::VcloudManager.new(
-              {
-                url: vm_shepherd_config.dig('creds', 'url'),
-                organization: vm_shepherd_config.dig('creds', 'organization'),
-                user: vm_shepherd_config.dig('creds', 'user'),
-                password: vm_shepherd_config.dig('creds', 'password'),
-              },
-              vm_shepherd_config.dig('vdc', 'name'),
-              stdout_logger
-            ).destroy([vm_shepherd_config.dig('vapp', 'ops_manager_name')], vm_shepherd_config.dig('vdc', 'catalog'))
           when VmShepherd::VSPHERE_IAAS_TYPE then
             VmShepherd::VsphereManager.new(
               vm_shepherd_config.dig('vcenter_creds', 'ip'),
@@ -139,19 +101,6 @@ module VmShepherd
         fail(InvalidIaas, "Unknown IaaS type: #{@iaas_type.inspect}")
       end
       case @iaas_type
-        when VmShepherd::VCLOUD_IAAS_TYPE then
-          @configs.each do |vm_shepherd_config|
-            VmShepherd::VcloudManager.new(
-              {
-                url: vm_shepherd_config.dig('creds', 'url'),
-                organization: vm_shepherd_config.dig('creds', 'organization'),
-                user: vm_shepherd_config.dig('creds', 'user'),
-                password: vm_shepherd_config.dig('creds', 'password'),
-              },
-              vm_shepherd_config.dig('vdc', 'name'),
-              stdout_logger,
-            ).clean_environment(vm_shepherd_config.dig('vapp', 'product_names')|| [], vm_shepherd_config.dig('vapp', 'product_catalog'))
-          end
         when VmShepherd::VSPHERE_IAAS_TYPE then
           @configs.each do |vm_shepherd_config|
             VmShepherd::VsphereManager.new(
@@ -277,7 +226,6 @@ module VmShepherd
 
     def valid_iaas_types
       [
-        VmShepherd::VCLOUD_IAAS_TYPE,
         VmShepherd::VSPHERE_IAAS_TYPE,
         VmShepherd::AWS_IAAS_TYPE,
         VmShepherd::OPENSTACK_IAAS_TYPE
